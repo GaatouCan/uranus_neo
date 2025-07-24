@@ -67,6 +67,5 @@ private:
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
     awaitable<void> Watchdog();
-
 };
 

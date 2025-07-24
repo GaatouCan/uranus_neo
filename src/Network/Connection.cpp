@@ -4,6 +4,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/aes.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 
@@ -140,24 +141,25 @@ awaitable<void> UConnection::WritePackage() {
             header.target = static_cast<int32_t>(htonl(pkg->mHeader.target));
 
             if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, 16> salt{};
+                std::array<uint8_t, AES_BLOCK_SIZE> salt{};
                 if (RAND_bytes(salt.data(), salt.size()) != 1) {
                     SPDLOG_WARN("{:<20} - Failed To Generate iv", __FUNCTION__);
                     continue;
                 }
 
-                int length = 0;
-                size_t encryptedLength = 0;
-                std::vector<uint8_t> encrypted(pkg->mPayload.Size() + 16);
+                int idx = 0;
+                size_t length = 0;
+                std::vector<uint8_t> encrypted(pkg->mPayload.Size() + AES_BLOCK_SIZE);
 
-                EVP_EncryptUpdate(mEncryptContext, encrypted.data(), &length, pkg->mPayload.Data(), pkg->mPayload.Size());
-                encryptedLength = length;
-                EVP_EncryptFinal_ex(mEncryptContext, encrypted.data() + length, &length);
-                encryptedLength += length;
-                encrypted.resize(encryptedLength);
+                EVP_EncryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, mNetwork->GetEncryptionKey(), salt.data());
+                EVP_EncryptUpdate(mEncryptContext, encrypted.data(), &idx, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
+                length = idx;
+                EVP_EncryptFinal_ex(mEncryptContext, encrypted.data() + idx, &idx);
+                length += idx;
+                encrypted.resize(length);
 
 #if defined(_WIN32) || defined(_WIN64)
-                header.length = htonll(encryptedLength);
+                header.length = htonll(length);
 #else
                 header.length = htobe64(encryptedLength);
 #endif
@@ -168,16 +170,16 @@ awaitable<void> UConnection::WritePackage() {
                     asio::buffer(encrypted)
                 };
 
-                const auto [ec, len] = co_await async_write(mSocket, buffers);
+                if (const auto [ec, len] = co_await async_write(mSocket, buffers); ec || len == 0) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
 
-                if (ec) {
-                    SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len == 0)
+                        SPDLOG_WARN("{:<20} - Package Length Equal Zero", __FUNCTION__);
+
                     Disconnect();
                     break;
                 }
-
-                if (len == 0)
-                    SPDLOG_WARN("{:<20} - Package Length Equal Zero", __FUNCTION__);
             } else {
 #if defined(_WIN32) || defined(_WIN64)
                 header.length = htonll(pkg->mHeader.length);
@@ -185,16 +187,16 @@ awaitable<void> UConnection::WritePackage() {
                 header.length = htobe64(pkg->mHeader.length);
 #endif
 
-                const auto [ec, len] = co_await async_write(mSocket, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE));
+                if (const auto [ec, len] = co_await async_write(mSocket, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
 
-                if (ec) {
-                    SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len == 0)
+                        SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
+
                     Disconnect();
                     break;
                 }
-
-                if (len == 0)
-                    SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
             }
 
             // Can Do Something Here
@@ -212,17 +214,15 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            const auto [ec, len] = co_await async_read(mSocket, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE));
+            if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+                if (ec)
+                    SPDLOG_WARN("{:<20} -  Failed To Read Package Header, Error Code: {}", __FUNCTION__, ec.message());
 
-            if (ec) {
-                SPDLOG_WARN("{:<20} - {}", __FUNCTION__, ec.message());
+                if (len == 0)
+                    SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
+
                 Disconnect();
                 break;
-            }
-
-            if (len == 0) {
-                SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
-                continue;
             }
 
             pkg->mHeader.magic = ntohl(pkg->mHeader.magic);
@@ -238,50 +238,46 @@ awaitable<void> UConnection::ReadPackage() {
 #endif
 
             if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, 16> salt{};
-                const auto [saltEc, saltLen] = co_await async_read(mSocket, asio::buffer(salt));
+                std::array<uint8_t, AES_BLOCK_SIZE> salt{};
 
-                if (saltEc) {
-                    SPDLOG_WARN("{:<20} - Failed To Read Salt, Error Code: {}", __FUNCTION__, saltEc.message());
-                    Disconnect();
-                    break;
-                }
+                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(salt)); ec || len != AES_BLOCK_SIZE) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} - Failed To Read Salt, Error Code: {}", __FUNCTION__, ec.message());
 
-                if (saltLen != 16) {
-                    SPDLOG_WARN("{:<20} - Read Salt Length Not Equal 16", __FUNCTION__);
+                    if (len != AES_BLOCK_SIZE)
+                        SPDLOG_WARN("{:<20} - Read Salt Length Not Equal 16", __FUNCTION__);
+
                     Disconnect();
                     break;
                 }
 
                 std::vector<uint8_t> ciphertext(pkg->mHeader.length);
 
-                const auto [ec, len] = co_await async_read(mSocket, asio::buffer(ciphertext));
+                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(ciphertext)); ec || len != pkg->mHeader.length) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} - Failed To Read Package Payload, Error Code: {}", __FUNCTION__, ec.message());
 
-                if (ec) {
-                    SPDLOG_WARN("{:<20} - Failed To Read Package Payload, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len != pkg->mHeader.length)
+                        SPDLOG_WARN("{:<20} - Read Package Payload Length Not Equal", __FUNCTION__);
+
                     Disconnect();
                     break;
                 }
 
-                if (len != pkg->mHeader.length) {
-                    SPDLOG_WARN("{:<20} - Read Package Payload Length Not Equal", __FUNCTION__);
-                    Disconnect();
-                    break;
-                }
-
-
+                int idx = 0;
                 int length = 0;
-                int decryptedLength = 0;
 
-                pkg->mPayload.Reserve(len);
-                memset(pkg->mPayload.Data(), 0, len);
+                pkg->mPayload.Reserve(pkg->mHeader.length);
+                memset(pkg->mPayload.Data(), 0, pkg->mHeader.length);
 
-                EVP_DecryptUpdate(mEncryptContext, pkg->mPayload.Data(), &length, ciphertext.data(), ciphertext.size());
-                decryptedLength = length;
-                EVP_DecryptFinal_ex(mEncryptContext, pkg->mPayload.Data() + len, &length);
-                decryptedLength += length;
+                EVP_DecryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, mNetwork->GetEncryptionKey(), salt.data());
+                EVP_DecryptUpdate(mEncryptContext, pkg->mPayload.Data(), &idx, ciphertext.data(), static_cast<int>(ciphertext.size()));
+                length = idx;
+                EVP_DecryptFinal_ex(mEncryptContext, pkg->mPayload.Data() + length, &idx);
+                length += idx;
 
-                pkg->mPayload.Resize(decryptedLength);
+                pkg->mPayload.Resize(length);
+                pkg->mHeader.length = length;
             }
 
             const auto now = std::chrono::steady_clock::now();

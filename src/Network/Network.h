@@ -2,8 +2,9 @@
 
 #include "Module.h"
 
-
 #include <memory>
+#include <string>
+#include <vector>
 
 class FPackage;
 
@@ -20,7 +21,11 @@ public:
         return "Network";
     }
 
+    const unsigned char* GetEncryptionKey();
 
     std::shared_ptr<FPackage> BuildPackage();
+
+private:
+    static std::vector<uint8_t> HexToBytes(const std::string &hex);
 };
 
