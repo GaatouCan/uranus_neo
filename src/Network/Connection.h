@@ -45,7 +45,6 @@ public:
     [[nodiscard]] ATcpSocket &GetSocket();
     [[nodiscard]] APackageChannel &GetChannel();
 
-
     void SetExpireSecond(int sec);
     void SetPlayerID(int64_t id);
 
