@@ -28,6 +28,8 @@ UConnection::UConnection(ATcpSocket socket)
       mPlayerID(-1) {
     mEncryptContext = EVP_CIPHER_CTX_new();
     mID = static_cast<int64_t>(mSocket.native_handle());
+    mSocket.set_option(asio::ip::tcp::no_delay(true));
+    mSocket.set_option(asio::ip::tcp::socket::keep_alive(true));
 }
 
 void UConnection::SetUpModule(UNetwork *owner) {
