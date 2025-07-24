@@ -1,0 +1,81 @@
+#pragma once
+
+#include "Recycle.h"
+#include "ByteArray.h"
+
+#include <sstream>
+
+
+// Define Minimum And Maximum Available Package ID
+
+inline constexpr uint32_t MINIMUM_PACKAGE_ID = 1001;
+inline constexpr uint32_t MAXIMUM_PACKAGE_ID = 999999;
+
+
+/**
+ * The Implement Of Package For Data Exchange;
+ * Use The Structure Of Header Plus Data Part;
+ * The Header Occupies 24 Bytes And Uses Big-Endian Transmission In Network
+ */
+class BASE_API FPackage final : public IRecycleInterface {
+
+    friend class UConnection;
+
+    // using FEncryptVector = std::array<uint8_t, 16>;
+
+    /// Packet Header Define
+    struct FHeader {
+        uint32_t magic;
+        uint32_t id;
+
+        int32_t source;
+        int32_t target;
+
+        size_t length;
+    };
+
+    FHeader         mHeader;
+    // FEncryptVector  mEncryptVector;
+    FByteArray      mPayload;
+
+protected:
+    void OnCreate() override;
+    void Initial() override;
+    void Reset() override;
+
+public:
+    FPackage();
+    ~FPackage() override;
+
+    [[nodiscard]] bool IsUnused() const override;
+    [[nodiscard]] bool IsAvailable() const override;
+
+    void SetPackageID(uint32_t id);
+    [[nodiscard]] uint32_t GetPackageID() const;
+
+    bool CopyFrom(IRecycleInterface *other) override;
+    bool CopyFrom(const std::shared_ptr<IRecycleInterface> &other) override;
+
+    FPackage &SetData(std::string_view str);
+    FPackage &SetData(const std::stringstream &ss);
+
+    FPackage &SetMagic(uint32_t magic);
+    [[nodiscard]] uint32_t GetMagic() const;
+
+    [[nodiscard]] size_t GetPayloadLength() const;
+
+    void SetSource(int32_t source);
+    [[nodiscard]] int32_t GetSource() const;
+
+    void SetTarget(int32_t target);
+    [[nodiscard]] int32_t GetTarget() const;
+
+    // void SetEncryptVector(const FEncryptVector &iv);
+    // [[nodiscard]] const FEncryptVector &GetEncryptVector() const;
+
+    [[nodiscard]] std::string ToString() const;
+    [[nodiscard]] const FByteArray &RawPayload() const;
+    [[nodiscard]] std::vector<uint8_t> &RawRef();
+
+    static constexpr size_t PACKAGE_HEADER_SIZE = sizeof(FHeader);
+};
