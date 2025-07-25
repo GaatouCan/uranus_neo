@@ -74,7 +74,7 @@ void FSharedLibrary::Reset() {
 
 
 void FSharedLibrary::Release() {
-    if (mControl && --mControl->refCount == 1) {
+    if (mControl && --mControl->refCount == 0) {
 #if defined(_WIN32) || defined(_WIN64)
         FreeLibrary(mControl->handle);
 #else
