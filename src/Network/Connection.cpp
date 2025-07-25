@@ -1,12 +1,16 @@
 #include "Connection.h"
 #include "Base/Package.h"
 #include "Network.h"
+#include "Server.h"
+#include "Config/Config.h"
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
+
+#include "Utils.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
@@ -127,6 +131,23 @@ void UConnection::SendPackage(const shared_ptr<FPackage> &pkg) {
 }
 
 awaitable<void> UConnection::WritePackage() {
+    if (GetServer() == nullptr) {
+        SPDLOG_CRITICAL("{:<20} - Use GetServer() Before Set Up!", __FUNCTION__);
+        co_return;
+    }
+
+    const auto *config = GetServer()->GetModule<UConfig>();
+    if (config == nullptr) {
+        SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
+        GetServer()->Shutdown();
+        exit(-1);
+    }
+
+    const auto &cfg = config->GetServerConfig();
+    const auto encryptionKey = cfg["server"]["encryption"]["key"].as<std::string>();
+
+    const auto key = utils::HexToBytes(encryptionKey);
+
     try {
         while (mSocket.is_open()) {
             const auto [ec, pkg] = co_await mChannel.async_receive();
@@ -153,7 +174,7 @@ awaitable<void> UConnection::WritePackage() {
                 size_t length = 0;
                 std::vector<uint8_t> encrypted(pkg->mPayload.Size() + AES_BLOCK_SIZE);
 
-                EVP_EncryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, mNetwork->GetEncryptionKey(), salt.data());
+                EVP_EncryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
                 EVP_EncryptUpdate(mEncryptContext, encrypted.data(), &idx, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
                 length = idx;
                 EVP_EncryptFinal_ex(mEncryptContext, encrypted.data() + idx, &idx);
@@ -210,6 +231,23 @@ awaitable<void> UConnection::WritePackage() {
 }
 
 awaitable<void> UConnection::ReadPackage() {
+    if (GetServer() == nullptr) {
+        SPDLOG_CRITICAL("{:<20} - Use GetServer() Before Set Up!", __FUNCTION__);
+        co_return;
+    }
+
+    const auto *config = GetServer()->GetModule<UConfig>();
+    if (config == nullptr) {
+        SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
+        GetServer()->Shutdown();
+        exit(-1);
+    }
+
+    const auto &cfg = config->GetServerConfig();
+    const auto encryptionKey = cfg["server"]["encryption"]["key"].as<std::string>();
+
+    const auto key = utils::HexToBytes(encryptionKey);
+
     try {
         while (mSocket.is_open()) {
             const auto pkg = BuildPackage();
@@ -272,7 +310,7 @@ awaitable<void> UConnection::ReadPackage() {
                 pkg->mPayload.Reserve(pkg->mHeader.length);
                 memset(pkg->mPayload.Data(), 0, pkg->mHeader.length);
 
-                EVP_DecryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, mNetwork->GetEncryptionKey(), salt.data());
+                EVP_DecryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
                 EVP_DecryptUpdate(mEncryptContext, pkg->mPayload.Data(), &idx, ciphertext.data(), static_cast<int>(ciphertext.size()));
                 length = idx;
                 EVP_DecryptFinal_ex(mEncryptContext, pkg->mPayload.Data() + length, &idx);

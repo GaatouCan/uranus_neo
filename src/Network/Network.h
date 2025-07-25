@@ -5,8 +5,6 @@
 #include "Base/Recycler.h"
 
 #include <memory>
-#include <string>
-#include <vector>
 #include <thread>
 
 
@@ -44,13 +42,9 @@ public:
 
     [[nodiscard]] io_context &GetIOContext();
 
-    const unsigned char* GetEncryptionKey();
-
     std::shared_ptr<FPackage> BuildPackage();
 
 private:
     awaitable<void> WaitForClient(uint16_t port);
-
-    static std::vector<uint8_t> HexToBytes(const std::string &hex);
 };
 
