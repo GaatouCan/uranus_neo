@@ -64,6 +64,10 @@ size_t FSharedLibrary::GetUseCount() const noexcept {
     return mControl ? mControl->refCount.load() : 0;
 }
 
+bool FSharedLibrary::IsValid() const noexcept {
+    return mControl != nullptr;
+}
+
 void FSharedLibrary::Swap(FSharedLibrary &rhs) {
     std::swap(mControl, rhs.mControl);
 }

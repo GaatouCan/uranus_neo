@@ -35,9 +35,11 @@ public:
     FSharedLibrary &operator=(FSharedLibrary &&rhs) noexcept;
 
     template<typename Type>
-    Type *GetSymbol(const std::string &name) const;
+    Type GetSymbol(const std::string &name) const;
 
     [[nodiscard]] size_t GetUseCount() const noexcept;
+
+    [[nodiscard]] bool IsValid() const noexcept;
 
     void Swap(FSharedLibrary &rhs);
     void Reset();
@@ -48,7 +50,7 @@ private:
 
 
 template<typename Type>
-inline Type *FSharedLibrary::GetSymbol(const std::string &name) const {
+inline Type FSharedLibrary::GetSymbol(const std::string &name) const {
     if (mControl->handle == nullptr)
         return nullptr;
 
