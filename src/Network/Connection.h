@@ -18,13 +18,14 @@ using std::shared_ptr;
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
     using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<FPackage>)>;
+    friend class UNetwork;
 
     ATcpSocket mSocket;
     APackageChannel mChannel;
 
     UNetwork *mNetwork;
 
-    EVP_CIPHER_CTX *mCiphertContext;
+    EVP_CIPHER_CTX *mCipherContext;
 
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;
