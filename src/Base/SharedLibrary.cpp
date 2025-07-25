@@ -60,6 +60,19 @@ FSharedLibrary &FSharedLibrary::operator=(FSharedLibrary &&rhs) noexcept {
     return *this;
 }
 
+size_t FSharedLibrary::GetUseCount() const noexcept {
+    return mControl ? mControl->refCount.load() : 0;
+}
+
+void FSharedLibrary::Swap(FSharedLibrary &rhs) {
+    std::swap(mControl, rhs.mControl);
+}
+
+void FSharedLibrary::Reset() {
+    FSharedLibrary().Swap(*this);
+}
+
+
 void FSharedLibrary::Release() {
     if (mControl && --mControl->refCount == 1) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -67,6 +80,8 @@ void FSharedLibrary::Release() {
 #else
         dlclose(mControl->handle);
 #endif
+
+        delete mControl;
     }
     mControl = nullptr;
 }
