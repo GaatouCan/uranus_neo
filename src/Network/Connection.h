@@ -24,7 +24,7 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
 
     UNetwork *mNetwork;
 
-    EVP_CIPHER_CTX *mEncryptContext;
+    EVP_CIPHER_CTX *mCiphertContext;
 
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;

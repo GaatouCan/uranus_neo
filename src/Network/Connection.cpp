@@ -10,6 +10,7 @@
 #include <openssl/aes.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
 
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -30,7 +31,7 @@ UConnection::UConnection(ATcpSocket socket)
       mWatchdog(mSocket.get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    mEncryptContext = EVP_CIPHER_CTX_new();
+    mCiphertContext = EVP_CIPHER_CTX_new();
     mID = static_cast<int64_t>(mSocket.native_handle());
     mSocket.set_option(asio::ip::tcp::no_delay(true));
     mSocket.set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -42,7 +43,7 @@ void UConnection::SetUpModule(UNetwork *owner) {
 
 UConnection::~UConnection() {
     Disconnect();
-    EVP_CIPHER_CTX_free(mEncryptContext);
+    EVP_CIPHER_CTX_free(mCiphertContext);
 }
 
 ATcpSocket &UConnection::GetSocket() {
@@ -174,10 +175,10 @@ awaitable<void> UConnection::WritePackage() {
                 size_t length = 0;
                 std::vector<uint8_t> encrypted(pkg->mPayload.Size() + AES_BLOCK_SIZE);
 
-                EVP_EncryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
-                EVP_EncryptUpdate(mEncryptContext, encrypted.data(), &idx, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
+                EVP_EncryptInit_ex(mCiphertContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
+                EVP_EncryptUpdate(mCiphertContext, encrypted.data(), &idx, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
                 length = idx;
-                EVP_EncryptFinal_ex(mEncryptContext, encrypted.data() + idx, &idx);
+                EVP_EncryptFinal_ex(mCiphertContext, encrypted.data() + idx, &idx);
                 length += idx;
                 encrypted.resize(length);
 
@@ -310,10 +311,10 @@ awaitable<void> UConnection::ReadPackage() {
                 pkg->mPayload.Reserve(pkg->mHeader.length);
                 memset(pkg->mPayload.Data(), 0, pkg->mHeader.length);
 
-                EVP_DecryptInit_ex(mEncryptContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
-                EVP_DecryptUpdate(mEncryptContext, pkg->mPayload.Data(), &idx, ciphertext.data(), static_cast<int>(ciphertext.size()));
+                EVP_DecryptInit_ex(mCiphertContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
+                EVP_DecryptUpdate(mCiphertContext, pkg->mPayload.Data(), &idx, ciphertext.data(), static_cast<int>(ciphertext.size()));
                 length = idx;
-                EVP_DecryptFinal_ex(mEncryptContext, pkg->mPayload.Data() + length, &idx);
+                EVP_DecryptFinal_ex(mCiphertContext, pkg->mPayload.Data() + length, &idx);
                 length += idx;
 
                 pkg->mPayload.Resize(length);
