@@ -112,10 +112,18 @@ public:
 
     bool BootService();
 
+    [[nodiscard]] std::string GetServiceName() const;
+    [[nodiscard]] virtual int32_t GetServiceID() const = 0;
+
     [[nodiscard]] UServer *GetServer() const;
     [[nodiscard]] IModuleBase *GetOwnerModule() const;
 
     [[nodiscard]] shared_ptr<FPackage> BuildPackage() const;
+    [[nodiscard]] EContextState GetState() const;
+
+    void PushPackage(const shared_ptr<FPackage> &pkg);
+    void PushTask(const std::function<void(IServiceBase *)> &task);
+    void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
 private:
     void PushNode(const shared_ptr<INodeBase> &node);

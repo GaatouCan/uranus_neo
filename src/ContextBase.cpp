@@ -4,6 +4,7 @@
 #include "Server.h"
 #include "Base/Recycler.h"
 #include "Base/Package.h"
+#include "Base/EventParam.h"
 #include "DataAsset.h"
 
 #include <spdlog/spdlog.h>
@@ -141,6 +142,66 @@ int IContextBase::ForceShutdown() {
 }
 
 bool IContextBase::BootService() {
+}
+
+std::string IContextBase::GetServiceName() const {
+    if (mState >= EContextState::INITIALIZED) {
+        return mService->GetServiceName();
+    }
+    return "UNKNOWN";
+}
+
+
+EContextState IContextBase::GetState() const {
+    return mState;
+}
+
+void IContextBase::PushPackage(const shared_ptr<FPackage> &pkg) {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return;
+
+    if (pkg == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Package From {}",
+        __FUNCTION__, static_cast<const void *>(this), GetServiceName(), pkg->GetSource());
+
+    const auto node = make_shared<UPackageNode>(mService);
+    node->SetPackage(pkg);
+
+    PushNode(node);
+}
+
+void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return;
+
+    if (task == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
+        __FUNCTION__, static_cast<const void *>(this), GetServiceName());
+
+    const auto node = make_shared<UTaskNode>(mService);
+    node->SetTask(task);
+
+    PushNode(node);
+}
+
+void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return;
+
+    if (event == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Event Type {}",
+        __FUNCTION__, static_cast<const void *>(this), GetServiceName(), event->GetEventType());
+
+    const auto node = make_shared<UEventNode>(mService);
+    node->SetEventParam(event);
+
+    PushNode(node);
 }
 
 UServer *IContextBase::GetServer() const {
