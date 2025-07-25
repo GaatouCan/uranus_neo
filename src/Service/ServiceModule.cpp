@@ -163,3 +163,155 @@ void UServiceModule::Stop() {
 UServiceModule::~UServiceModule() {
     Stop();
 }
+
+std::shared_ptr<UServiceContext> UServiceModule::FindService(const int32_t sid) const {
+    if (mState != EModuleState::RUNNING)
+        return nullptr;
+
+    std::shared_lock lock(mServiceMutex);
+    const auto iter = mServiceMap.find(sid);
+    return iter != mServiceMap.end() ? iter->second : nullptr;
+}
+
+std::shared_ptr<UServiceContext> UServiceModule::FindService(const std::string &name) const {
+    if (mState != EModuleState::RUNNING)
+        return nullptr;
+
+    int32_t sid;
+
+    {
+        std::shared_lock lock(mNameMutex);
+        const auto nameIter = mNameToServiceID.find(name);
+        if (nameIter == mNameToServiceID.end())
+            return nullptr;
+
+        sid = nameIter->second;
+    }
+
+    return FindService(sid);
+}
+
+const FSharedLibrary &UServiceModule::FindServiceLibrary(const std::string &filename, const bool bCore) const {
+    std::shared_lock lock(mLibraryMutex);
+    if (bCore) {
+        const auto iter = mCoreLibraryMap.find(filename);
+        return iter !=  mCoreLibraryMap.end() ? iter->second : nullptr;
+    }
+
+    const auto iter = mExtendLibraryMap.find(filename);
+    return iter != mExtendLibraryMap.end() ? iter->second : nullptr;
+}
+
+std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {
+    if (mState != EModuleState::RUNNING)
+        return nullptr;
+
+    const auto handle = FindServiceLibrary(filename);
+    if (!handle.IsValid()) {
+        SPDLOG_WARN("{:<20} - Cannot Found Service Library[{}]", __FUNCTION__, filename);
+        return nullptr;
+    }
+
+    const int32_t sid = mAllocator.AllocateTS();
+    if (sid < 0)
+        return nullptr;
+
+    auto context = std::make_shared<UServiceContext>();
+
+    context->SetUpModule(this);
+    context->SetUpLibrary(handle);
+    context->SetServiceID(sid);
+    context->SetFilename(filename);
+    context->SetCoreFlag(false);
+
+    if (!context->Initial(data)) {
+        SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", __FUNCTION__, filename);
+
+        context->ForceShutdown();
+        mAllocator.RecycleTS(sid);
+
+        return nullptr;
+    }
+
+    // Check If Service Name Unique
+    bool bSuccess = true;
+
+    {
+        std::shared_lock lock(mNameMutex);
+        if (mNameToServiceID.contains(context->GetServiceName())) {
+            SPDLOG_WARN("{:<20} - Service[{}] Has Already Exist.", __FUNCTION__, context->GetServiceName());
+            bSuccess = false;
+        }
+    }
+
+    // If Service Name Unique
+    if (bSuccess) {
+        if (context->BootService()) {
+            {
+                const auto name = context->GetServiceName();
+
+                std::scoped_lock lock(mServiceMutex, mFileNameMutex, mNameMutex);
+
+                mServiceMap[sid] = context;
+                mFilenameMapping[filename].insert(sid);
+                mNameToServiceID[name] = sid;
+            }
+
+            SPDLOG_INFO("{:<20} - Boot Extend Service[{}] Successfully", __FUNCTION__, context->GetServiceName());
+            return context;
+        }
+
+        SPDLOG_ERROR("{:<20} - Failed To Boot Extend Service[{}]", __FUNCTION__, context->GetServiceName());
+    }
+
+    // If Not Unique, Service Force To Shut Down And Recycle The Service ID
+    context->ForceShutdown();
+    mAllocator.RecycleTS(sid);
+
+    return nullptr;
+}
+
+void UServiceModule::ShutdownService(int32_t sid) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    std::shared_ptr<UServiceContext> context = FindService(sid);
+    if (context == nullptr) {
+        mAllocator.RecycleTS(sid);
+        return;
+    }
+
+    if (context->GetServiceID() == INVALID_SERVICE_ID) {
+        SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, sid);
+        return;
+    }
+
+    if (context->GetCoreFlag()) {
+        // TODO
+    } else {
+        {
+            std::scoped_lock lock(mServiceMutex, mNameMutex);
+            // if (const auto &iter = mServiceMap.find(sid); iter != mServiceMap.end()) {
+            //     context = iter->second;
+            //     mServiceMap.erase(iter);
+            // }
+
+            mServiceMap.erase(sid);
+            mNameToServiceID.erase(context->GetServiceName());
+        }
+
+        // if (context == nullptr) {
+        //     mAllocator.RecycleTS(sid);
+        //     return;
+        // }
+
+        // auto func = [this, id, filename = info.filename](IContextBase *) {
+        //     if (mState != EModuleState::RUNNING)
+        //         return;
+        //     OnServiceShutdown(filename, id, false);
+        //     mAllocator.RecycleT(id);
+        // };
+
+        context->Shutdown(false, 5, nullptr);
+    }
+}

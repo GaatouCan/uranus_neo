@@ -8,12 +8,12 @@
 #include <unordered_set>
 #include <shared_mutex>
 
+
 using std::unordered_map;
 using std::unordered_set;
 
-
+class IDataAsset_Interface;
 class UServiceContext;
-
 
 class BASE_API UServiceModule final : public IModuleBase {
 
@@ -32,6 +32,14 @@ public:
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Service Module";
     }
+
+    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(int32_t sid) const;
+    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
+
+    [[nodiscard]] const FSharedLibrary &FindServiceLibrary(const std::string &filename, bool bCore = false) const;
+
+    std::shared_ptr<UServiceContext> BootExtendService(const std::string &filename, const IDataAsset_Interface *data);
+    void ShutdownService(int32_t sid);
 
 private:
     /** Dynamic Library Handles That For Service **/
