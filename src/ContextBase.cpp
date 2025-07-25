@@ -4,14 +4,13 @@
 #include "Server.h"
 #include "Base/Recycler.h"
 #include "Base/Package.h"
+#include "DataAsset.h"
 
 #include <spdlog/spdlog.h>
 
 
 typedef IServiceBase *(*AServiceCreator)();
-
 typedef void (*AServiceDestroyer)(IServiceBase *);
-
 
 IContextBase::INodeBase::INodeBase(IServiceBase *service)
     : mService(service) {
@@ -22,6 +21,48 @@ IServiceBase *IContextBase::INodeBase::GetService() const {
 }
 
 void IContextBase::INodeBase::Execute() {
+}
+
+IContextBase::UPackageNode::UPackageNode(IServiceBase *service)
+    : INodeBase(service) {
+}
+
+void IContextBase::UPackageNode::SetPackage(const shared_ptr<FPackage> &pkg) {
+    mPackage = pkg;
+}
+
+void IContextBase::UPackageNode::Execute() {
+    if (mService != nullptr && mPackage != nullptr) {
+        mService->OnPackage(mPackage);
+    }
+}
+
+IContextBase::UTaskNode::UTaskNode(IServiceBase *service)
+    : INodeBase(service) {
+}
+
+void IContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
+    mTask = task;
+}
+
+void IContextBase::UTaskNode::Execute() {
+    if (mService && mTask) {
+        std::invoke(mTask, mService);
+    }
+}
+
+IContextBase::UEventNode::UEventNode(IServiceBase *service)
+    : INodeBase(service) {
+}
+
+void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
+    mEvent = event;
+}
+
+void IContextBase::UEventNode::Execute() {
+    if (mService != nullptr && mEvent != nullptr) {
+        mService->OnEvent(mEvent);
+    }
 }
 
 IContextBase::IContextBase()
@@ -47,7 +88,7 @@ void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool IContextBase::Initial() {
+bool IContextBase::Initial(const IDataAsset_Interface *data) {
     if (mState != EContextState::CREATED)
         return false;
 
@@ -77,10 +118,12 @@ bool IContextBase::Initial() {
     mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
 
     // Create Package Pool For Data Exchange
-    mPackagePool = make_shared<TRecycler<FPackage>>();
+    mPackagePool = make_shared<TRecycler<FPackage> >();
     mPackagePool->Initial();
 
-    // TODO: Service Initial
+    // Initial Service
+    mService->SetUpContext(this);
+    mService->Initial(data);
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
