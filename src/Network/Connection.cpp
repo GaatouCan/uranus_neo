@@ -3,6 +3,7 @@
 #include "Network.h"
 #include "Server.h"
 #include "Config/Config.h"
+#include "Utils.h"
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -10,7 +11,6 @@
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 
-#include "Utils.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
