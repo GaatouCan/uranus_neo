@@ -28,6 +28,10 @@ FSharedLibrary::FSharedLibrary(const std::string &path) {
 #endif
 }
 
+FSharedLibrary::FSharedLibrary(const std::filesystem::path &path)
+    : FSharedLibrary(path.string()) {
+}
+
 FSharedLibrary::FSharedLibrary(const FSharedLibrary &rhs) {
     mControl = rhs.mControl;
     if (mControl) {
@@ -52,7 +56,7 @@ FSharedLibrary::FSharedLibrary(FSharedLibrary &&rhs) noexcept {
 }
 
 FSharedLibrary &FSharedLibrary::operator=(FSharedLibrary &&rhs) noexcept {
-    if (this !=&rhs) {
+    if (this != &rhs) {
         Release();
         mControl = rhs.mControl;
         rhs.mControl = nullptr;

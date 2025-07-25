@@ -11,6 +11,7 @@ class UServer;
 class IDataAsset_Interface;
 class IEventParam_Interface;
 
+
 enum class BASE_API EContextState {
     CREATED,
     INITIALIZING,
@@ -22,7 +23,9 @@ enum class BASE_API EContextState {
     STOPPED
 };
 
-
+/**
+ * Context For Interaction Between Service And The Server
+ */
 class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> {
 
     /**

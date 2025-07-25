@@ -4,6 +4,7 @@
 
 #include <string>
 #include <atomic>
+#include <filesystem>
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 using AModuleHandle = HMODULE;
@@ -27,6 +28,7 @@ public:
     ~FSharedLibrary();
 
     explicit FSharedLibrary(const std::string &path);
+    explicit FSharedLibrary(const std::filesystem::path &path);
 
     FSharedLibrary(const FSharedLibrary &rhs);
     FSharedLibrary &operator=(const FSharedLibrary &rhs);

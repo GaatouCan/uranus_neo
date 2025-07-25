@@ -5,7 +5,6 @@
 #include "Base/Recycler.h"
 #include "Base/Package.h"
 #include "Base/EventParam.h"
-#include "DataAsset.h"
 
 #include <spdlog/spdlog.h>
 
@@ -72,6 +71,11 @@ IContextBase::IContextBase()
 }
 
 IContextBase::~IContextBase() {
+    if (mShutdownTimer) {
+        mShutdownTimer->cancel();
+        ForceShutdown();
+    }
+
     if (mChannel) {
         mChannel->close();
     }
@@ -97,6 +101,9 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
         SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
         return false;
     }
+
+    if (GetServer() == nullptr)
+        return false;
 
     // Start To Create Service
     mState = EContextState::INITIALIZING;
@@ -134,7 +141,74 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
     return true;
 }
 
-int IContextBase::Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func) {
+int IContextBase::Shutdown(const bool bForce, int second, const std::function<void(IContextBase *)> &func) {
+    if (GetServer() == nullptr)
+        return -10;
+
+    // State Maybe WAITING While If Not Force To Shut Down
+    if (bForce ? mState >= EContextState::SHUTTING_DOWN : mState >= EContextState::WAITING)
+        return -1;
+
+    // If Not Force To Shut Down, Turn To Waiting Current Schedule Node Execute Complete
+    if (!bForce && mState == EContextState::RUNNING) {
+        mState = EContextState::WAITING;
+
+        mShutdownTimer = make_unique<ASteadyTimer>(GetServer()->GetIOContext());
+        if (func != nullptr)
+            mShutdownCallback = func;
+
+        // Spawn Coroutine For Waiting To Force Shut Down
+        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), second]() -> awaitable<void> {
+            self->mShutdownTimer->expires_after(std::chrono::seconds(second));
+            if (const auto [ec] = co_await self->mShutdownTimer->async_wait(); ec)
+                co_return;
+
+            if (self->GetState() == EContextState::WAITING) {
+                self->ForceShutdown();
+            }
+        }, detached);
+
+        return 0;
+    }
+
+    mState = EContextState::SHUTTING_DOWN;
+
+    mShutdownTimer->cancel();
+    mChannel->close();
+
+    const std::string name = GetServiceName();
+
+    if (mService && mService->GetState() != EServiceState::TERMINATED) {
+        mService->Stop();
+    }
+
+    if (!mLibrary.IsValid()) {
+        SPDLOG_ERROR("{:<20} - Library Node Is Null", __FUNCTION__);
+        mState = EContextState::STOPPED;
+        return -2;
+    }
+
+    auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
+    if (destroyer == nullptr) {
+        // SPDLOG_ERROR("{:<20} - Can't Load Destroyer, Path[{}]", __FUNCTION__, mHandle->GetPath());
+        mState = EContextState::STOPPED;
+        return -3;
+    }
+
+    std::invoke(destroyer, mService);
+
+    mService = nullptr;
+    // mLibrary.Reset();
+
+    mState = EContextState::STOPPED;
+    SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",
+        __FUNCTION__, static_cast<void *>(this), name);
+
+    if (mShutdownCallback) {
+        std::invoke(mShutdownCallback, this);
+    }
+
+    return 1;
 }
 
 int IContextBase::ForceShutdown() {
@@ -142,6 +216,27 @@ int IContextBase::ForceShutdown() {
 }
 
 bool IContextBase::BootService() {
+    if (mState != EContextState::INITIALIZED || mService == nullptr)
+        return false;
+
+    mState = EContextState::IDLE;
+
+    if (const auto res = mService->Start(); !res) {
+        SPDLOG_ERROR("{:<20} - Context[{:p}], Service[{} - {}] Failed To Boot.",
+            __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+
+        mState = EContextState::INITIALIZED;
+        return false;
+    }
+
+    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
+        __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+
+    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this()] -> awaitable<void> {
+        co_await self->ProcessChannel();
+    }, detached);
+
+    return true;
 }
 
 std::string IContextBase::GetServiceName() const {
