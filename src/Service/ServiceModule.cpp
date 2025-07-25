@@ -144,7 +144,20 @@ void UServiceModule::Start() {
 }
 
 void UServiceModule::Stop() {
+    if (mState == EModuleState::STOPPED)
+        return;
 
+    mState = EModuleState::STOPPED;
+
+    SPDLOG_INFO("Unloading All Service...");
+    for (const auto &context : mServiceMap | std::views::values) {
+        context->ForceShutdown();
+    }
+
+    mCoreLibraryMap.clear();
+    mExtendLibraryMap.clear();
+
+    SPDLOG_INFO("Free All Service Library Successfully");
 }
 
 UServiceModule::~UServiceModule() {
