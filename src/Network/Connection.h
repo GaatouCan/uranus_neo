@@ -35,12 +35,12 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
     std::atomic_int64_t mPlayerID;
 
 protected:
-    explicit UConnection(ATcpSocket socket);
-
     void SetUpModule(UNetwork *owner);
 
 public:
     UConnection() = delete;
+
+    explicit UConnection(ATcpSocket socket);
     ~UConnection();
 
     [[nodiscard]] ATcpSocket &GetSocket();

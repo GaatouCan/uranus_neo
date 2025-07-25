@@ -10,8 +10,6 @@
 #include <openssl/aes.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
-#include <yaml-cpp/yaml.h>
-
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
@@ -19,6 +17,7 @@
 #include <arpa/inet.h>
 #include <endian.h>
 #endif
+
 
 using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
