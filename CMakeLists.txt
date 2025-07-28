@@ -58,3 +58,11 @@ target_link_libraries(core PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
 target_link_libraries(core PUBLIC OpenSSL::Crypto)
 target_link_libraries(core PUBLIC OpenSSL::SSL)
+
+add_executable(uranus Uranus.cpp)
+target_link_libraries(uranus PUBLIC core)
+
+target_include_directories(uranus PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
+)
