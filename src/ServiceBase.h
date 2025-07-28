@@ -1,18 +1,17 @@
 #pragma once
 
 #include "Base/TimerHandle.h"
+#include "Server.h"
 
 #include <string>
 #include <memory>
 #include <asio.hpp>
 
 
-class UServer;
 class FPackage;
 class IContextBase;
 class IEventParam_Interface;
 class IDataAsset_Interface;
-
 
 enum class BASE_API EServiceState {
     CREATED,
@@ -40,6 +39,9 @@ public:
 
     [[nodiscard]] asio::io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
+
+    template<CModuleType Module>
+    Module *GetModule() const;
 
     [[nodiscard]] EServiceState GetState() const;
 
@@ -101,6 +103,14 @@ protected:
     IContextBase *mContext;
     std::atomic<EServiceState> mState;
 };
+
+template<CModuleType Module>
+inline Module *IServiceBase::GetModule() const {
+    if (GetServer() == nullptr)
+        return nullptr;
+
+    return GetServer()->GetModule<Module>();
+}
 
 template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostTaskT(int32_t target, Callback &&func, Args &&...args) {

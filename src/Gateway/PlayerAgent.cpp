@@ -39,7 +39,7 @@ void IPlayerAgent::SendToPlayer(const int64_t pid, const std::shared_ptr<FPackag
     if (pkg == nullptr || pid == GetPlayerID())
         return;
 
-    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+    if (const auto *gateway = GetModule<UGateway>()) {
         SPDLOG_TRACE("{:<20} - From Player[{}] To Player[{}]", __FUNCTION__, GetPlayerID(), pid);
 
         pkg->SetSource(PLAYER_AGENT_ID);
@@ -57,7 +57,7 @@ void IPlayerAgent::PostToPlayer(const int64_t pid, const std::function<void(ISer
     if (task == nullptr || pid == GetPlayerID())
         return;
 
-    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+    if (const auto *gateway = GetModule<UGateway>()) {
         SPDLOG_TRACE("{:<20} - From Player[{}] To Player[{}]", __FUNCTION__, GetPlayerID(), pid);
         gateway->PostToPlayer(pid, task);
     }
@@ -67,10 +67,10 @@ void IPlayerAgent::SendToClient(const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
-    if (pkg == nullptr || GetServer() == nullptr)
+    if (pkg == nullptr)
         return;
 
-    if (const auto *network = GetServer()->GetModule<UNetwork>()) {
+    if (const auto *network = GetModule<UNetwork>()) {
         SPDLOG_TRACE("{:<20} - Player[{}]", __FUNCTION__, GetPlayerID());
 
         pkg->SetSource(PLAYER_AGENT_ID);
@@ -82,31 +82,21 @@ void IPlayerAgent::SendToClient(const std::shared_ptr<FPackage> &pkg) const {
 
 
 FTimerHandle IPlayerAgent::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
-    if (GetServer() == nullptr)
-        return { -1, true };
-
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+    if (auto *module = GetModule<UTimerModule>()) {
         return module->SetSteadyTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
     }
     return { -1, true };
 }
 
 FTimerHandle IPlayerAgent::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-    if (GetServer() == nullptr)
-        return { -1, false };
-
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+    if (auto *module = GetModule<UTimerModule>()) {
         return module->SetSystemTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
     }
     return { -1, false };
 }
 
 void IPlayerAgent::CancelTimer(const FTimerHandle &handle) {
-    if (GetServer() == nullptr)
-        return;
-
-
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+    if (auto *module = GetModule<UTimerModule>()) {
         if (handle.id > 0) {
             module->CancelTimer(handle);
         } else {
@@ -119,19 +109,13 @@ void IPlayerAgent::OnHeartBeat(const std::shared_ptr<FPackage> &pkg) {
 }
 
 void IPlayerAgent::ListenEvent(const int event) const {
-    if (GetServer() == nullptr)
-        return;
-
-    if (auto *module = GetServer()->GetModule<UEventModule>()) {
+    if (auto *module = GetModule<UEventModule>()) {
         module->ListenEvent(event, PLAYER_AGENT_ID, GetPlayerID());
     }
 }
 
 void IPlayerAgent::RemoveListener(const int event) const {
-    if (GetServer() == nullptr)
-        return;
-
-    if (auto *module = GetServer()->GetModule<UEventModule>()) {
+     if (auto *module = GetModule<UEventModule>()) {
         module->RemoveListener(event, PLAYER_AGENT_ID, GetPlayerID());
     }
 }
