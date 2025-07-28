@@ -3,6 +3,7 @@
 #include "Module.h"
 #include "Utils.h"
 #include "Base/IdentAllocator.h"
+#include "Base/TimerHandle.h"
 
 #include <functional>
 #include <unordered_map>
@@ -11,11 +12,6 @@
 
 
 class IServiceBase;
-
-struct BASE_API FTimerHandle {
-    int64_t id;
-    bool bSteady;
-};
 
 class BASE_API UTimerModule final : public IModuleBase {
 

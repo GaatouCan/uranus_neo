@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Common.h"
+#include "Base/TimerHandle.h"
 
 #include <string>
 #include <memory>
 #include <asio.hpp>
+
 
 class UServer;
 class FPackage;
@@ -72,7 +73,7 @@ public:
     void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
 #pragma endregion
 
-#pragma region ToPlayer
+#pragma region To Player
     virtual void SendToPlayer(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
     virtual void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
@@ -82,6 +83,19 @@ public:
 #pragma endregion
 
     virtual void SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
+
+#pragma region Event
+    virtual void ListenEvent(int event) const;
+    virtual void RemoveListener(int event) const;
+
+    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
+#pragma endregion
+
+#pragma region Timer
+    virtual FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
+    virtual FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
+    virtual void CancelTimer(const FTimerHandle &handle);
+#pragma endregion
 
 protected:
     IContextBase *mContext;

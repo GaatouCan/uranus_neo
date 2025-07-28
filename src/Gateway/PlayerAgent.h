@@ -24,14 +24,14 @@ public:
 
     void SendToClient(const std::shared_ptr<FPackage> &pkg) const;
 
-    // FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
-    // FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
-    // void CancelTimer(const FTimerHandle &handle) final;
+    FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
+    FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
+    void CancelTimer(const FTimerHandle &handle) final;
 
     virtual void OnHeartBeat(const std::shared_ptr<FPackage> &pkg);
 
-    // void ListenEvent(int event) const final;
-    // void RemoveListener(int event) const final;
+    void ListenEvent(int event) const final;
+    void RemoveListener(int event) const final;
 
 private:
     void SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const final;

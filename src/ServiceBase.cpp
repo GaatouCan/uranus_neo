@@ -2,6 +2,11 @@
 #include "ContextBase.h"
 #include "Server.h"
 #include "Base/Package.h"
+#include "Service/ServiceModule.h"
+#include "Service/ServiceContext.h"
+#include "Gateway/Gateway.h"
+#include "Event/EventModule.h"
+#include "Timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -62,7 +67,7 @@ void IServiceBase::PostPackage(const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
-    if (pkg == nullptr)
+    if (pkg == nullptr || GetServer() == nullptr)
         return;
 
     // Do Not Post To Self
@@ -70,17 +75,17 @@ void IServiceBase::PostPackage(const std::shared_ptr<FPackage> &pkg) const {
     if (target <= 0 || target == GetServiceID())
         return;
 
-    // const auto *module = GetModule<UServiceModule>();
-    // if (module == nullptr)
-    //     return;
-    //
-    // if (const auto context = module->FindService(target)) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-    //     __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
-    //
-    //     pkg->SetSource(GetServiceID());
-    //     context->PushPackage(pkg);
-    // }
+    const auto *module = GetServer()->GetModule<UServiceModule>();
+    if (module == nullptr)
+        return;
+
+    if (const auto context = module->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+        __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
+
+        pkg->SetSource(GetServiceID());
+        context->PushPackage(pkg);
+    }
 }
 
 void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<FPackage> &pkg) const {
@@ -88,22 +93,22 @@ void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<FP
         return;
 
     // Do Not Post To Self
-    if (pkg == nullptr || name == GetServiceName())
+    if (pkg == nullptr || GetServer() == nullptr || name == GetServiceName())
         return;
 
-    // const auto *module = GetModule<UServiceModule>();
-    // if (module == nullptr)
-    //     return;
-    //
-    // if (const auto target = module->FindService(name)) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-    //         __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
-    //
-    //     pkg->SetSource(GetServiceID());
-    //     pkg->SetTarget(target->GetServiceID());
-    //
-    //     target->PushPackage(pkg);
-    // }
+    const auto *module = GetServer()->GetModule<UServiceModule>();
+    if (module == nullptr)
+        return;
+
+    if (const auto target = module->FindService(name)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
+
+        pkg->SetSource(GetServiceID());
+        pkg->SetTarget(target->GetServiceID());
+
+        target->PushPackage(pkg);
+    }
 }
 
 void IServiceBase::PostTask(int32_t target, const std::function<void(IServiceBase *)> &task) const {
@@ -111,19 +116,19 @@ void IServiceBase::PostTask(int32_t target, const std::function<void(IServiceBas
         return;
 
     // Do Not Post To Self
-    if (target < 0 || target == GetServiceID())
+    if (target < 0 || GetServer() == nullptr || target == GetServiceID())
         return;
 
-    // const auto *module = GetModule<UServiceModule>();
-    // if (module == nullptr)
-    //     return;
-    //
-    // if (const auto context = module->FindService(target)) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-    //         __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
-    //
-    //     context->PushTask(task);
-    // }
+    const auto *module = GetServer()->GetModule<UServiceModule>();
+    if (module == nullptr)
+        return;
+
+    if (const auto context = module->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
+
+        context->PushTask(task);
+    }
 }
 
 void IServiceBase::PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const {
@@ -131,70 +136,135 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
         return;
 
     // Do Not Post To Self
-    if (name == GetServiceName())
+    if (GetServer() == nullptr || name == GetServiceName())
         return;
 
-    // const auto *module = GetModule<UServiceModule>();
-    // if (module == nullptr)
-    //     return;
-    //
-    // if (const auto target = module->FindService(name)) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-    //         __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
-    //
-    //     target->PushTask(task);
-    // }
+    const auto *module = GetServer()->GetModule<UServiceModule>();
+    if (module == nullptr)
+        return;
+
+    if (const auto target = module->FindService(name)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
+
+        target->PushTask(task);
+    }
 }
 
 void IServiceBase::SendToPlayer(int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
-    if (pkg == nullptr)
+    if (pkg == nullptr || GetServer() == nullptr)
         return;
 
-    // if (const auto *gateway = GetModule<UGateway>()) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
-    //     __FUNCTION__, GetServiceID(), GetServiceName(), pid);
-    //
-    //     pkg->SetSource(GetServiceID());
-    //     pkg->SetTarget(PLAYER_AGENT_ID);
-    //
-    //     gateway->SendToPlayer(pid, pkg);
-    // }
+    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+        __FUNCTION__, GetServiceID(), GetServiceName(), pid);
+
+        pkg->SetSource(GetServiceID());
+        pkg->SetTarget(PLAYER_AGENT_ID);
+
+        gateway->SendToPlayer(pid, pkg);
+    }
 }
 
 void IServiceBase::PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const {
     if (mState != EServiceState::RUNNING)
         return;
 
-    if (task == nullptr)
+    if (task == nullptr || GetServer() == nullptr)
         return;
 
-    // if (const auto *gateway = GetModule<UGateway>()) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
-    //      __FUNCTION__, GetServiceID(), GetServiceName(), pid);
-    //
-    //     gateway->PostToPlayer(pid, task);
-    // }
+    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+         __FUNCTION__, GetServiceID(), GetServiceName(), pid);
+
+        gateway->PostToPlayer(pid, task);
+    }
 }
 
 void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
+    if (GetServer() == nullptr)
+        return;
+
     if (pkg == nullptr)
         return;
 
-    // if (const auto *gateway = GetModule<UGateway>()) {
-    //     SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
-    //     __FUNCTION__, GetServiceID(), GetServiceName(), pid);
-    //
-    //     pkg->SetSource(GetServiceID());
-    //     pkg->SetTarget(CLIENT_TARGET_ID);
-    //
-    //     gateway->SendToClient(pid, pkg);
-    // }
+    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+        __FUNCTION__, GetServiceID(), GetServiceName(), pid);
+
+        pkg->SetSource(GetServiceID());
+        pkg->SetTarget(CLIENT_TARGET_ID);
+
+        gateway->SendToClient(pid, pkg);
+    }
+}
+
+void IServiceBase::ListenEvent(const int event) const {
+    if (GetServer() == nullptr)
+        return;
+
+    if (auto *module = GetServer()->GetModule<UEventModule>()) {
+        module->ListenEvent(event, GetServiceID());
+    }
+}
+
+void IServiceBase::RemoveListener(int event) const {
+    if (GetServer() == nullptr)
+        return;
+
+    if (auto *module = GetServer()->GetModule<UEventModule>()) {
+        module->RemoveListener(event, GetServiceID());
+    }
+}
+
+void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
+    if (GetServer() == nullptr)
+        return;
+
+    if (const auto *module = GetServer()->GetModule<UEventModule>()) {
+        module->Dispatch(event);
+    }
+}
+
+FTimerHandle IServiceBase::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
+    if (GetServer() == nullptr)
+        return { -1, true };
+
+    if (auto *timer = GetServer()->GetModule<UTimerModule>()) {
+        return timer->SetSteadyTimer(GetServiceID(), -1, task, delay, rate);
+    }
+
+    return { -1, true };
+}
+
+FTimerHandle IServiceBase::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
+    if (GetServer() == nullptr)
+        return { -1, false };
+
+    if (auto *timer = GetServer()->GetModule<UTimerModule>()) {
+        return timer->SetSystemTimer(GetServiceID(), -1, task, delay, rate);
+    }
+
+    return { -1, false };
+}
+
+void IServiceBase::CancelTimer(const FTimerHandle &handle) {
+    if (GetServer() == nullptr)
+        return;
+
+    if (auto *timer = GetServer()->GetModule<UTimerModule>()) {
+        if (handle.id > 0) {
+            timer->CancelTimer(handle);
+        } else {
+            timer->CancelServiceTimer(GetServiceID());
+        }
+    }
 }
 
 EServiceState IServiceBase::GetState() const {
