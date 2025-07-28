@@ -11,45 +11,45 @@
 #include <spdlog/spdlog.h>
 
 
-UAgentContext::UAgentContext()
-    : mPlayerID(0),
-      mConnectionID(0) {
-}
-
-int32_t UAgentContext::GetServiceID() const {
-    return PLAYER_AGENT_ID;
-}
-
-void UAgentContext::SetPlayerID(const int64_t pid) {
-    mPlayerID = pid;
-}
-
-void UAgentContext::SetConnectionID(const int64_t cid) {
-    mConnectionID = cid;
-}
-
-int64_t UAgentContext::GetPlayerID() const {
-    return mPlayerID;
-}
-
-int64_t UAgentContext::GetConnectionID() const {
-    return mConnectionID;
-}
-
-void UAgentContext::OnHeartBeat(const std::shared_ptr<IPackageInterface> &pkg) const {
-    if (mState != EContextState::IDLE && mState != EContextState::RUNNING)
-        return;
-
-    if (pkg == nullptr)
-        return;
-
-    SPDLOG_INFO("{:<20} - Heartbeat From Player[{}]", __FUNCTION__, mPlayerID);
-    dynamic_cast<IPlayerAgent *>(GetService())->OnHeartBeat(pkg);
-}
-
-UGateway *UAgentContext::GetGateway() const {
-    return dynamic_cast<UGateway *>(GetOwner());
-}
+// UAgentContext::UAgentContext()
+//     : mPlayerID(0),
+//       mConnectionID(0) {
+// }
+//
+// int32_t UAgentContext::GetServiceID() const {
+//     return PLAYER_AGENT_ID;
+// }
+//
+// void UAgentContext::SetPlayerID(const int64_t pid) {
+//     mPlayerID = pid;
+// }
+//
+// void UAgentContext::SetConnectionID(const int64_t cid) {
+//     mConnectionID = cid;
+// }
+//
+// int64_t UAgentContext::GetPlayerID() const {
+//     return mPlayerID;
+// }
+//
+// int64_t UAgentContext::GetConnectionID() const {
+//     return mConnectionID;
+// }
+//
+// void UAgentContext::OnHeartBeat(const std::shared_ptr<IPackageInterface> &pkg) const {
+//     if (mState != EContextState::IDLE && mState != EContextState::RUNNING)
+//         return;
+//
+//     if (pkg == nullptr)
+//         return;
+//
+//     SPDLOG_INFO("{:<20} - Heartbeat From Player[{}]", __FUNCTION__, mPlayerID);
+//     dynamic_cast<IPlayerAgent *>(GetService())->OnHeartBeat(pkg);
+// }
+//
+// UGateway *UAgentContext::GetGateway() const {
+//     return dynamic_cast<UGateway *>(GetOwner());
+// }
 
 IPlayerAgent::IPlayerAgent() {
 

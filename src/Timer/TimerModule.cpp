@@ -3,8 +3,10 @@
 #include "Gateway/Gateway.h"
 #include "Gateway/PlayerAgent.h"
 #include "Service/ServiceModule.h"
+#include "Service/ServiceContext.h"
 
 #include <spdlog/spdlog.h>
+#include <ranges>
 
 
 UTimerModule::UTimerModule() {
@@ -15,7 +17,7 @@ UTimerModule::~UTimerModule() {
 }
 
 FTimerHandle UTimerModule::SetSteadyTimer(const int32_t sid, const int64_t pid, const ATimerTask &task, int delay, int rate) {
-    const auto id = mAllocator.AllocateT();
+    const auto id = mAllocator.AllocateTS();
     if (id < 0)
         return { -1, true };
 
@@ -69,14 +71,14 @@ FTimerHandle UTimerModule::SetSteadyTimer(const int32_t sid, const int64_t pid, 
         }
 
         RemoveSteadyTimer(id);
-        mAllocator.RecycleT(id);
+        mAllocator.RecycleTS(id);
     }, detached);
 
     return { id, true };
 }
 
 FTimerHandle UTimerModule::SetSystemTimer(int32_t sid, int64_t pid, const ATimerTask &task, int delay, int rate) {
-    const auto id = mAllocator.AllocateT();
+    const auto id = mAllocator.AllocateTS();
     if (id < 0)
         return { -1, false };
 
@@ -130,7 +132,7 @@ FTimerHandle UTimerModule::SetSystemTimer(int32_t sid, int64_t pid, const ATimer
         }
 
         RemoveSystemTimer(id);
-        mAllocator.RecycleT(id);
+        mAllocator.RecycleTS(id);
     }, detached);
 
     return { id, false };

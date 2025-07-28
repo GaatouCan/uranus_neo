@@ -42,7 +42,7 @@ void UServiceModule::Initial() {
             }
             const std::filesystem::path path = std::filesystem::path(CORE_SERVICE_DIRECTORY) / (linux_filename + ".so");
 #endif
-            mCoreLibraryMap[filename] = FSharedLibrary(path);
+            mCoreLibraryMap[filename] = FSharedLibrary{ path };
         }
     } else {
         for (const auto &entry: std::filesystem::directory_iterator(CORE_SERVICE_DIRECTORY)) {
@@ -56,7 +56,7 @@ void UServiceModule::Initial() {
                     filename.erase(0, prefix.size());
                 }
 #endif
-                mCoreLibraryMap[filename] = FSharedLibrary(entry.path());
+                mCoreLibraryMap[filename] = FSharedLibrary{ entry.path() };
             }
         }
     }
@@ -75,7 +75,7 @@ void UServiceModule::Initial() {
             }
             const std::filesystem::path path = std::filesystem::path(EXTEND_SERVICE_DIRECTORY) / (linux_filename + ".so");
 #endif
-            mExtendLibraryMap[filename] = FSharedLibrary(path);
+            mExtendLibraryMap[filename] = FSharedLibrary{ path };
         }
     } else {
         for (const auto &entry: std::filesystem::directory_iterator(EXTEND_SERVICE_DIRECTORY)) {
@@ -90,7 +90,7 @@ void UServiceModule::Initial() {
                 }
 
 #endif
-                mExtendLibraryMap[filename] = FSharedLibrary(entry.path());
+                mExtendLibraryMap[filename] = FSharedLibrary{ entry.path() };
             }
         }
     }
@@ -193,11 +193,11 @@ FSharedLibrary UServiceModule::FindServiceLibrary(const std::string &filename, c
     std::shared_lock lock(mLibraryMutex);
     if (type == EServiceType::CORE) {
         const auto iter = mCoreLibraryMap.find(filename);
-        return iter != mCoreLibraryMap.end() ? iter->second : FSharedLibrary();
+        return iter != mCoreLibraryMap.end() ? iter->second : FSharedLibrary{};
     }
 
     const auto iter = mExtendLibraryMap.find(filename);
-    return iter != mExtendLibraryMap.end() ? iter->second : FSharedLibrary();
+    return iter != mExtendLibraryMap.end() ? iter->second : FSharedLibrary{};
 }
 
 std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {

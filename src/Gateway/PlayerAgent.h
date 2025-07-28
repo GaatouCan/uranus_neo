@@ -8,27 +8,27 @@ class IPlayerAgent;
 class UGateway;
 
 
-class BASE_API UAgentContext final : public IContextBase {
-
-    int64_t mPlayerID;
-    int64_t mConnectionID;
-
-public:
-    UAgentContext();
-    ~UAgentContext() override = default;
-
-    [[nodiscard]] int32_t GetServiceID() const override;
-
-    void SetPlayerID(int64_t pid);
-    [[nodiscard]] int64_t GetPlayerID() const;
-
-    void SetConnectionID(int64_t cid);
-    [[nodiscard]] int64_t GetConnectionID() const;
-
-    void OnHeartBeat(const std::shared_ptr<IPackageInterface> &pkg) const;
-
-    UGateway *GetGateway() const;
-};
+// class BASE_API UAgentContext final : public IContextBase {
+//
+//     int64_t mPlayerID;
+//     int64_t mConnectionID;
+//
+// public:
+//     UAgentContext();
+//     ~UAgentContext() override = default;
+//
+//     [[nodiscard]] int32_t GetServiceID() const override;
+//
+//     void SetPlayerID(int64_t pid);
+//     [[nodiscard]] int64_t GetPlayerID() const;
+//
+//     void SetConnectionID(int64_t cid);
+//     [[nodiscard]] int64_t GetConnectionID() const;
+//
+//     void OnHeartBeat(const std::shared_ptr<IPackageInterface> &pkg) const;
+//
+//     UGateway *GetGateway() const;
+// };
 
 
 class BASE_API IPlayerAgent : public IServiceBase {

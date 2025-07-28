@@ -2,11 +2,11 @@
 
 #include "Module.h"
 #include "Utils.h"
-#include "IdentAllocator.h"
+#include "Base/IdentAllocator.h"
 
 #include <functional>
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
+#include <unordered_map>
+#include <unordered_set>
 #include <shared_mutex>
 
 
@@ -22,8 +22,8 @@ class BASE_API UTimerModule final : public IModuleBase {
     DECLARE_MODULE(UTimerModule)
 
     using ATimerTask = std::function<void(IServiceBase *)>;
-    using AServiceToTimerMap = absl::flat_hash_map<int32_t, absl::flat_hash_set<int64_t>>;
-    using APlayerToTimerMap = absl::flat_hash_map<int64_t, absl::flat_hash_set<int64_t>>;
+    using AServiceToTimerMap = std::unordered_map<int32_t, std::unordered_set<int64_t>>;
+    using APlayerToTimerMap = std::unordered_map<int64_t, std::unordered_set<int64_t>>;
 
     struct FSteadyTimerNode final {
         int32_t sid;
@@ -64,8 +64,8 @@ private:
 private:
     TIdentAllocator<int64_t, true> mAllocator;
 
-    absl::flat_hash_map<int64_t, FSteadyTimerNode> mSteadyTimerMap;
-    absl::flat_hash_map<int64_t, FSystemTimerNode> mSystemTimerMap;
+    std::unordered_map<int64_t, FSteadyTimerNode> mSteadyTimerMap;
+    std::unordered_map<int64_t, FSystemTimerNode> mSystemTimerMap;
 
     AServiceToTimerMap mServiceToSteadyTimer;
     AServiceToTimerMap mServiceToSystemTimer;
