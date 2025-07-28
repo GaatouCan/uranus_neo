@@ -11,8 +11,7 @@
 #include <ranges>
 
 
-UGateway::UGateway()
-    : mLibrary(nullptr) {
+UGateway::UGateway() {
 }
 
 UGateway::~UGateway() {

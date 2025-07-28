@@ -1,5 +1,7 @@
 #include "EventModule.h"
 #include "Server.h"
+#include "Service/ServiceContext.h"
+#include "Gateway/AgentContext.h"
 #include "Gateway/Gateway.h"
 #include "Gateway/PlayerAgent.h"
 #include "Service/ServiceModule.h"
@@ -10,12 +12,12 @@
 UEventModule::UEventModule() {
 }
 
-void UEventModule::Dispatch(const std::shared_ptr<IEventInterface> &event) const {
+void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event) const {
     if (mState != EModuleState::RUNNING)
         return;
 
-    absl::flat_hash_set<int32_t> serviceSet;
-    absl::flat_hash_set<int64_t> playerSet;
+    unordered_set<int32_t> serviceSet;
+    unordered_set<int64_t> playerSet;
 
     {
         std::shared_lock lock(mListenerMutex);

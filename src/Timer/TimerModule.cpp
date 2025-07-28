@@ -1,7 +1,7 @@
 #include "TimerModule.h"
 #include "Server.h"
 #include "Gateway/Gateway.h"
-#include "Gateway/PlayerAgent.h"
+#include "Gateway/AgentContext.h"
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"
 

@@ -1,16 +1,16 @@
 #pragma once
 
 #include "Module.h"
-#include "Event.h"
+#include "Base/EventParam.h"
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
+#include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <shared_mutex>
 
 
-using absl::flat_hash_map;
-using absl::flat_hash_set;
+using std::unordered_map;
+using std::unordered_set;
 
 
 class BASE_API UEventModule final : public IModuleBase {
@@ -30,7 +30,7 @@ public:
     template<CEventType Type>
     std::shared_ptr<Type> CreateEvent() const;
 
-    void Dispatch(const std::shared_ptr<IEventInterface> &event) const;
+    void Dispatch(const std::shared_ptr<IEventParam_Interface> &event) const;
 
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
@@ -39,8 +39,8 @@ public:
     void RemoveListener(int event, int32_t sid, int64_t pid = -1);
 
 private:
-    flat_hash_map<int, flat_hash_set<int32_t>> mServiceListener;
-    flat_hash_map<int, flat_hash_set<int64_t>> mPlayerListener;
+    unordered_map<int, unordered_set<int32_t>> mServiceListener;
+    unordered_map<int, unordered_set<int64_t>> mPlayerListener;
     mutable std::shared_mutex mListenerMutex;
 };
 
