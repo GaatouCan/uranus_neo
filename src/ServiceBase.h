@@ -12,6 +12,7 @@ class IContextBase;
 class IEventParam_Interface;
 class IDataAsset_Interface;
 
+
 enum class BASE_API EServiceState {
     CREATED,
     INITIALIZED,
@@ -25,6 +26,7 @@ class BASE_API IServiceBase {
 
 protected:
     void SetUpContext(IContextBase *context);
+    [[nodiscard]] IContextBase *GetContext() const;
 
 public:
     IServiceBase();
@@ -81,7 +83,7 @@ public:
 
     virtual void SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
 
-private:
+protected:
     IContextBase *mContext;
     std::atomic<EServiceState> mState;
 };

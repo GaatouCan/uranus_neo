@@ -1,19 +1,19 @@
 #pragma once
 
 #include "Module.h"
-#include "Utils.h"
+#include "Base/SharedLibrary.h"
 
+#include <functional>
 #include <shared_mutex>
-#include <absl/container/flat_hash_map.h>
+#include <unordered_map>
 
 
-class IPackageInterface;
+class FPackage;
 class IServiceBase;
 class IPlayerAgent;
 class UAgentContext;
-class FLibraryHandle;
 
-using absl::flat_hash_map;
+using std::unordered_map;
 
 
 class BASE_API UGateway final : public IModuleBase {
@@ -39,19 +39,19 @@ public:
     int64_t GetConnectionID(int64_t pid) const;
     std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
 
-    void SendToPlayer(int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const;
+    void SendToPlayer(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
     void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
-    void OnClientPackage(int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const;
-    void SendToClient(int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const;
+    void OnClientPackage(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
+    void SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
 
-    void OnHeartBeat(int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const;
+    void OnHeartBeat(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
 
 private:
-    FLibraryHandle *mLibrary;
+    FSharedLibrary mLibrary;
 
-    flat_hash_map<int64_t, int64_t> mConnToPlayer;
-    flat_hash_map<int64_t, std::shared_ptr<UAgentContext>> mPlayerMap;
+    unordered_map<int64_t, int64_t> mConnToPlayer;
+    unordered_map<int64_t, std::shared_ptr<UAgentContext>> mPlayerMap;
 
     mutable std::shared_mutex mMutex;
 };

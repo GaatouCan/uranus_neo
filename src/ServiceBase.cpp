@@ -11,6 +11,10 @@ void IServiceBase::SetUpContext(IContextBase *context) {
     mContext = context;
 }
 
+IContextBase *IServiceBase::GetContext() const {
+    return mContext;
+}
+
 IServiceBase::IServiceBase()
     : mContext(nullptr),
       mState(EServiceState::CREATED) {

@@ -1,12 +1,14 @@
 #include "Gateway.h"
+#include "AgentContext.h"
 #include "PlayerAgent.h"
 #include "Server.h"
-#include "Service/LibraryHandle.h"
-#include "Package.h"
+#include "Base/Package.h"
 #include "Network/Network.h"
 #include "Service/ServiceModule.h"
+#include "Service/ServiceContext.h"
 
 #include <spdlog/spdlog.h>
+#include <ranges>
 
 
 UGateway::UGateway()
@@ -24,7 +26,7 @@ void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
     const auto agent = make_shared<UAgentContext>();
 
     agent->SetUpModule(this);
-    agent->SetUpHandle(mLibrary);
+    agent->SetUpLibrary(mLibrary);
     agent->SetPlayerID(pid);
     agent->SetConnectionID(cid);
 
@@ -105,8 +107,8 @@ void UGateway::Initial() {
     agent += "/libagent.so";
 #endif
 
-    mLibrary = new FLibraryHandle();
-    if (!mLibrary->LoadFrom(agent)) {
+    mLibrary = FSharedLibrary(agent);
+    if (!mLibrary.IsValid()) {
         SPDLOG_ERROR("Gateway Module Fail To Load Agent Library");
         GetServer()->Shutdown();
         exit(-5);
@@ -126,10 +128,10 @@ void UGateway::Stop() {
         agent->Shutdown(false, 0, nullptr);
     }
 
-    delete mLibrary;
+    mLibrary.Reset();
 }
 
-void UGateway::SendToPlayer(const int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const {
+void UGateway::SendToPlayer(const int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -151,7 +153,7 @@ void UGateway::PostToPlayer(const int64_t pid, const std::function<void(IService
         agent->PushTask(task);
 }
 
-void UGateway::OnClientPackage(const int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const {
+void UGateway::OnClientPackage(const int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -171,7 +173,7 @@ void UGateway::OnClientPackage(const int64_t pid, const std::shared_ptr<IPackage
         context->PushPackage(pkg);
 }
 
-void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const {
+void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -186,7 +188,7 @@ void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<IPackageInt
         network->SendToClient(agent->GetConnectionID(), pkg);
 }
 
-void UGateway::OnHeartBeat(const int64_t pid, const std::shared_ptr<IPackageInterface> &pkg) const {
+void UGateway::OnHeartBeat(const int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

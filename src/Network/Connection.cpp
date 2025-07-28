@@ -3,6 +3,8 @@
 #include "Network.h"
 #include "Server.h"
 #include "Config/Config.h"
+#include "Login/LoginAuth.h"
+#include "Gateway/Gateway.h"
 #include "Utils.h"
 
 #include <openssl/evp.h>
@@ -323,38 +325,38 @@ awaitable<void> UConnection::ReadPackage() {
             const auto now = std::chrono::steady_clock::now();
 
             // Run The Login Branch
-            // if (mPlayerID < 0) {
-            //     // Do Not Try Login Too Frequently
-            //     if (now - mReceiveTime > std::chrono::seconds(3)) {
-            //         --mPlayerID;
-            //
-            //         // Try Login Failed 3 Times Then Disconnect This
-            //         if (mPlayerID < -3) {
-            //             SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
-            //             Disconnect();
-            //             break;
-            //         }
-            //
-            //         // Handle Login Logic
-            //         if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-            //             login->OnPlayerLogin(mId, pkg);
-            //         }
-            //     }
-            //
-            //     mReceiveTime = now;
-            //     continue;
-            // }
+            if (mPlayerID < 0) {
+                // Do Not Try Login Too Frequently
+                if (now - mReceiveTime > std::chrono::seconds(3)) {
+                    --mPlayerID;
+
+                    // Try Login Failed 3 Times Then Disconnect This
+                    if (mPlayerID < -3) {
+                        SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
+                        Disconnect();
+                        break;
+                    }
+
+                    // Handle Login Logic
+                    if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+                        login->OnPlayerLogin(mID, pkg);
+                    }
+                }
+
+                mReceiveTime = now;
+                continue;
+            }
 
             // Update Receive Time Point For Watchdog
             mReceiveTime = now;
 
-            // if (const auto *gateway = GetServer()->GetModule<UGateway>(); gateway != nullptr) {
-            //     if (pkg->GetPackageID() == 1001) {
-            //         gateway->OnHeartBeat(mPlayerID, pkg);
-            //     } else {
-            //         gateway->OnClientPackage(mPlayerID, pkg);
-            //     }
-            // }
+            if (const auto *gateway = GetServer()->GetModule<UGateway>(); gateway != nullptr) {
+                if (pkg->GetPackageID() == 1001) {
+                    gateway->OnHeartBeat(mPlayerID, pkg);
+                } else {
+                    gateway->OnClientPackage(mPlayerID, pkg);
+                }
+            }
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
