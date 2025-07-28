@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include "ServiceType.h"
 #include "Base/SharedLibrary.h"
 #include "Base/IdentAllocator.h"
 
@@ -36,10 +37,13 @@ public:
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(int32_t sid) const;
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
 
-    [[nodiscard]] const FSharedLibrary &FindServiceLibrary(const std::string &filename, bool bCore = false) const;
+    [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
 
     std::shared_ptr<UServiceContext> BootExtendService(const std::string &filename, const IDataAsset_Interface *data);
     void ShutdownService(int32_t sid);
+
+private:
+    void OnServiceShutdown(const std::string &filename, int32_t sid, EServiceType type);
 
 private:
     /** Dynamic Library Handles That For Service **/

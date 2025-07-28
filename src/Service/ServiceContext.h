@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ContextBase.h"
+#include "ServiceType.h"
 
 class UServiceModule;
 
@@ -12,7 +13,7 @@ class BASE_API UServiceContext final : public IContextBase {
     std::string mFilename;
 
     /** If This Service Is Core Service **/
-    bool bCore;
+    EServiceType mType;
 
 public:
     UServiceContext();
@@ -24,8 +25,8 @@ public:
     void SetFilename(const std::string& filename);
     [[nodiscard]] const std::string& GetFilename() const;
 
-    void SetCoreFlag(bool core);
-    [[nodiscard]] bool GetCoreFlag() const;
+    void SetServiceType(EServiceType type);
+    [[nodiscard]] EServiceType GetServiceType() const;
 
     [[nodiscard]] UServiceModule* GetServiceModule() const;
 };

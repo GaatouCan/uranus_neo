@@ -1,7 +1,7 @@
 #include "ServiceModule.h"
 #include "ServiceContext.h"
-#include "Config/Config.h"
 #include "Server.h"
+#include "Config/Config.h"
 
 #include <spdlog/spdlog.h>
 #include <filesystem>
@@ -31,7 +31,7 @@ void UServiceModule::Initial() {
     SPDLOG_INFO("Loading Core Service...");
 
     if (config["service"] && config["service"]["core"]) {
-        for (const auto &val : config["service"]["core"]) {
+        for (const auto &val: config["service"]["core"]) {
             const auto filename = val["name"].as<std::string>();
 #if defined(_WIN32) || defined(_WIN64)
             const std::filesystem::path path = std::filesystem::path(CORE_SERVICE_DIRECTORY) / (filename + ".dll");
@@ -64,7 +64,7 @@ void UServiceModule::Initial() {
     SPDLOG_INFO("Loading Extend Service...");
 
     if (config["service"] && config["service"]["extend"]) {
-        for (const auto &val : config["service"]["extend"]) {
+        for (const auto &val: config["service"]["extend"]) {
             const auto filename = val["name"].as<std::string>();
 #if defined(_WIN32) || defined(_WIN64)
             const std::filesystem::path path = std::filesystem::path(EXTEND_SERVICE_DIRECTORY) / (filename + ".dll");
@@ -75,7 +75,7 @@ void UServiceModule::Initial() {
             }
             const std::filesystem::path path = std::filesystem::path(EXTEND_SERVICE_DIRECTORY) / (linux_filename + ".so");
 #endif
-           mExtendLibraryMap[filename] = FSharedLibrary(path);
+            mExtendLibraryMap[filename] = FSharedLibrary(path);
         }
     } else {
         for (const auto &entry: std::filesystem::directory_iterator(EXTEND_SERVICE_DIRECTORY)) {
@@ -98,7 +98,7 @@ void UServiceModule::Initial() {
 
     // Begin Initial Core Service
 
-    for (const auto &[filename, node] : mCoreLibraryMap) {
+    for (const auto &[filename, node]: mCoreLibraryMap) {
         const int32_t sid = mAllocator.Allocate();
         const auto context = std::make_shared<UServiceContext>();
 
@@ -106,7 +106,7 @@ void UServiceModule::Initial() {
         context->SetUpLibrary(node);
         context->SetServiceID(sid);
         context->SetFilename(filename);
-        context->SetCoreFlag(true);
+        context->SetServiceType(EServiceType::CORE);
 
         if (context->Initial(nullptr)) {
             const auto name = context->GetServiceName();
@@ -150,7 +150,7 @@ void UServiceModule::Stop() {
     mState = EModuleState::STOPPED;
 
     SPDLOG_INFO("Unloading All Service...");
-    for (const auto &context : mServiceMap | std::views::values) {
+    for (const auto &context: mServiceMap | std::views::values) {
         context->ForceShutdown();
     }
 
@@ -177,9 +177,7 @@ std::shared_ptr<UServiceContext> UServiceModule::FindService(const std::string &
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    int32_t sid;
-
-    {
+    int32_t sid; {
         std::shared_lock lock(mNameMutex);
         const auto nameIter = mNameToServiceID.find(name);
         if (nameIter == mNameToServiceID.end())
@@ -191,15 +189,15 @@ std::shared_ptr<UServiceContext> UServiceModule::FindService(const std::string &
     return FindService(sid);
 }
 
-const FSharedLibrary &UServiceModule::FindServiceLibrary(const std::string &filename, const bool bCore) const {
+FSharedLibrary UServiceModule::FindServiceLibrary(const std::string &filename, const EServiceType type) const {
     std::shared_lock lock(mLibraryMutex);
-    if (bCore) {
+    if (type == EServiceType::CORE) {
         const auto iter = mCoreLibraryMap.find(filename);
-        return iter !=  mCoreLibraryMap.end() ? iter->second : nullptr;
+        return iter != mCoreLibraryMap.end() ? iter->second : FSharedLibrary();
     }
 
     const auto iter = mExtendLibraryMap.find(filename);
-    return iter != mExtendLibraryMap.end() ? iter->second : nullptr;
+    return iter != mExtendLibraryMap.end() ? iter->second : FSharedLibrary();
 }
 
 std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {
@@ -222,7 +220,7 @@ std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::st
     context->SetUpLibrary(handle);
     context->SetServiceID(sid);
     context->SetFilename(filename);
-    context->SetCoreFlag(false);
+    context->SetServiceType(EServiceType::EXTEND);
 
     if (!context->Initial(data)) {
         SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", __FUNCTION__, filename);
@@ -234,9 +232,7 @@ std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::st
     }
 
     // Check If Service Name Unique
-    bool bSuccess = true;
-
-    {
+    bool bSuccess = true; {
         std::shared_lock lock(mNameMutex);
         if (mNameToServiceID.contains(context->GetServiceName())) {
             SPDLOG_WARN("{:<20} - Service[{}] Has Already Exist.", __FUNCTION__, context->GetServiceName());
@@ -275,43 +271,68 @@ void UServiceModule::ShutdownService(int32_t sid) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    std::shared_ptr<UServiceContext> context = FindService(sid);
-    if (context == nullptr) {
+    std::shared_ptr<UServiceContext> context = nullptr;
+
+    // Find The Target Service Context
+    {
+        std::unique_lock lock(mServiceMutex);
+        if (const auto node = mServiceMap.extract(sid); !node.empty()) {
+            context = node.mapped();
+        }
+    }
+
+    if (context == nullptr || context->GetServiceID() == INVALID_SERVICE_ID) {
+        SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, sid);
         mAllocator.RecycleTS(sid);
         return;
     }
 
-    if (context->GetServiceID() == INVALID_SERVICE_ID) {
-        SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, sid);
-        return;
+    // Erase Name To Service ID Mapping
+    {
+        std::unique_lock lock(mNameMutex);
+        mNameToServiceID.erase(context->GetServiceName());
     }
 
-    if (context->GetCoreFlag()) {
-        // TODO
-    } else {
-        {
-            std::scoped_lock lock(mServiceMutex, mNameMutex);
-            // if (const auto &iter = mServiceMap.find(sid); iter != mServiceMap.end()) {
-            //     context = iter->second;
-            //     mServiceMap.erase(iter);
-            // }
-
-            mServiceMap.erase(sid);
-            mNameToServiceID.erase(context->GetServiceName());
+    switch (context->GetServiceType()) {
+        case EServiceType::CORE: {
         }
+        break;
+        case EServiceType::EXTEND: {
+            auto func = [this, sid, filename = context->GetFilename()](IContextBase *) {
+                OnServiceShutdown(filename, sid, EServiceType::EXTEND);
+                mAllocator.RecycleTS(sid);
+            };
 
-        // if (context == nullptr) {
-        //     mAllocator.RecycleTS(sid);
-        //     return;
-        // }
+            // Try To Shut Down Service In 5 Seconds, If Timeout, Force Shut Down It
+            // If Force Or Not, Run The Callback After Service Shutting Down
+            context->Shutdown(false, 5, func);
+        }
+        break;
+        default: break;
+    }
+}
 
-        // auto func = [this, id, filename = info.filename](IContextBase *) {
-        //     if (mState != EModuleState::RUNNING)
-        //         return;
-        //     OnServiceShutdown(filename, id, false);
-        //     mAllocator.RecycleT(id);
-        // };
+void UServiceModule::OnServiceShutdown(const std::string &filename, const int32_t sid, const EServiceType type) {
+    if (GetState() != EModuleState::RUNNING)
+        return;
 
-        context->Shutdown(false, 5, nullptr);
+    if (sid <= 0)
+        return;
+
+    switch (type) {
+        case EServiceType::CORE: {
+            // TODO
+        }
+        break;
+        case EServiceType::EXTEND: {
+            std::unique_lock lock(mFileNameMutex);
+            if (const auto iter = mFilenameMapping.find(filename); iter != mFilenameMapping.end()) {
+                iter->second.erase(sid);
+                if (iter->second.empty()) {
+                    mFilenameMapping.erase(iter);
+                }
+            }
+        }
+        default: break;
     }
 }

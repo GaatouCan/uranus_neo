@@ -198,7 +198,7 @@ int IContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     std::invoke(destroyer, mService);
 
     mService = nullptr;
-    // mLibrary.Reset();
+    mLibrary.Reset();
 
     mState = EContextState::STOPPED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",

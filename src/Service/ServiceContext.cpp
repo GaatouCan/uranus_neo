@@ -3,7 +3,7 @@
 
 UServiceContext::UServiceContext()
     : mServiceID(INVALID_SERVICE_ID),
-      bCore(false) {
+      mType(EServiceType::CORE) {
 }
 
 UServiceContext::~UServiceContext() {
@@ -25,13 +25,14 @@ const std::string &UServiceContext::GetFilename() const {
     return mFilename;
 }
 
-void UServiceContext::SetCoreFlag(const bool core) {
-    bCore = core;
+void UServiceContext::SetServiceType(const EServiceType type) {
+    mType = type;
 }
 
-bool UServiceContext::GetCoreFlag() const {
-    return bCore;
+EServiceType UServiceContext::GetServiceType() const {
+    return mType;
 }
+
 
 UServiceModule *UServiceContext::GetServiceModule() const {
     return dynamic_cast<UServiceModule *>(GetOwnerModule());
