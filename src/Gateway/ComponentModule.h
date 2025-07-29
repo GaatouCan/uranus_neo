@@ -4,6 +4,7 @@
 
 #include <unordered_map>
 #include <typeindex>
+#include <memory>
 
 
 class UPlayerBase;
@@ -27,10 +28,13 @@ public:
     template<CComponentType Type>
     Type *GetComponent() const;
 
+    void OnLogin();
+    void OnLogout();
+
 private:
     UPlayerBase *mOwner;
 
-    std::unordered_map<std::type_index, IPlayerComponent *> mComponents;
+    std::unordered_map<std::type_index, std::unique_ptr<IPlayerComponent>> mComponents;
     std::vector<std::type_index> mComponentOrder;
 };
 
@@ -42,17 +46,19 @@ inline Type *UComponentModule::CreateComponent() {
         return it->second;
     }
 
-    auto *component = new Type();
+    auto component = std::make_unique<Type>();
     component->SetUpModule(this);
 
-    mComponents[type] = component;
+    auto *ptr = component.get();
+
+    mComponents.insert_or_assign(type, std::move(component));
     mComponentOrder.push_back(type);
 
-    return component;
+    return ptr;
 }
 
 template<CComponentType Type>
 inline Type *UComponentModule::GetComponent() const {
     const auto iter = mComponents.find(typeid(Type));
-    return iter != mComponents.end() ? iter->second : nullptr;
+    return iter != mComponents.end() ? iter->second.get() : nullptr;
 }

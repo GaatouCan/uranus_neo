@@ -15,3 +15,19 @@ UPlayerBase *UComponentModule::GetPlayer() const {
 int64_t UComponentModule::GetPlayerID() const {
     return mOwner->GetPlayerID();
 }
+
+void UComponentModule::OnLogin() {
+    for (const auto &type : mComponentOrder) {
+        if (const auto it = mComponents.find(type); it != mComponents.end()) {
+            it->second->OnLogin();
+        }
+    }
+}
+
+void UComponentModule::OnLogout() {
+    for (const auto &type : mComponentOrder) {
+        if (const auto it = mComponents.find(type); it != mComponents.end()) {
+            it->second->OnLogout();
+        }
+    }
+}

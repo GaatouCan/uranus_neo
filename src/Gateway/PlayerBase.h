@@ -2,6 +2,7 @@
 
 #include "PlayerAgent.h"
 #include "Base/ProtocolRoute.h"
+#include "ComponentModule.h"
 
 #include <functional>
 
@@ -19,8 +20,26 @@ public:
 
     void OnPackage(const std::shared_ptr<FPackage> &pkg) override;
 
+    UComponentModule &GetComponentModule();
+
+    template<CComponentType Type>
+    Type *GetComponent() const;
+
+    virtual void OnLogin();
+    virtual void OnLogout();
+
+protected:
+    bool Start() override;
+    void Stop() override;
+
 private:
     /** Protocol Route While Receive Package **/
     TProtocolRoute<APlayerProtocol> mRoute;
+
+    UComponentModule mComponentModule;
 };
 
+template<CComponentType Type>
+inline Type *UPlayerBase::GetComponent() const {
+    return mComponentModule.GetComponent<Type>();
+}
