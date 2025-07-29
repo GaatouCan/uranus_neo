@@ -190,8 +190,8 @@ std::map<std::string, int32_t> UServiceModule::GetServiceList() const {
 
     std::shared_lock lock(mServiceMutex);
     std::map<std::string, int32_t> result;
-    for (const auto &[fst, snd] : mServiceMap) {
-        result.emplace(snd->GetServiceName(), fst);
+    for (const auto &[sid, context] : mServiceMap) {
+        result.emplace(context->GetServiceName(), sid);
     }
     return result;
 }
