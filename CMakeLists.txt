@@ -58,7 +58,6 @@ endif ()
 
 add_library(core SHARED ${URANUS_FILES})
 target_compile_definitions(core PRIVATE URANUS_EXPORT)
-target_include_directories(core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(core PUBLIC spdlog::spdlog)
 target_link_libraries(core PUBLIC asio::asio)
 target_link_libraries(core PUBLIC nlohmann_json::nlohmann_json)
@@ -66,18 +65,65 @@ target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
 target_link_libraries(core PUBLIC OpenSSL::Crypto)
 target_link_libraries(core PUBLIC OpenSSL::SSL)
 
-# Add Protobuf Static
-add_subdirectory(protobuf)
-
-# Add Default Implement
-add_subdirectory(impl)
-
-add_executable(uranus Uranus.cpp)
-target_link_libraries(uranus PUBLIC core)
-target_link_libraries(uranus PUBLIC impl)
-
-target_include_directories(uranus PUBLIC
+target_include_directories(core PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
-target_include_directories(uranus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/impl)
+
+set(${CMAKE_INSTALL_PREFIX} D:/library/install)
+
+install(TARGETS core
+        EXPORT UranusTargets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h")
+
+# 安装导出文件
+install(EXPORT UranusTargets
+        FILE UranusTargets.cmake
+        NAMESPACE Uranus::
+        DESTINATION lib/cmake/Uranus)
+
+# 包配置：UranusConfig.cmake + version
+include(CMakePackageConfigHelpers)
+
+# 生成 version 文件
+write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/UranusConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+
+# 配置 config 文件
+configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/UranusConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/UranusConfig.cmake
+        INSTALL_DESTINATION lib/cmake/Uranus
+)
+
+# 安装 config 文件
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/UranusConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/UranusConfigVersion.cmake
+        DESTINATION lib/cmake/Uranus)
+
+# Add Protobuf Static
+# add_subdirectory(protobuf)
+
+# Add Default Implement
+# add_subdirectory(impl)
+
+#add_executable(uranus Uranus.cpp)
+#target_link_libraries(uranus PUBLIC core)
+#target_link_libraries(uranus PUBLIC impl)
+#
+#target_include_directories(uranus PUBLIC
+#        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+#        $<INSTALL_INTERFACE:include>
+#)
+#target_include_directories(uranus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/impl)

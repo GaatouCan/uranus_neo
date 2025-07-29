@@ -9,6 +9,7 @@
 
 class FPackage;
 class UServer;
+class ULoginAuth;
 
 
 class BASE_API ILoginHandler {
