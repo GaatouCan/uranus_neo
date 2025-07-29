@@ -38,7 +38,8 @@ public:
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(int32_t sid) const;
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
 
-    std::map<std::string, int32_t> GetServiceList() const;
+    [[nodiscard]] std::map<std::string, int32_t> GetServiceList() const;
+    [[nodiscard]] int32_t GetServiceID(const std::string &name) const;
 
     [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
 

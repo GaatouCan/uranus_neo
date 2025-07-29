@@ -29,5 +29,10 @@ public:
     [[nodiscard]] EServiceType GetServiceType() const;
 
     [[nodiscard]] UServiceModule* GetServiceModule() const;
+
+    [[nodiscard]] int32_t GetOtherServiceID(const std::string &name) const;
+
+    [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(int32_t sid) const;
+    [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(const std::string &name) const;
 };
 

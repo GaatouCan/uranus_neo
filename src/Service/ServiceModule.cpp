@@ -177,14 +177,9 @@ std::shared_ptr<UServiceContext> UServiceModule::FindService(const std::string &
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    int32_t sid; {
-        std::shared_lock lock(mNameMutex);
-        const auto nameIter = mNameToServiceID.find(name);
-        if (nameIter == mNameToServiceID.end())
-            return nullptr;
-
-        sid = nameIter->second;
-    }
+    const int32_t sid = GetServiceID(name);
+    if (sid <= 0)
+        return nullptr;
 
     return FindService(sid);
 }
@@ -199,6 +194,18 @@ std::map<std::string, int32_t> UServiceModule::GetServiceList() const {
         result.emplace(snd->GetServiceName(), fst);
     }
     return result;
+}
+
+int32_t UServiceModule::GetServiceID(const std::string &name) const {
+    if (mState != EModuleState::RUNNING)
+        return INVALID_SERVICE_ID;
+
+    std::shared_lock lock(mNameMutex);
+    const auto nameIter = mNameToServiceID.find(name);
+    if (nameIter == mNameToServiceID.end())
+        return INVALID_SERVICE_ID;
+
+    return nameIter->second;
 }
 
 FSharedLibrary UServiceModule::FindServiceLibrary(const std::string &filename, const EServiceType type) const {
