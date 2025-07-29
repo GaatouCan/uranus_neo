@@ -9,7 +9,6 @@
 
 class BASE_API UPlayerBase : public IPlayerAgent {
 
-    // typedef void(*APlayerProtocol)(uint32_t, const std::shared_ptr<FPackage> &, UPlayerBase *);
     using APlayerProtocol = std::function<void(uint32_t, const std::shared_ptr<FPackage> &, UPlayerBase *)>;
 
 public:
@@ -39,6 +38,7 @@ private:
     /** Protocol Route While Receive Package **/
     TProtocolRoute<APlayerProtocol> mRoute;
 
+    /** Manage All The Player Components **/
     UComponentModule mComponentModule;
 };
 

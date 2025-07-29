@@ -63,7 +63,7 @@ void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<FPackage
         return;
     }
 
-    auto *network = GetServer()->GetModule<UNetwork>();
+    const auto *network = GetServer()->GetModule<UNetwork>();
     const auto *gateway = GetServer()->GetModule<UGateway>();
 
     if (network == nullptr || gateway == nullptr) {
@@ -92,7 +92,8 @@ void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<FPackage
     OnLoginSuccess(cid, pid);
 }
 
-void ULoginAuth::OnLoginSuccess(const int64_t cid, const int64_t pid) { {
+void ULoginAuth::OnLoginSuccess(const int64_t cid, const int64_t pid) {
+    {
         std::unique_lock lock(mMutex);
         mRecentLoginMap.erase(cid);
     }
