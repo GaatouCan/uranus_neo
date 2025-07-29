@@ -128,4 +128,4 @@ add_subdirectory(service/agent)
 #        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 #        $<INSTALL_INTERFACE:include>
 #)
-#target_include_directories(uranus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/impl)
+target_include_directories(uranus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/impl)
