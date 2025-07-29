@@ -10,6 +10,11 @@
 #include <spdlog/spdlog.h>
 
 int main() {
+#ifdef _DEBUG
+    spdlog::set_level(spdlog::level::trace);
+#else
+    spdlog::set_level(spdlog::level::info);
+#endif
 
     const auto server = new UServer();
 
@@ -27,7 +32,6 @@ int main() {
 
     server->Initial();
     server->Run();
-
     server->Shutdown();
 
     delete server;
