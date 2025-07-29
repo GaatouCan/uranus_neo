@@ -122,6 +122,8 @@ public:
     [[nodiscard]] IModuleBase *GetOwnerModule() const;
 
     [[nodiscard]] shared_ptr<FPackage> BuildPackage() const;
+
+    [[nodiscard]] IServiceBase *GetOwningService() const;
     [[nodiscard]] EContextState GetState() const;
 
     void PushPackage(const shared_ptr<FPackage> &pkg);

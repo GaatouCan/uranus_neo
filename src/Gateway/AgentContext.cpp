@@ -1,7 +1,9 @@
 #include "AgentContext.h"
 #include "Gateway.h"
+#include "PlayerAgent.h"
 
 #include <spdlog/spdlog.h>
+
 
 UAgentContext::UAgentContext()
     : mPlayerID(0),
@@ -35,6 +37,20 @@ UGateway *UAgentContext::GetGateway() const {
     return dynamic_cast<UGateway *>(GetOwnerModule());
 }
 
+std::shared_ptr<UAgentContext> UAgentContext::GetOtherAgent(const int64_t pid) const {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return nullptr;
+
+    if (pid <= 0 || pid == mPlayerID)
+        return nullptr;
+
+    if (const auto *gateway = GetGateway()) {
+        return gateway->FindPlayerAgent(pid);
+    }
+
+    return nullptr;
+}
+
 void UAgentContext::OnHeartBeat(const std::shared_ptr<FPackage> &pkg) const {
     if (mState != EContextState::IDLE && mState != EContextState::RUNNING)
         return;
@@ -43,5 +59,5 @@ void UAgentContext::OnHeartBeat(const std::shared_ptr<FPackage> &pkg) const {
         return;
 
     SPDLOG_TRACE("{:<20} - Heartbeat From Player[{}]", __FUNCTION__, mPlayerID);
-    // dynamic_cast<IPlayerAgent *>(GetService())->OnHeartBeat(pkg);
+    dynamic_cast<IPlayerAgent *>(GetOwningService())->OnHeartBeat(pkg);
 }

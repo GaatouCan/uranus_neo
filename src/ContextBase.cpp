@@ -319,6 +319,13 @@ shared_ptr<FPackage> IContextBase::BuildPackage() const {
     return nullptr;
 }
 
+IServiceBase *IContextBase::GetOwningService() const {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return nullptr;
+
+    return mService;
+}
+
 void IContextBase::PushNode(const shared_ptr<INodeBase> &node) {
     if (GetServer() == nullptr)
         return;
