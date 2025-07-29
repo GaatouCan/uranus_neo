@@ -118,10 +118,12 @@ add_subdirectory(protobuf)
 # Add Default Implement
 add_subdirectory(impl)
 
-#add_executable(uranus Uranus.cpp)
-#target_link_libraries(uranus PUBLIC core)
-#target_link_libraries(uranus PUBLIC impl)
-#
+add_executable(uranus Uranus.cpp)
+target_link_libraries(uranus PUBLIC core)
+target_link_libraries(uranus PUBLIC impl)
+
+add_subdirectory(service/agent)
+
 #target_include_directories(uranus PUBLIC
 #        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 #        $<INSTALL_INTERFACE:include>
