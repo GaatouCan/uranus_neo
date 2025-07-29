@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option optimize_for = LITE_RUNTIME;
+
+package Player;
+
+message SyncPlayerInfo {
+  int64 player_id = 1;
+  string name = 2;
+
+  int32 avatar = 3;
+}

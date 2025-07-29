@@ -6,6 +6,7 @@
 #include "Base/IdentAllocator.h"
 
 #include <unordered_map>
+#include <map>
 #include <unordered_set>
 #include <shared_mutex>
 
@@ -36,6 +37,8 @@ public:
 
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(int32_t sid) const;
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
+
+    std::map<std::string, int32_t> GetServiceList() const;
 
     [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
 

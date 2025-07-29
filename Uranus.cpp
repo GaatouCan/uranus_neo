@@ -6,6 +6,7 @@
 #include <Service/ServiceModule.h>
 #include <Gateway/Gateway.h>
 #include <Network/Network.h>
+#include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
 
@@ -23,7 +24,10 @@ int main() {
         config->SetJSONPath("../../config");
     }
 
-    server->CreateModule<ULoginAuth>();
+    if (auto *auth = server->CreateModule<ULoginAuth>(); auth != nullptr) {
+        auth->SetLoginHandler<ULoginHandlerImpl>();
+    }
+
     server->CreateModule<UEventModule>();
     server->CreateModule<UTimerModule>();
     server->CreateModule<UServiceModule>();

@@ -28,13 +28,20 @@ list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/nlohmann_json)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/zlib)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/YAML_CPP)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/openssl)
+list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/protobuf)
+
+if (UNIX)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif ()
 
 find_package(spdlog CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(OpenSSL COMPONENTS REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 
+# The Core Library
 file(GLOB_RECURSE URANUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE URANUS_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE URANUS_FILES  ${URANUS_HEADER} ${URANUS_SOURCE})
@@ -59,10 +66,18 @@ target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
 target_link_libraries(core PUBLIC OpenSSL::Crypto)
 target_link_libraries(core PUBLIC OpenSSL::SSL)
 
+# Add Protobuf Static
+add_subdirectory(protobuf)
+
+# Add Default Implement
+add_subdirectory(impl)
+
 add_executable(uranus Uranus.cpp)
 target_link_libraries(uranus PUBLIC core)
+target_link_libraries(uranus PUBLIC impl)
 
 target_include_directories(uranus PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
+target_include_directories(uranus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/impl)

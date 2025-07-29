@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option optimize_for = LITE_RUNTIME;
+
+package Login;
+
+message Heartbeat {
+  int64 player_id = 1;
+  string message = 2;
+}
+
+message LoginRequest {
+  int64 player_id = 1;
+  string token = 2;
+}
+
+message LoginResponse {
+  int64 player_id = 1;
+
+  message ServiceInfo {
+    int32 sid = 1;
+    string name = 2;
+  }
+
+  repeated ServiceInfo services = 2;
+}
+
+message RepeatLoginResponse {
+  int64 player_id = 1;
+  string address = 2;
+}

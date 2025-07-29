@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option optimize_for = LITE_RUNTIME;
+
+package Appearance;
+
+message AppearanceRequest {
+  enum AppearanceOperate {
+    SEND_INFO = 0;
+    ACTIVE_AVATAR = 1;
+    USE_AVATAR = 2;
+  }
+  AppearanceOperate operate = 1;
+  int32 param_1 = 2;
+  int32 param_2 = 3;
+}
+
+message AppearanceResponse {
+  message AvatarInfo {
+    int32 index = 1;
+    bool active = 2;
+    bool in_used = 3;
+  }
+
+  int32 avatar = 1;
+  repeated AvatarInfo list = 2;
+}
