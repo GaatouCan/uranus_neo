@@ -23,6 +23,9 @@ public:
     UComponentModule &GetComponentModule();
 
     template<CComponentType Type>
+    Type *CreateComponent();
+
+    template<CComponentType Type>
     Type *GetComponent() const;
 
     virtual void OnLogin();
@@ -38,6 +41,11 @@ private:
 
     UComponentModule mComponentModule;
 };
+
+template<CComponentType Type>
+inline Type *UPlayerBase::CreateComponent() {
+    return mComponentModule.CreateComponent<Type>();
+}
 
 template<CComponentType Type>
 inline Type *UPlayerBase::GetComponent() const {
