@@ -17,5 +17,3 @@ add_library(impl SHARED ${IMPL_SOURCE_FILES})
 target_compile_definitions(impl PRIVATE BUILD_IMPL_LIBRARY)
 target_link_libraries(impl PUBLIC core)
 target_link_libraries(impl PUBLIC proto_static)
-
-target_include_directories(impl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../src)

@@ -113,10 +113,10 @@ install(FILES
         DESTINATION lib/cmake/Uranus)
 
 # Add Protobuf Static
-# add_subdirectory(protobuf)
+add_subdirectory(protobuf)
 
 # Add Default Implement
-# add_subdirectory(impl)
+add_subdirectory(impl)
 
 #add_executable(uranus Uranus.cpp)
 #target_link_libraries(uranus PUBLIC core)
