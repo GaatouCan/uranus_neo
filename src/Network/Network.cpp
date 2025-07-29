@@ -3,6 +3,7 @@
 #include "Server.h"
 #include "Base/Package.h"
 #include "Config/Config.h"
+#include "Login/LoginAuth.h"
 #include "Utils.h"
 
 #include <string>
@@ -91,13 +92,13 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
             }
 
             if (socket.is_open()) {
-                // if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-                //     if (!login->VerifyAddress(socket.remote_endpoint())) {
-                //         SPDLOG_WARN("Reject Client From {}", socket.remote_endpoint().address().to_string());
-                //         socket.close();
-                //         continue;
-                //     }
-                // }
+                if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+                    if (!login->VerifyAddress(socket.remote_endpoint())) {
+                        SPDLOG_WARN("Reject Client From {}", socket.remote_endpoint().address().to_string());
+                        socket.close();
+                        continue;
+                    }
+                }
 
                 const auto conn = make_shared<UConnection>(std::move(socket));
                 conn->SetUpModule(this);
