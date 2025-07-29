@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Base/TimerHandle.h"
+#include "Base/EventParam.h"
 #include "Server.h"
 
 #include <string>
@@ -10,7 +11,6 @@
 
 class FPackage;
 class IContextBase;
-class IEventParam_Interface;
 class IDataAsset_Interface;
 
 enum class BASE_API EServiceState {
@@ -91,6 +91,9 @@ public:
     virtual void RemoveListener(int event) const;
 
     void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
+
+    template<CEventType Type, class ... Args>
+    void DispatchEventT(Args && ... args) const;
 #pragma endregion
 
 #pragma region Timer
@@ -146,4 +149,10 @@ inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...
         std::invoke(func, ptr, args...);
     };
     this->PostToPlayer(pid, task);
+}
+
+template<CEventType Type, class ... Args>
+inline void IServiceBase::DispatchEventT(Args &&...args) const {
+    auto event = std::make_shared<Type>(std::forward<Args>(args)...);
+    this->DispatchEvent(event);
 }
