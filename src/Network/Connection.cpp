@@ -184,8 +184,8 @@ awaitable<void> UConnection::WritePackage() {
                 if (const auto [ec, len] = co_await async_write(mStream, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                     if (ec)
                         SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len == 0)
-                        SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
+                    if (len != FPackage::PACKAGE_HEADER_SIZE)
+                        SPDLOG_WARN("{:<20} - Write Package Header Length Not Equal", __FUNCTION__);
 
                     Disconnect();
                     break;
@@ -215,8 +215,8 @@ awaitable<void> UConnection::ReadPackage() {
             if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                 if (ec)
                     SPDLOG_WARN("{:<20} -  Failed To Read Package Header, Error Code: {}", __FUNCTION__, ec.message());
-                if (len == 0)
-                    SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
+                if (len != FPackage::PACKAGE_HEADER_SIZE)
+                    SPDLOG_WARN("{:<20} - Read Package Header Length Not Equal", __FUNCTION__);
 
                 Disconnect();
                 break;
