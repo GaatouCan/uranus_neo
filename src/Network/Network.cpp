@@ -30,6 +30,15 @@ void UNetwork::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
+    mSSLContext.use_certificate_chain_file("server.crt");
+    mSSLContext.use_private_key_file("server.key", asio::ssl::context::pem);
+    mSSLContext.set_options(
+        asio::ssl::context::no_sslv2 |
+        asio::ssl::context::no_sslv3 |
+        asio::ssl::context::default_workarounds |
+        asio::ssl::context::single_dh_use
+    );
+
     mPackagePool = make_shared<TRecycler<FPackage>>();
     mPackagePool->Initial();
 
@@ -101,25 +110,23 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     }
                 }
 
-                ASslStream stream(std::move(socket), mSSLContext);
+                const auto conn = make_shared<UConnection>(ASslStream(std::move(socket), mSSLContext));
+                conn->SetUpModule(this);
 
-                // const auto conn = make_shared<UConnection>(std::move(socket));
-                // conn->SetUpModule(this);
-                //
-                // if (const auto id = conn->GetConnectionID(); id > 0) {
-                //     std::unique_lock lock(mMutex);
-                //     mConnectionMap[id] = conn;
-                // } else {
-                //     SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
-                //         __FUNCTION__, conn->RemoteAddress().to_string());
-                //     conn->Disconnect();
-                //     continue;
-                // }
-                //
-                // SPDLOG_INFO("{:<20} - New Connection From {} - fd[{}]",
-                //     __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
-                //
-                // conn->ConnectToClient();
+                if (const auto id = conn->GetConnectionID(); id > 0) {
+                    std::unique_lock lock(mMutex);
+                    mConnectionMap[id] = conn;
+                } else {
+                    SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
+                        __FUNCTION__, conn->RemoteAddress().to_string());
+                    conn->Disconnect();
+                    continue;
+                }
+
+                SPDLOG_INFO("{:<20} - New Connection From {} - fd[{}]",
+                    __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
+
+                conn->ConnectToClient();
             }
         }
     } catch (const std::exception &e) {
