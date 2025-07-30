@@ -62,8 +62,7 @@ target_link_libraries(core PUBLIC spdlog::spdlog)
 target_link_libraries(core PUBLIC asio::asio)
 target_link_libraries(core PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
-target_link_libraries(core PUBLIC OpenSSL::Crypto)
-target_link_libraries(core PUBLIC OpenSSL::SSL)
+target_link_libraries(core PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(core PUBLIC protobuf::libprotobuf-lite)
 
 target_include_directories(core PUBLIC

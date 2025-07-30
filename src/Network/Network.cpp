@@ -13,7 +13,8 @@
 // static const std::string key = "1d0fa7879b018b71a00109e7e29eb0c5037617e9eddc3d46e95294fc1fa3ad50";
 
 UNetwork::UNetwork()
-    : mAcceptor(mIOContext),
+    : mSSLContext(asio::ssl::context::tlsv13_server),
+      mAcceptor(mIOContext),
       mPackagePool(nullptr) {
 }
 
@@ -100,23 +101,25 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     }
                 }
 
-                const auto conn = make_shared<UConnection>(std::move(socket));
-                conn->SetUpModule(this);
+                ASslStream stream(std::move(socket), mSSLContext);
 
-                if (const auto id = conn->GetConnectionID(); id > 0) {
-                    std::unique_lock lock(mMutex);
-                    mConnectionMap[id] = conn;
-                } else {
-                    SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
-                        __FUNCTION__, conn->RemoteAddress().to_string());
-                    conn->Disconnect();
-                    continue;
-                }
-
-                SPDLOG_INFO("{:<20} - New Connection From {} - fd[{}]",
-                    __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
-
-                conn->ConnectToClient();
+                // const auto conn = make_shared<UConnection>(std::move(socket));
+                // conn->SetUpModule(this);
+                //
+                // if (const auto id = conn->GetConnectionID(); id > 0) {
+                //     std::unique_lock lock(mMutex);
+                //     mConnectionMap[id] = conn;
+                // } else {
+                //     SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
+                //         __FUNCTION__, conn->RemoteAddress().to_string());
+                //     conn->Disconnect();
+                //     continue;
+                // }
+                //
+                // SPDLOG_INFO("{:<20} - New Connection From {} - fd[{}]",
+                //     __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
+                //
+                // conn->ConnectToClient();
             }
         }
     } catch (const std::exception &e) {

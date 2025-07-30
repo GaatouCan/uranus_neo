@@ -7,8 +7,6 @@
 #include "Gateway/Gateway.h"
 #include "Utils.h"
 
-#include <openssl/evp.h>
-#include <openssl/rand.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 
@@ -24,16 +22,16 @@ using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
 
 
-UConnection::UConnection(ATcpSocket socket)
-    : mSocket(std::move(socket)),
-      mChannel(mSocket.get_executor(), 1024),
+UConnection::UConnection(ASslStream stream)
+    : mStream(std::move(stream)),
+      mChannel(mStream.next_layer().get_executor(), 1024),
       mNetwork(nullptr),
-      mWatchdog(mSocket.get_executor()),
+      mWatchdog(mStream.next_layer().get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    mID = static_cast<int64_t>(mSocket.native_handle());
-    mSocket.set_option(asio::ip::tcp::no_delay(true));
-    mSocket.set_option(asio::ip::tcp::socket::keep_alive(true));
+    mID = static_cast<int64_t>(mStream.next_layer().native_handle());
+    mStream.next_layer().set_option(asio::ip::tcp::no_delay(true));
+    mStream.next_layer().set_option(asio::ip::tcp::socket::keep_alive(true));
 }
 
 void UConnection::SetUpModule(UNetwork *owner) {
@@ -44,8 +42,12 @@ UConnection::~UConnection() {
     Disconnect();
 }
 
+bool UConnection::IsSocketOpen() const {
+    return mStream.next_layer().is_open();
+}
+
 ATcpSocket &UConnection::GetSocket() {
-    return mSocket;
+    return mStream.next_layer();
 }
 
 UConnection::APackageChannel &UConnection::GetChannel() {
@@ -66,7 +68,12 @@ void UConnection::SetPlayerID(const int64_t id) {
 void UConnection::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
-    co_spawn(mSocket.get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+    co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+        if (const auto [ec] = co_await self->mStream.async_handshake(asio::ssl::stream_base::server); ec) {
+            SPDLOG_ERROR("Connection[{}] Handshake Failed: {}", self->RemoteAddress().to_string(), ec.message());
+            co_return;
+        }
+
         co_await (
             self->ReadPackage() ||
             self->WritePackage() ||
@@ -76,11 +83,11 @@ void UConnection::ConnectToClient() {
 }
 
 void UConnection::Disconnect() {
-    if (!mSocket.is_open())
+    if (!IsSocketOpen())
         return;
 
     mWatchdog.cancel();
-    mSocket.close();
+    GetSocket().close();
 
     mNetwork->RemoveConnection(mID, mPlayerID);
 
@@ -106,8 +113,8 @@ shared_ptr<FPackage> UConnection::BuildPackage() const {
 }
 
 asio::ip::address UConnection::RemoteAddress() const {
-    if (mSocket.is_open()) {
-        return mSocket.remote_endpoint().address();
+    if (IsSocketOpen()) {
+        return mStream.next_layer().remote_endpoint().address();
     }
     return {};
 }
@@ -124,10 +131,11 @@ void UConnection::SendPackage(const shared_ptr<FPackage> &pkg) {
     if (pkg == nullptr)
         return;
 
-    co_spawn(mSocket.get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
+    co_spawn(mStream.next_layer().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
         co_await self->mChannel.async_send(std::error_code{}, pkg);
     }, detached);
 }
+
 
 awaitable<void> UConnection::WritePackage() {
     if (GetServer() == nullptr) {
@@ -142,13 +150,8 @@ awaitable<void> UConnection::WritePackage() {
         exit(-1);
     }
 
-    const auto &cfg = config->GetServerConfig();
-    const auto encryptionKey = cfg["server"]["encryption"]["key"].as<std::string>();
-
-    const auto key = utils::HexToBytes(encryptionKey);
-
     try {
-        while (mSocket.is_open()) {
+        while (IsSocketOpen()) {
             const auto [ec, pkg] = co_await mChannel.async_receive();
             if (ec || pkg == nullptr)
                 co_return;
@@ -162,45 +165,22 @@ awaitable<void> UConnection::WritePackage() {
             header.source = static_cast<int32_t>(htonl(pkg->mHeader.source));
             header.target = static_cast<int32_t>(htonl(pkg->mHeader.target));
 
-            if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, 12> iv{};
-                RAND_bytes(iv.data(), iv.size());
-
-                std::vector<uint8_t> ciphertext(pkg->mPayload.Size());
-                std::array<uint8_t, 16> tag{};
-
-                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-                EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
-                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv.size(), nullptr);
-                EVP_EncryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data());
-
-                int len = 0;
-                EVP_EncryptUpdate(ctx, ciphertext.data(), &len, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
-                int total = len;
-
-                EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len);
-                total += len;
-
-                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag.size(), tag.data());
-                EVP_CIPHER_CTX_free(ctx);
-
 #if defined(_WIN32) || defined(_WIN64)
-                header.length = htonll(total);
+            header.length = htonll(pkg->mHeader.length);
 #else
-                header.length = htobe64(total);
+            header.length = htobe64(pkg->mHeader.length);
 #endif
+
+            if (pkg->mHeader.length > 0) {
 
                 const auto buffers = {
                     asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE),
-                    asio::buffer(iv),
-                    asio::buffer(ciphertext.data(), total),
-                    asio::buffer(tag)
+                    asio::buffer(pkg->mPayload.RawRef()),
                 };
 
-                if (const auto [ec, len] = co_await async_write(mSocket, buffers); ec || len == 0) {
+                if (const auto [ec, len] = co_await async_write(mStream, buffers); ec || len == 0) {
                     if (ec)
                         SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-
                     if (len == 0)
                         SPDLOG_WARN("{:<20} - Package Length Equal Zero", __FUNCTION__);
 
@@ -209,16 +189,9 @@ awaitable<void> UConnection::WritePackage() {
                 }
 
             } else {
-#if defined(_WIN32) || defined(_WIN64)
-                header.length = htonll(pkg->mHeader.length);
-#else
-                header.length = htobe64(pkg->mHeader.length);
-#endif
-
-                if (const auto [ec, len] = co_await async_write(mSocket, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+                if (const auto [ec, len] = co_await async_write(mStream, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                     if (ec)
                         SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-
                     if (len == 0)
                         SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
 
@@ -248,21 +221,15 @@ awaitable<void> UConnection::ReadPackage() {
         exit(-1);
     }
 
-    const auto &cfg = config->GetServerConfig();
-    const auto encryptionKey = cfg["server"]["encryption"]["key"].as<std::string>();
-
-    const auto key = utils::HexToBytes(encryptionKey);
-
     try {
-        while (mSocket.is_open()) {
+        while (IsSocketOpen()) {
             const auto pkg = BuildPackage();
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+            if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                 if (ec)
                     SPDLOG_WARN("{:<20} -  Failed To Read Package Header, Error Code: {}", __FUNCTION__, ec.message());
-
                 if (len == 0)
                     SPDLOG_WARN("{:<20} - Package Header Length Equal Zero", __FUNCTION__);
 
@@ -283,60 +250,16 @@ awaitable<void> UConnection::ReadPackage() {
 #endif
 
             if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, 12> iv{};
-                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(iv)); ec || len != 12) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} -  Failed To Read Package IV, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len != 0)
-                        SPDLOG_WARN("{:<20} - Package IV Length Not Equal 12", __FUNCTION__);
-                    Disconnect();
-                    break;
-                }
-
-                std::vector<uint8_t> ciphertext(pkg->mHeader.length);
-                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(ciphertext)); ec || len == 0) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} -  Failed To Read Package Cipher Text, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len != 0)
-                        SPDLOG_WARN("{:<20} - Package Cipher Text Length Equal 0", __FUNCTION__);
-                    Disconnect();
-                    break;
-                }
-
-                std::array<uint8_t, 16> tag{};
-                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(tag)); ec || len != 16) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} -  Failed To Read Package Tag, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len != 0)
-                        SPDLOG_WARN("{:<20} - Package Tag Length Not Equal 16", __FUNCTION__);
-                    Disconnect();
-                    break;
-                }
-
                 pkg->mPayload.Reserve(pkg->mHeader.length);
+                if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(pkg->RawRef())); ec || len != pkg->mHeader.length) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} - Fail To Read Package Payload, {}", __FUNCTION__, ec.message());
+                    if (len != pkg->mHeader.length)
+                        SPDLOG_WARN("{:<20} - The Payload Length Not Equal", __FUNCTION__);
 
-                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-                EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
-                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv.size(), nullptr);
-                EVP_DecryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data());
-                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag.size(), tag.data());
-
-                int len = 0;
-                EVP_DecryptUpdate(ctx, pkg->mPayload.Data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size()));
-                int total = len;
-
-                const int ret = EVP_DecryptFinal_ex(ctx, pkg->mPayload.Data() + len, &len);
-                EVP_CIPHER_CTX_free(ctx);
-
-                if (ret <= 0) {
-                    SPDLOG_WARN("{:<20} - GCM Tag Check Failed, Connection: {}", __FUNCTION__, RemoteAddress().to_string());
                     Disconnect();
-                    co_return;
+                    break;
                 }
-
-                total += len;
-                pkg->mPayload.Resize(total);
-                pkg->mHeader.length = total;
             }
 
             const auto now = std::chrono::steady_clock::now();
@@ -399,7 +322,7 @@ awaitable<void> UConnection::Watchdog() {
             now = std::chrono::steady_clock::now();
         } while ((mReceiveTime + mExpiration) > now);
 
-        if (mSocket.is_open()) {
+        if (IsSocketOpen()) {
             SPDLOG_WARN("{:<20} - Watchdog Timeout", __FUNCTION__);
             Disconnect();
         }

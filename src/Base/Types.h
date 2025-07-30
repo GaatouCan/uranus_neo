@@ -3,6 +3,7 @@
 #include <asio.hpp>
 #include <asio/experimental/channel.hpp>
 #include <asio/experimental/concurrent_channel.hpp>
+#include <asio/ssl.hpp>
 #include <chrono>
 #include <memory>
 
@@ -23,9 +24,10 @@ using std::unique_ptr;
 using ATcpAcceptor = DefaultToken::as_default_on_t<asio::ip::tcp::acceptor>;
 using ATcpSocket = DefaultToken::as_default_on_t<asio::ip::tcp::socket>;
 
+using ASslStream = asio::ssl::stream<ATcpSocket>;
+
 using ASteadyTimer = DefaultToken::as_default_on_t<asio::steady_timer>;
 using ASystemTimer = DefaultToken::as_default_on_t<asio::system_timer>;
-
 
 using ASteadyTimePoint = std::chrono::steady_clock::time_point;
 using ASteadyDuration = std::chrono::steady_clock::duration;

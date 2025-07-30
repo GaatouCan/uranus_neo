@@ -17,6 +17,8 @@ class BASE_API UNetwork final : public IModuleBase {
     DECLARE_MODULE(UNetwork)
 
     io_context mIOContext;
+    asio::ssl::context mSSLContext;
+
     ATcpAcceptor mAcceptor;
 
     std::thread mThread;
