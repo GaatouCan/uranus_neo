@@ -38,7 +38,7 @@ class BASE_API FPackage final : public IRecycle_Interface {
 protected:
     void OnCreate() override;
     void Initial() override;
-    void Reset() override;
+    void Clear() override;
 
 public:
     FPackage();
@@ -52,6 +52,8 @@ public:
 
     bool CopyFrom(IRecycle_Interface *other) override;
     bool CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) override;
+
+    void Reset();
 
     FPackage &SetData(std::string_view str);
     FPackage &SetData(const std::stringstream &ss);

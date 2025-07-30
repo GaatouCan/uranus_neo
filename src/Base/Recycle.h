@@ -29,7 +29,7 @@ protected:
     virtual void Initial() = 0;
 
     /** Called When It Recycled To Recycler */
-    virtual void Reset() = 0;
+    virtual void Clear() = 0;
 
 public:
     IRecycle_Interface() = default;

@@ -29,6 +29,11 @@ void FPackage::Initial() {
     mHeader.target = -1;
 }
 
+void FPackage::Clear() {
+    mHeader.id = 0;
+    mPayload.Clear();
+}
+
 bool FPackage::CopyFrom(IRecycle_Interface *other) {
     if (IRecycle_Interface::CopyFrom(other)) {
         if (const auto temp = dynamic_cast<FPackage *>(other); temp != nullptr) {
@@ -58,8 +63,8 @@ bool FPackage::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
 }
 
 void FPackage::Reset() {
-    mHeader.id = 0;
-    mPayload.Clear();
+    memset(&mHeader, 0, sizeof(mHeader));
+    mPayload.Reset();
 }
 
 bool FPackage::IsAvailable() const {

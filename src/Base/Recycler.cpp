@@ -167,7 +167,7 @@ void IRecyclerBase::Recycle(IRecycle_Interface *pElem) {
         return;
     }
 
-    pElem->Reset();
+    pElem->Clear();
     --mUsage;
 
     std::unique_lock lock(mMutex);
