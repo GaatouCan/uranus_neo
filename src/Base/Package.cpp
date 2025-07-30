@@ -121,14 +121,6 @@ int32_t FPackage::GetTarget() const {
     return mHeader.target;
 }
 
-// void FPackage::SetEncryptVector(const FEncryptVector &iv) {
-//     mEncryptVector = iv;
-// }
-//
-// const FPackage::FEncryptVector &FPackage::GetEncryptVector() const {
-//     return mEncryptVector;
-// }
-
 std::string FPackage::ToString() const {
     return mPayload.ToString();
 }

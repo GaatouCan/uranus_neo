@@ -69,9 +69,6 @@ public:
     void SetTarget(int32_t target);
     [[nodiscard]] int32_t GetTarget() const;
 
-    // void SetEncryptVector(const FEncryptVector &iv);
-    // [[nodiscard]] const FEncryptVector &GetEncryptVector() const;
-
     [[nodiscard]] std::string ToString() const;
     [[nodiscard]] const FByteArray &RawPayload() const;
     [[nodiscard]] std::vector<uint8_t> &RawRef();
