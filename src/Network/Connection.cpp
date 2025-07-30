@@ -2,7 +2,6 @@
 #include "Base/Package.h"
 #include "Network.h"
 #include "Server.h"
-#include "Config/Config.h"
 #include "Login/LoginAuth.h"
 #include "Gateway/Gateway.h"
 #include "Utils.h"
@@ -143,12 +142,12 @@ awaitable<void> UConnection::WritePackage() {
         co_return;
     }
 
-    const auto *config = GetServer()->GetModule<UConfig>();
-    if (config == nullptr) {
-        SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
-        GetServer()->Shutdown();
-        exit(-1);
-    }
+    // const auto *config = GetServer()->GetModule<UConfig>();
+    // if (config == nullptr) {
+    //     SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
+    //     GetServer()->Shutdown();
+    //     exit(-1);
+    // }
 
     try {
         while (IsSocketOpen()) {
@@ -214,12 +213,12 @@ awaitable<void> UConnection::ReadPackage() {
         co_return;
     }
 
-    const auto *config = GetServer()->GetModule<UConfig>();
-    if (config == nullptr) {
-        SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
-        GetServer()->Shutdown();
-        exit(-1);
-    }
+    // const auto *config = GetServer()->GetModule<UConfig>();
+    // if (config == nullptr) {
+    //     SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
+    //     GetServer()->Shutdown();
+    //     exit(-1);
+    // }
 
     try {
         while (IsSocketOpen()) {
