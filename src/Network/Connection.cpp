@@ -130,7 +130,7 @@ void UConnection::SendPackage(const shared_ptr<FPackage> &pkg) {
     if (pkg == nullptr)
         return;
 
-    co_spawn(mStream.next_layer().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
+    co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
         co_await self->mChannel.async_send(std::error_code{}, pkg);
     }, detached);
 }
