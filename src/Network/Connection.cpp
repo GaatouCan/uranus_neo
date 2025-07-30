@@ -142,13 +142,6 @@ awaitable<void> UConnection::WritePackage() {
         co_return;
     }
 
-    // const auto *config = GetServer()->GetModule<UConfig>();
-    // if (config == nullptr) {
-    //     SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
-    //     GetServer()->Shutdown();
-    //     exit(-1);
-    // }
-
     try {
         while (IsSocketOpen()) {
             const auto [ec, pkg] = co_await mChannel.async_receive();
@@ -212,13 +205,6 @@ awaitable<void> UConnection::ReadPackage() {
         SPDLOG_CRITICAL("{:<20} - Use GetServer() Before Set Up!", __FUNCTION__);
         co_return;
     }
-
-    // const auto *config = GetServer()->GetModule<UConfig>();
-    // if (config == nullptr) {
-    //     SPDLOG_CRITICAL("{:<20} - Config Module Not Found!", __FUNCTION__);
-    //     GetServer()->Shutdown();
-    //     exit(-1);
-    // }
 
     try {
         while (IsSocketOpen()) {
