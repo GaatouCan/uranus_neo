@@ -329,6 +329,7 @@ awaitable<void> UConnection::ReadPackage() {
                 EVP_CIPHER_CTX_free(ctx);
 
                 if (ret <= 0) {
+                    SPDLOG_WARN("{:<20} - GCM Tag Check Failed, Connection: {}", __FUNCTION__, RemoteAddress().to_string());
                     Disconnect();
                     co_return;
                 }
