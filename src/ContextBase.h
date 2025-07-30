@@ -12,7 +12,6 @@ class IEventParam_Interface;
 class FPackage;
 class UServer;
 
-
 enum class BASE_API EContextState {
     CREATED,
     INITIALIZING,
