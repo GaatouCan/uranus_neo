@@ -1,4 +1,7 @@
 #include "Monitor.h"
+#include "PluginBase.h"
+
+#include <ranges>
 
 UMonitor::UMonitor() {
 }
@@ -29,4 +32,7 @@ UMonitor::~UMonitor() {
 }
 
 void UMonitor::OnAcceptClient(const std::shared_ptr<UConnection> &conn) {
+    for (const auto &val : mPluginMap | std::views::values) {
+        val->OnAcceptClient(conn);
+    }
 }

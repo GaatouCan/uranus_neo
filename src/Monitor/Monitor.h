@@ -3,9 +3,12 @@
 #include "Module.h"
 
 #include <memory>
+#include <unordered_map>
+#include <string>
 
 
 class UConnection;
+class IPluginBase;
 
 
 class BASE_API UMonitor final : public IModuleBase {
@@ -27,6 +30,9 @@ public:
     }
 
     void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
+
+private:
+    std::unordered_map<std::string, std::unique_ptr<IPluginBase>> mPluginMap;
 };
 
 

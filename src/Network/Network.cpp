@@ -129,7 +129,7 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
 
                 conn->ConnectToClient();
 
-                if (auto *monitor = GetServer()->GetModule<UMonitor>()) {
+                if (auto *monitor = GetServer()->GetModule<UMonitor>(); monitor != nullptr) {
                     monitor->OnAcceptClient(conn);
                 }
             }

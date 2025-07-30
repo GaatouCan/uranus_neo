@@ -2,9 +2,11 @@
 
 #include "Common.h"
 
+#include <memory>
 
 class UMonitor;
 class UServer;
+class UConnection;
 
 class BASE_API IPluginBase {
 
@@ -20,6 +22,8 @@ public:
 
     [[nodiscard]] UMonitor *GetMonitor() const;
     [[nodiscard]] UServer *GetServer() const;
+
+    virtual void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
 
 private:
     void SetUpModule(UMonitor *owner);
