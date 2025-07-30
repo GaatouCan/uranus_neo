@@ -4,6 +4,7 @@
 #include "Base/Package.h"
 #include "Config/Config.h"
 #include "Login/LoginAuth.h"
+#include "Monitor/Monitor.h"
 #include "Utils.h"
 
 #include <string>
@@ -127,6 +128,10 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
 
                 conn->ConnectToClient();
+
+                if (auto *monitor = GetServer()->GetModule<UMonitor>()) {
+                    monitor->OnAcceptClient(conn);
+                }
             }
         }
     } catch (const std::exception &e) {

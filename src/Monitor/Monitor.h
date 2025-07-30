@@ -2,6 +2,11 @@
 
 #include "Module.h"
 
+#include <memory>
+
+
+class UConnection;
+
 
 class BASE_API UMonitor final : public IModuleBase {
 
@@ -20,6 +25,8 @@ public:
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "UMonitor";
     }
+
+    void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
 };
 
 

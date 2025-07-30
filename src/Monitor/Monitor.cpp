@@ -27,3 +27,6 @@ void UMonitor::Stop() {
 UMonitor::~UMonitor() {
     Stop();
 }
+
+void UMonitor::OnAcceptClient(const std::shared_ptr<UConnection> &conn) {
+}
