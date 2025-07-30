@@ -5,10 +5,6 @@
 
 #include <memory>
 
-
-struct evp_cipher_ctx_st;
-typedef evp_cipher_ctx_st EVP_CIPHER_CTX;
-
 class UNetwork;
 class UServer;
 class FPackage;
@@ -24,8 +20,6 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
     APackageChannel mChannel;
 
     UNetwork *mNetwork;
-
-    EVP_CIPHER_CTX *mCipherContext;
 
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;

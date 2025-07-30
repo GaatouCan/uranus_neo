@@ -59,7 +59,7 @@ bool FPackage::CopyFrom(const std::shared_ptr<IRecycleInterface> &other) {
 
 void FPackage::Reset() {
     mHeader.id = 0;
-    mPayload.Reset();
+    mPayload.Clear();
 }
 
 bool FPackage::IsAvailable() const {

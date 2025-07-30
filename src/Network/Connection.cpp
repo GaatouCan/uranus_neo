@@ -9,7 +9,6 @@
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-#include <openssl/aes.h>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 
@@ -32,7 +31,6 @@ UConnection::UConnection(ATcpSocket socket)
       mWatchdog(mSocket.get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    mCipherContext = EVP_CIPHER_CTX_new();
     mID = static_cast<int64_t>(mSocket.native_handle());
     mSocket.set_option(asio::ip::tcp::no_delay(true));
     mSocket.set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -44,7 +42,6 @@ void UConnection::SetUpModule(UNetwork *owner) {
 
 UConnection::~UConnection() {
     Disconnect();
-    EVP_CIPHER_CTX_free(mCipherContext);
 }
 
 ATcpSocket &UConnection::GetSocket() {
@@ -166,33 +163,38 @@ awaitable<void> UConnection::WritePackage() {
             header.target = static_cast<int32_t>(htonl(pkg->mHeader.target));
 
             if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, AES_BLOCK_SIZE> salt{};
-                if (RAND_bytes(salt.data(), salt.size()) != 1) {
-                    SPDLOG_WARN("{:<20} - Failed To Generate iv", __FUNCTION__);
-                    continue;
-                }
+                std::array<uint8_t, 12> iv{};
+                RAND_bytes(iv.data(), iv.size());
 
-                int idx = 0;
-                size_t length = 0;
-                std::vector<uint8_t> encrypted(pkg->mPayload.Size() + AES_BLOCK_SIZE);
+                std::vector<uint8_t> ciphertext(pkg->mPayload.Size());
+                std::array<uint8_t, 16> tag{};
 
-                EVP_EncryptInit_ex(mCipherContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
-                EVP_EncryptUpdate(mCipherContext, encrypted.data(), &idx, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
-                length = idx;
-                EVP_EncryptFinal_ex(mCipherContext, encrypted.data() + idx, &idx);
-                length += idx;
-                encrypted.resize(length);
+                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+                EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
+                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv.size(), nullptr);
+                EVP_EncryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data());
+
+                int len = 0;
+                EVP_EncryptUpdate(ctx, ciphertext.data(), &len, pkg->mPayload.Data(), static_cast<int>(pkg->mPayload.Size()));
+                int total = len;
+
+                EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len);
+                total += len;
+
+                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag.size(), tag.data());
+                EVP_CIPHER_CTX_free(ctx);
 
 #if defined(_WIN32) || defined(_WIN64)
-                header.length = htonll(length);
+                header.length = htonll(total);
 #else
-                header.length = htobe64(encryptedLength);
+                header.length = htobe64(total);
 #endif
 
                 const auto buffers = {
                     asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE),
-                    asio::buffer(salt),
-                    asio::buffer(encrypted)
+                    asio::buffer(iv),
+                    asio::buffer(ciphertext.data(), total),
+                    asio::buffer(tag)
                 };
 
                 if (const auto [ec, len] = co_await async_write(mSocket, buffers); ec || len == 0) {
@@ -205,6 +207,7 @@ awaitable<void> UConnection::WritePackage() {
                     Disconnect();
                     break;
                 }
+
             } else {
 #if defined(_WIN32) || defined(_WIN64)
                 header.length = htonll(pkg->mHeader.length);
@@ -280,46 +283,59 @@ awaitable<void> UConnection::ReadPackage() {
 #endif
 
             if (pkg->mHeader.length > 0) {
-                std::array<uint8_t, AES_BLOCK_SIZE> salt{};
-
-                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(salt)); ec || len != AES_BLOCK_SIZE) {
+                std::array<uint8_t, 12> iv{};
+                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(iv)); ec || len != 12) {
                     if (ec)
-                        SPDLOG_WARN("{:<20} - Failed To Read Salt, Error Code: {}", __FUNCTION__, ec.message());
-
-                    if (len != AES_BLOCK_SIZE)
-                        SPDLOG_WARN("{:<20} - Read Salt Length Not Equal 16", __FUNCTION__);
-
+                        SPDLOG_WARN("{:<20} -  Failed To Read Package IV, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len != 0)
+                        SPDLOG_WARN("{:<20} - Package IV Length Not Equal 12", __FUNCTION__);
                     Disconnect();
                     break;
                 }
 
                 std::vector<uint8_t> ciphertext(pkg->mHeader.length);
-
-                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(ciphertext)); ec || len != pkg->mHeader.length) {
+                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(ciphertext)); ec || len == 0) {
                     if (ec)
-                        SPDLOG_WARN("{:<20} - Failed To Read Package Payload, Error Code: {}", __FUNCTION__, ec.message());
-
-                    if (len != pkg->mHeader.length)
-                        SPDLOG_WARN("{:<20} - Read Package Payload Length Not Equal", __FUNCTION__);
-
+                        SPDLOG_WARN("{:<20} -  Failed To Read Package Cipher Text, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len != 0)
+                        SPDLOG_WARN("{:<20} - Package Cipher Text Length Equal 0", __FUNCTION__);
                     Disconnect();
                     break;
                 }
 
-                int idx = 0;
-                int length = 0;
+                std::array<uint8_t, 16> tag{};
+                if (const auto [ec, len] = co_await async_read(mSocket, asio::buffer(tag)); ec || len != 16) {
+                    if (ec)
+                        SPDLOG_WARN("{:<20} -  Failed To Read Package Tag, Error Code: {}", __FUNCTION__, ec.message());
+                    if (len != 0)
+                        SPDLOG_WARN("{:<20} - Package Tag Length Not Equal 16", __FUNCTION__);
+                    Disconnect();
+                    break;
+                }
 
                 pkg->mPayload.Reserve(pkg->mHeader.length);
-                memset(pkg->mPayload.Data(), 0, pkg->mHeader.length);
 
-                EVP_DecryptInit_ex(mCipherContext, EVP_aes_256_cbc(), nullptr, key.data(), salt.data());
-                EVP_DecryptUpdate(mCipherContext, pkg->mPayload.Data(), &idx, ciphertext.data(), static_cast<int>(ciphertext.size()));
-                length = idx;
-                EVP_DecryptFinal_ex(mCipherContext, pkg->mPayload.Data() + length, &idx);
-                length += idx;
+                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+                EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
+                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv.size(), nullptr);
+                EVP_DecryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data());
+                EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag.size(), tag.data());
 
-                pkg->mPayload.Resize(length);
-                pkg->mHeader.length = length;
+                int len = 0;
+                EVP_DecryptUpdate(ctx, pkg->mPayload.Data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size()));
+                int total = len;
+
+                const int ret = EVP_DecryptFinal_ex(ctx, pkg->mPayload.Data() + len, &len);
+                EVP_CIPHER_CTX_free(ctx);
+
+                if (ret <= 0) {
+                    Disconnect();
+                    co_return;
+                }
+
+                total += len;
+                pkg->mPayload.Resize(total);
+                pkg->mHeader.length = total;
             }
 
             const auto now = std::chrono::steady_clock::now();

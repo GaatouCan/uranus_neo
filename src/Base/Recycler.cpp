@@ -51,7 +51,7 @@ std::shared_ptr<IRecycleInterface> IRecyclerBase::Acquire() {
     }
 
     // Calculate How Many New Elements Need To Be Created
-    size_t num = static_cast<size_t>(static_cast<float>(mUsage.load()) * RECYCLER_EXPAND_RATE);
+    auto num = static_cast<size_t>(static_cast<float>(mUsage.load()) * RECYCLER_EXPAND_RATE);
 
     if (num <= 0) {
         SPDLOG_ERROR("{:<20} - Recycler[{:p}] - Inner Queue Is Empty But Usage Equals Zero!");
@@ -95,7 +95,7 @@ std::shared_ptr<IRecycleInterface> IRecyclerBase::Acquire() {
     pResult->Initial();
     ++mUsage;
 
-    return {pResult, deleter};
+    return { pResult, deleter };
 }
 
 size_t IRecyclerBase::GetUsage() const {
@@ -169,7 +169,6 @@ void IRecyclerBase::Recycle(IRecycleInterface *pElem) {
 
     pElem->Reset();
     --mUsage;
-
 
     std::unique_lock lock(mMutex);
     mQueue.emplace(pElem);

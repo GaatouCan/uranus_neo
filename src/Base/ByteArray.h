@@ -33,6 +33,8 @@ public:
     /** Clean The Data And Release The Space */
     void Reset();
 
+    void Clear();
+
     [[nodiscard]] size_t Size() const;
     void Resize(size_t size);
 

@@ -22,6 +22,10 @@ void FByteArray::Reset() {
     mByteArray.shrink_to_fit();
 }
 
+void FByteArray::Clear() {
+    mByteArray.clear();
+}
+
 size_t FByteArray::Size() const {
     return mByteArray.size();
 }
