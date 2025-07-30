@@ -29,8 +29,8 @@ void FPackage::Initial() {
     mHeader.target = -1;
 }
 
-bool FPackage::CopyFrom(IRecycleInterface *other) {
-    if (IRecycleInterface::CopyFrom(other)) {
+bool FPackage::CopyFrom(IRecycle_Interface *other) {
+    if (IRecycle_Interface::CopyFrom(other)) {
         if (const auto temp = dynamic_cast<FPackage *>(other); temp != nullptr) {
             memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
 
@@ -43,8 +43,8 @@ bool FPackage::CopyFrom(IRecycleInterface *other) {
     return false;
 }
 
-bool FPackage::CopyFrom(const std::shared_ptr<IRecycleInterface> &other) {
-    if (IRecycleInterface::CopyFrom(other)) {
+bool FPackage::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
+    if (IRecycle_Interface::CopyFrom(other)) {
         if (const auto temp = std::dynamic_pointer_cast<FPackage>(other); temp != nullptr) {
             memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
 

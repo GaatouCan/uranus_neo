@@ -19,13 +19,13 @@ IRecyclerBase::IRecyclerBase(const size_t capacity)
 IRecyclerBase::~IRecyclerBase() {
 }
 
-std::shared_ptr<IRecycleInterface> IRecyclerBase::Acquire() {
+std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     // Not Initialized
     if (mUsage < 0)
         return nullptr;
 
     // Custom Deleter Of The Smart Pointer
-    auto deleter = [weak = weak_from_this()](IRecycleInterface *pElem) {
+    auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
         if (const auto self = weak.lock()) {
             self->Recycle(pElem);
         } else {
@@ -59,8 +59,8 @@ std::shared_ptr<IRecycleInterface> IRecyclerBase::Acquire() {
     }
 
     // The Last One Directly Return
-    std::vector<IRecycleInterface *> elems(num - 1);
-    IRecycleInterface *pResult = nullptr;
+    std::vector<IRecycle_Interface *> elems(num - 1);
+    IRecycle_Interface *pResult = nullptr;
 
     while (num-- > 0) {
         auto *pElem = Create();
@@ -161,7 +161,7 @@ void IRecyclerBase::Shrink() {
     }
 }
 
-void IRecyclerBase::Recycle(IRecycleInterface *pElem) {
+void IRecyclerBase::Recycle(IRecycle_Interface *pElem) {
     if (mUsage < 0) {
         delete pElem;
         return;

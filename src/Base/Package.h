@@ -17,7 +17,7 @@ inline constexpr uint32_t MAXIMUM_PACKAGE_ID = 999999;
  * Use The Structure Of Header Plus Data Part;
  * The Header Occupies 24 Bytes And Uses Big-Endian Transmission In Network
  */
-class BASE_API FPackage final : public IRecycleInterface {
+class BASE_API FPackage final : public IRecycle_Interface {
 
     friend class UConnection;
 
@@ -50,8 +50,8 @@ public:
     void SetPackageID(uint32_t id);
     [[nodiscard]] uint32_t GetPackageID() const;
 
-    bool CopyFrom(IRecycleInterface *other) override;
-    bool CopyFrom(const std::shared_ptr<IRecycleInterface> &other) override;
+    bool CopyFrom(IRecycle_Interface *other) override;
+    bool CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) override;
 
     FPackage &SetData(std::string_view str);
     FPackage &SetData(const std::stringstream &ss);

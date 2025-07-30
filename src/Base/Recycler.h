@@ -16,7 +16,7 @@
 class BASE_API IRecyclerBase : public std::enable_shared_from_this<IRecyclerBase> {
 
     /** Internal Container */
-    std::queue<unique_ptr<IRecycleInterface>> mQueue;
+    std::queue<unique_ptr<IRecycle_Interface>> mQueue;
     mutable std::shared_mutex mMutex;
 
     std::atomic_int64_t mUsage;
@@ -33,7 +33,7 @@ protected:
     IRecyclerBase();
     explicit IRecyclerBase(size_t capacity);
 
-    [[nodiscard]] virtual IRecycleInterface *Create() const = 0;
+    [[nodiscard]] virtual IRecycle_Interface *Create() const = 0;
 
 public:
     virtual ~IRecyclerBase();
@@ -43,7 +43,7 @@ public:
     void Initial(size_t capacity = RECYCLER_MINIMUM_CAPACITY);
 
     /** Pop The Element Of The Front Of The Internal Queue */
-    shared_ptr<IRecycleInterface> Acquire();
+    shared_ptr<IRecycle_Interface> Acquire();
     void Shrink();
 
     [[nodiscard]] size_t GetUsage() const;
@@ -51,16 +51,16 @@ public:
     [[nodiscard]] size_t GetCapacity() const;
 
 private:
-    void Recycle(IRecycleInterface *pElem);
+    void Recycle(IRecycle_Interface *pElem);
 };
 
 
 template<class Type>
-requires std::derived_from<Type, IRecycleInterface> && (!std::is_same_v<Type, IRecycleInterface>)
+requires std::derived_from<Type, IRecycle_Interface> && (!std::is_same_v<Type, IRecycle_Interface>)
 class TRecycler final : public IRecyclerBase {
 
 protected:
-    IRecycleInterface *Create() const override {
+    IRecycle_Interface *Create() const override {
         return new Type();
     }
 
