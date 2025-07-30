@@ -11,6 +11,11 @@ class FPackage;
 
 using std::shared_ptr;
 
+/**
+ * The Wrapper Of asio::ip::tcp::socket And Use OpenSSL To Encrypt/Decrypt The FPackage
+ * The Data Transform In Network Be Like:
+ * [Header (24)][IV (12)][Ciphertext (N)][TAG (16)]
+ */
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
     using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<FPackage>)>;

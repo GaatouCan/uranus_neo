@@ -21,8 +21,6 @@ class BASE_API FPackage final : public IRecycleInterface {
 
     friend class UConnection;
 
-    // using FEncryptVector = std::array<uint8_t, 16>;
-
     /// Packet Header Define
     struct FHeader {
         uint32_t magic;
@@ -35,7 +33,6 @@ class BASE_API FPackage final : public IRecycleInterface {
     };
 
     FHeader         mHeader;
-    // FEncryptVector  mEncryptVector;
     FByteArray      mPayload;
 
 protected:
