@@ -7,14 +7,14 @@
 
 class UNetwork;
 class UServer;
-class FPackage;
+class FPacket;
 
 using std::shared_ptr;
 
 
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
-    using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<FPackage>)>;
+    using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<FPacket>)>;
     friend class UNetwork;
 
     // ATcpSocket mSocket;
@@ -52,13 +52,13 @@ public:
     [[nodiscard]] UNetwork *GetNetworkModule() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    shared_ptr<FPackage> BuildPackage() const;
+    shared_ptr<FPacket> BuildPackage() const;
 
     asio::ip::address RemoteAddress() const;
     [[nodiscard]] int64_t GetConnectionID() const;
     [[nodiscard]] int64_t GetPlayerID() const;
 
-    void SendPackage(const shared_ptr<FPackage> &pkg);
+    void SendPackage(const shared_ptr<FPacket> &pkg);
 
 private:
     awaitable<void> WritePackage();

@@ -9,7 +9,7 @@
 
 class BASE_API UPlayerBase : public IPlayerAgent {
 
-    using APlayerProtocol = std::function<void(uint32_t, const std::shared_ptr<FPackage> &, UPlayerBase *)>;
+    using APlayerProtocol = std::function<void(uint32_t, const std::shared_ptr<FPacket> &, UPlayerBase *)>;
 
 public:
     UPlayerBase();
@@ -17,7 +17,7 @@ public:
 
     void RegisterProtocol(uint32_t id, const APlayerProtocol &func);
 
-    void OnPackage(const std::shared_ptr<FPackage> &pkg) override;
+    void OnPackage(const std::shared_ptr<FPacket> &pkg) override;
 
     UComponentModule &GetComponentModule();
 

@@ -1,6 +1,6 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
-#include "Base/Package.h"
+#include "Base/Packet.h"
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"
 #include "Gateway/Gateway.h"
@@ -47,7 +47,7 @@ UServer *IServiceBase::GetServer() const {
     return mContext->GetServer();
 }
 
-std::shared_ptr<FPackage> IServiceBase::BuildPackage() const {
+std::shared_ptr<FPacket> IServiceBase::BuildPackage() const {
     if (mState != EServiceState::RUNNING)
         return nullptr;
 
@@ -62,7 +62,7 @@ std::shared_ptr<FPackage> IServiceBase::BuildPackage() const {
     return nullptr;
 }
 
-void IServiceBase::PostPackage(const std::shared_ptr<FPackage> &pkg) const {
+void IServiceBase::PostPackage(const std::shared_ptr<FPacket> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -87,7 +87,7 @@ void IServiceBase::PostPackage(const std::shared_ptr<FPackage> &pkg) const {
     }
 }
 
-void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<FPackage> &pkg) const {
+void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<FPacket> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -150,7 +150,7 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
     }
 }
 
-void IServiceBase::SendToPlayer(int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
+void IServiceBase::SendToPlayer(int64_t pid, const std::shared_ptr<FPacket> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -183,7 +183,7 @@ void IServiceBase::PostToPlayer(int64_t pid, const std::function<void(IServiceBa
     }
 }
 
-void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const {
+void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<FPacket> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -273,7 +273,7 @@ void IServiceBase::Stop() {
     mState = EServiceState::TERMINATED;
 }
 
-void IServiceBase::OnPackage(const std::shared_ptr<FPackage> &pkg) {
+void IServiceBase::OnPackage(const std::shared_ptr<FPacket> &pkg) {
 }
 
 void IServiceBase::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {

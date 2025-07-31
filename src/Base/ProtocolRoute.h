@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Base/Package.h"
+#include "Base/Packet.h"
 
 #include <unordered_map>
 #include <memory>
@@ -19,7 +19,7 @@ public:
     }
 
     template<class ... Args>
-    void OnReceivePackage(const std::shared_ptr<FPackage> &pkg, Args && ... args) {
+    void OnReceivePackage(const std::shared_ptr<FPacket> &pkg, Args && ... args) {
         const auto iter = mProtocolMap.find(pkg->GetPackageID());
         if (iter == mProtocolMap.end())
             return;

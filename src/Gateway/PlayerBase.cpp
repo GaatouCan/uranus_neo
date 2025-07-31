@@ -11,7 +11,7 @@ void UPlayerBase::RegisterProtocol(const uint32_t id, const APlayerProtocol &fun
     mRoute.Register(id, func);
 }
 
-void UPlayerBase::OnPackage(const std::shared_ptr<FPackage> &pkg) {
+void UPlayerBase::OnPackage(const std::shared_ptr<FPacket> &pkg) {
     mRoute.OnReceivePackage(pkg, this);
 }
 

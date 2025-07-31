@@ -8,7 +8,7 @@
 #include <thread>
 
 
-class FPackage;
+class FPacket;
 class UConnection;
 
 
@@ -44,15 +44,15 @@ public:
 
     [[nodiscard]] io_context &GetIOContext();
 
-    std::shared_ptr<FPackage> BuildPackage() const;
+    std::shared_ptr<FPacket> BuildPackage() const;
 
     shared_ptr<UConnection> FindConnection(int64_t cid) const;
     void RemoveConnection(int64_t cid, int64_t pid);
 
-    void SendToClient(int64_t cid, const shared_ptr<FPackage> &pkg) const;
+    void SendToClient(int64_t cid, const shared_ptr<FPacket> &pkg) const;
 
-    void OnLoginSuccess(int64_t cid, int64_t pid, const shared_ptr<FPackage> &pkg) const;
-    void OnLoginFailure(int64_t cid, const shared_ptr<FPackage> &pkg) const;
+    void OnLoginSuccess(int64_t cid, int64_t pid, const shared_ptr<FPacket> &pkg) const;
+    void OnLoginFailure(int64_t cid, const shared_ptr<FPacket> &pkg) const;
 
 private:
     awaitable<void> WaitForClient(uint16_t port);

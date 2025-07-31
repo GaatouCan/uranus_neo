@@ -1,6 +1,6 @@
 #include "LoginAuth.h"
 #include "Server.h"
-#include "Base/Package.h"
+#include "Base/Packet.h"
 #include "Gateway/Gateway.h"
 #include "Network/Network.h"
 #include "Network/Connection.h"
@@ -43,7 +43,7 @@ bool ULoginAuth::VerifyAddress(const asio::ip::tcp::endpoint &endpoint) {
     return true;
 }
 
-void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<FPackage> &pkg) {
+void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<FPacket> &pkg) {
     if (mState != EModuleState::RUNNING)
         return;
 

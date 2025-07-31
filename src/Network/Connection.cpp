@@ -1,5 +1,5 @@
 #include "Connection.h"
-#include "Base/Package.h"
+#include "Base/Packet.h"
 #include "Network.h"
 #include "Server.h"
 #include "Login/LoginAuth.h"
@@ -105,7 +105,7 @@ UServer *UConnection::GetServer() const {
     return nullptr;
 }
 
-shared_ptr<FPackage> UConnection::BuildPackage() const {
+shared_ptr<FPacket> UConnection::BuildPackage() const {
     if (mNetwork)
         return mNetwork->BuildPackage();
     return nullptr;
@@ -126,7 +126,7 @@ int64_t UConnection::GetPlayerID() const {
     return mPlayerID;
 }
 
-void UConnection::SendPackage(const shared_ptr<FPackage> &pkg) {
+void UConnection::SendPackage(const shared_ptr<FPacket> &pkg) {
     if (pkg == nullptr)
         return;
 
@@ -148,8 +148,8 @@ awaitable<void> UConnection::WritePackage() {
             if (ec || pkg == nullptr)
                 co_return;
 
-            FPackage::FHeader header{};
-            memset(&header, 0, sizeof(FPackage::FHeader));
+            FPacket::FHeader header{};
+            memset(&header, 0, sizeof(FPacket::FHeader));
 
             header.magic = htonl(pkg->mHeader.magic);
             header.id = htonl(pkg->mHeader.id);
@@ -166,7 +166,7 @@ awaitable<void> UConnection::WritePackage() {
             if (pkg->mHeader.length > 0) {
 
                 const auto buffers = {
-                    asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE),
+                    asio::buffer(&header, FPacket::PACKAGE_HEADER_SIZE),
                     asio::buffer(pkg->mPayload.RawRef()),
                 };
 
@@ -181,10 +181,10 @@ awaitable<void> UConnection::WritePackage() {
                 }
 
             } else {
-                if (const auto [ec, len] = co_await async_write(mStream, asio::buffer(&header, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+                if (const auto [ec, len] = co_await async_write(mStream, asio::buffer(&header, FPacket::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                     if (ec)
                         SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len != FPackage::PACKAGE_HEADER_SIZE)
+                    if (len != FPacket::PACKAGE_HEADER_SIZE)
                         SPDLOG_WARN("{:<20} - Write Package Header Length Not Equal", __FUNCTION__);
 
                     Disconnect();
@@ -212,10 +212,10 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPackage::PACKAGE_HEADER_SIZE)); ec || len == 0) {
+            if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPacket::PACKAGE_HEADER_SIZE)); ec || len == 0) {
                 if (ec)
                     SPDLOG_WARN("{:<20} -  Failed To Read Package Header, Error Code: {}", __FUNCTION__, ec.message());
-                if (len != FPackage::PACKAGE_HEADER_SIZE)
+                if (len != FPacket::PACKAGE_HEADER_SIZE)
                     SPDLOG_WARN("{:<20} - Read Package Header Length Not Equal", __FUNCTION__);
 
                 Disconnect();

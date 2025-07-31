@@ -11,8 +11,8 @@ public:
     ~ULoginHandlerImpl() override;
 
     void UpdateAddressList() override;
-    FLoginToken ParseLoginRequest(const std::shared_ptr<FPackage> &pkg) override;
+    FLoginToken ParseLoginRequest(const std::shared_ptr<FPacket> &pkg) override;
 
-    void OnLoginSuccess(int64_t pid, const std::shared_ptr<FPackage> &pkg) const override;
-    void OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<FPackage> &pkg) override;
+    void OnLoginSuccess(int64_t pid, const std::shared_ptr<FPacket> &pkg) const override;
+    void OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<FPacket> &pkg) override;
 };

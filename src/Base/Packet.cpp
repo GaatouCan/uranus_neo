@@ -1,4 +1,4 @@
-#include "Package.h"
+#include "Packet.h"
 
 #ifdef __linux__
 #include <cstring>
@@ -7,36 +7,36 @@
 
 inline constexpr int PACKET_MAGIC = 20250514;
 
-FPackage::FPackage()
+FPacket::FPacket()
     : mHeader() {
     memset(&mHeader, 0, sizeof(mHeader));
 }
 
-FPackage::~FPackage() = default;
+FPacket::~FPacket() = default;
 
-bool FPackage::IsUnused() const {
+bool FPacket::IsUnused() const {
     // As Same As Assigned In Initial() Method
     return mHeader.id == (MINIMUM_PACKAGE_ID - 1);
 }
 
-void FPackage::OnCreate() {
+void FPacket::OnCreate() {
     SetMagic(PACKET_MAGIC);
 }
 
-void FPackage::Initial() {
+void FPacket::Initial() {
     mHeader.id = MINIMUM_PACKAGE_ID - 1;
     mHeader.source = -1;
     mHeader.target = -1;
 }
 
-void FPackage::Clear() {
+void FPacket::Clear() {
     mHeader.id = 0;
     mPayload.Clear();
 }
 
-bool FPackage::CopyFrom(IRecycle_Interface *other) {
+bool FPacket::CopyFrom(IRecycle_Interface *other) {
     if (IRecycle_Interface::CopyFrom(other)) {
-        if (const auto temp = dynamic_cast<FPackage *>(other); temp != nullptr) {
+        if (const auto temp = dynamic_cast<FPacket *>(other); temp != nullptr) {
             memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
 
             mPayload = temp->mPayload;
@@ -48,9 +48,9 @@ bool FPackage::CopyFrom(IRecycle_Interface *other) {
     return false;
 }
 
-bool FPackage::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
+bool FPacket::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
     if (IRecycle_Interface::CopyFrom(other)) {
-        if (const auto temp = std::dynamic_pointer_cast<FPackage>(other); temp != nullptr) {
+        if (const auto temp = std::dynamic_pointer_cast<FPacket>(other); temp != nullptr) {
             memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
 
             mPayload = temp->mPayload;
@@ -62,73 +62,73 @@ bool FPackage::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
     return false;
 }
 
-void FPackage::Reset() {
+void FPacket::Reset() {
     memset(&mHeader, 0, sizeof(mHeader));
     mPayload.Reset();
 }
 
-bool FPackage::IsAvailable() const {
+bool FPacket::IsAvailable() const {
     if (IsUnused())
         return true;
 
     return mHeader.id >= MINIMUM_PACKAGE_ID && mHeader.id <= MAXIMUM_PACKAGE_ID;
 }
 
-void FPackage::SetPackageID(const uint32_t id) {
+void FPacket::SetPackageID(const uint32_t id) {
     mHeader.id = id;
 }
 
-FPackage &FPackage::SetData(const std::string_view str) {
+FPacket &FPacket::SetData(const std::string_view str) {
     mHeader.length = str.size();
     mPayload.FromString(str);
     return *this;
 }
 
-FPackage &FPackage::SetData(const std::stringstream &ss) {
+FPacket &FPacket::SetData(const std::stringstream &ss) {
     return SetData(ss.str());
 }
 
-FPackage &FPackage::SetMagic(const uint32_t magic) {
+FPacket &FPacket::SetMagic(const uint32_t magic) {
     mHeader.magic = magic;
     return *this;
 }
 
-uint32_t FPackage::GetMagic() const {
+uint32_t FPacket::GetMagic() const {
     return mHeader.magic;
 }
 
-uint32_t FPackage::GetPackageID() const {
+uint32_t FPacket::GetPackageID() const {
     return mHeader.id;
 }
 
-size_t FPackage::GetPayloadLength() const {
+size_t FPacket::GetPayloadLength() const {
     return mPayload.Size();
 }
 
-void FPackage::SetSource(const int32_t source) {
+void FPacket::SetSource(const int32_t source) {
     mHeader.source = source;
 }
 
-int32_t FPackage::GetSource() const {
+int32_t FPacket::GetSource() const {
     return mHeader.source;
 }
 
-void FPackage::SetTarget(const int32_t target) {
+void FPacket::SetTarget(const int32_t target) {
     mHeader.target = target;
 }
 
-int32_t FPackage::GetTarget() const {
+int32_t FPacket::GetTarget() const {
     return mHeader.target;
 }
 
-std::string FPackage::ToString() const {
+std::string FPacket::ToString() const {
     return mPayload.ToString();
 }
 
-const FByteArray &FPackage::RawPayload() const {
+const FByteArray &FPacket::RawPayload() const {
     return mPayload;
 }
 
-std::vector<uint8_t> &FPackage::RawRef() {
+std::vector<uint8_t> &FPacket::RawRef() {
     return mPayload.RawRef();
 }

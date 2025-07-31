@@ -7,7 +7,7 @@
 #include <memory>
 
 
-class FPackage;
+class FPacket;
 class UServer;
 class ULoginAuth;
 
@@ -33,10 +33,10 @@ public:
 
     virtual void UpdateAddressList() = 0;
 
-    virtual FLoginToken ParseLoginRequest(const std::shared_ptr<FPackage> &pkg) = 0;
+    virtual FLoginToken ParseLoginRequest(const std::shared_ptr<FPacket> &pkg) = 0;
 
-    virtual void OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<FPackage> &pkg) = 0;
-    virtual void OnLoginSuccess(int64_t pid, const std::shared_ptr<FPackage> &pkg) const = 0;
+    virtual void OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<FPacket> &pkg) = 0;
+    virtual void OnLoginSuccess(int64_t pid, const std::shared_ptr<FPacket> &pkg) const = 0;
 
     [[nodiscard]] UServer *GetServer() const;
 

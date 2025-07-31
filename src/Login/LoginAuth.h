@@ -33,7 +33,7 @@ public:
     void SetLoginHandler(Args && ... args);
 
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
-    void OnPlayerLogin(int64_t cid, const std::shared_ptr<FPackage> &pkg);
+    void OnPlayerLogin(int64_t cid, const std::shared_ptr<FPacket> &pkg);
 
 private:
     void OnLoginSuccess(int64_t cid, int64_t pid);

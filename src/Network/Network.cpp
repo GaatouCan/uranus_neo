@@ -1,7 +1,7 @@
 #include "Network.h"
 #include "Connection.h"
 #include "Server.h"
-#include "Base/Package.h"
+#include "Base/Packet.h"
 #include "Config/Config.h"
 #include "Login/LoginAuth.h"
 #include "Monitor/Monitor.h"
@@ -40,7 +40,7 @@ void UNetwork::Initial() {
         asio::ssl::context::single_dh_use
     );
 
-    mPackagePool = make_shared<TRecycler<FPackage>>();
+    mPackagePool = make_shared<TRecycler<FPacket>>();
     mPackagePool->Initial();
 
     mThread = std::thread([this] {
@@ -139,11 +139,11 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
     }
 }
 
-std::shared_ptr<FPackage> UNetwork::BuildPackage() const {
+std::shared_ptr<FPacket> UNetwork::BuildPackage() const {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    return std::dynamic_pointer_cast<FPackage>(mPackagePool->Acquire());
+    return std::dynamic_pointer_cast<FPacket>(mPackagePool->Acquire());
 }
 
 shared_ptr<UConnection> UNetwork::FindConnection(const int64_t cid) const {
@@ -171,7 +171,7 @@ void UNetwork::RemoveConnection(const int64_t cid, const int64_t pid) {
     }
 }
 
-void UNetwork::SendToClient(const int64_t cid, const shared_ptr<FPackage> &pkg) const {
+void UNetwork::SendToClient(const int64_t cid, const shared_ptr<FPacket> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -183,7 +183,7 @@ void UNetwork::SendToClient(const int64_t cid, const shared_ptr<FPackage> &pkg) 
     }
 }
 
-void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared_ptr<FPackage> &pkg) const {
+void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared_ptr<FPacket> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -194,7 +194,7 @@ void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared
     conn->SendPackage(pkg);
 }
 
-void UNetwork::OnLoginFailure(const int64_t cid, const shared_ptr<FPackage> &pkg) const {
+void UNetwork::OnLoginFailure(const int64_t cid, const shared_ptr<FPacket> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

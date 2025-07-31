@@ -9,7 +9,7 @@
 #include <asio.hpp>
 
 
-class FPackage;
+class FPacket;
 class IContextBase;
 class IDataAsset_Interface;
 
@@ -49,17 +49,17 @@ public:
     virtual bool Start();
     virtual void Stop();
 
-    [[nodiscard]] std::shared_ptr<FPackage> BuildPackage() const;
+    [[nodiscard]] std::shared_ptr<FPacket> BuildPackage() const;
 
-    virtual void OnPackage(const std::shared_ptr<FPackage> &pkg);
+    virtual void OnPackage(const std::shared_ptr<FPacket> &pkg);
     virtual void OnEvent(const std::shared_ptr<IEventParam_Interface> &event);
 
 #pragma region Package
     /// Send To Other Service Use Target In Package
-    void PostPackage(const std::shared_ptr<FPackage> &pkg) const;
+    void PostPackage(const std::shared_ptr<FPacket> &pkg) const;
 
     /// Send To Other Service Use Service Name
-    void PostPackage(const std::string &name, const std::shared_ptr<FPackage> &pkg) const;
+    void PostPackage(const std::string &name, const std::shared_ptr<FPacket> &pkg) const;
 #pragma endregion
 
 #pragma region Task
@@ -76,7 +76,7 @@ public:
 #pragma endregion
 
 #pragma region To Player
-    virtual void SendToPlayer(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
+    virtual void SendToPlayer(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
     virtual void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
     template<class Type, class Callback, class... Args>
@@ -84,7 +84,7 @@ public:
     void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
 #pragma endregion
 
-    virtual void SendToClient(int64_t pid, const std::shared_ptr<FPackage> &pkg) const;
+    virtual void SendToClient(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
 
 #pragma region Event
     virtual void ListenEvent(int event) const;
