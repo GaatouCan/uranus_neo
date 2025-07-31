@@ -92,7 +92,7 @@ void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool IContextBase::Initial(const IDataAsset_Interface *data) {
+bool IContextBase::Initial(const std::shared_ptr<IDataAsset_Interface> &data) {
     if (mState != EContextState::CREATED)
         return false;
 
