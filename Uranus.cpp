@@ -7,6 +7,7 @@
 #include <Service/ServiceModule.h>
 #include <Gateway/Gateway.h>
 #include <Network/Network.h>
+#include <Internal/CodecFactory.h>
 #include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
@@ -34,7 +35,10 @@ int main() {
     server->CreateModule<UMonitor>();
     server->CreateModule<UServiceModule>();
     server->CreateModule<UGateway>();
-    server->CreateModule<UNetwork>();
+
+    if (auto *network = server->CreateModule<UNetwork>(); network != nullptr) {
+        network->SetCodecFactory<UCodecFactory>();
+    }
 
     server->Initial();
     server->Run();
