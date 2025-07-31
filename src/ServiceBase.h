@@ -45,7 +45,7 @@ public:
 
     [[nodiscard]] EServiceState GetState() const;
 
-    virtual bool Initial(const std::shared_ptr<IDataAsset_Interface> &data);
+    virtual bool Initial(const IDataAsset_Interface *data);
     virtual bool Start();
     virtual void Stop();
 

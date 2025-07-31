@@ -250,7 +250,7 @@ EServiceState IServiceBase::GetState() const {
     return mState;
 }
 
-bool IServiceBase::Initial(const std::shared_ptr<IDataAsset_Interface> &data) {
+bool IServiceBase::Initial(const IDataAsset_Interface *data) {
     if (mState != EServiceState::CREATED)
         return false;
 
