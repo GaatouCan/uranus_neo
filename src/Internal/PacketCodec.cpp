@@ -11,3 +11,7 @@ awaitable<bool> UPacketCodec::EncodeT(const shared_ptr<FPacket> &pkg) {
 awaitable<bool> UPacketCodec::DecodeT(const shared_ptr<FPacket> &pkg) {
     co_return true;
 }
+
+ATcpSocket &UPacketCodec::GetSocket() {
+    return mStream.next_layer();
+}
