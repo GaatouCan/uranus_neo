@@ -57,11 +57,17 @@ private:
 
 template<class Type>
 requires std::derived_from<Type, IRecycle_Interface> && (!std::is_same_v<Type, IRecycle_Interface>)
-class TRecycler final : public IRecyclerBase {
+class TRecycler : public IRecyclerBase {
 
 protected:
     IRecycle_Interface *Create() const override {
-        return new Type();
+        auto res = new Type();
+        this->OnCreateElement(res);
+        return res;
+    }
+
+    virtual void OnCreateElement(Type *) const {
+        // Can Do Something Here If You Need
     }
 
 public:
