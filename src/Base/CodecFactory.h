@@ -4,6 +4,7 @@
 #include "Types.h"
 
 class IPackageCodec_Interface;
+class IRecyclerBase;
 
 class BASE_API ICodecFactory_Interface {
 
@@ -13,5 +14,6 @@ public:
 
     DISABLE_COPY_MOVE(ICodecFactory_Interface)
 
-    virtual IPackageCodec_Interface *CreateCodec(ATcpSocket socket) = 0;
+    virtual IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) = 0;
+    virtual std::shared_ptr<IRecyclerBase> CreatePackagePool() = 0;
 };

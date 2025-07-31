@@ -12,6 +12,8 @@ public:
 
     DISABLE_COPY_MOVE(IPackageCodec_Interface)
 
+    virtual awaitable<bool> Initial() = 0;
+
     virtual awaitable<bool> Encode(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
     virtual awaitable<bool> Decode(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
 

@@ -1,5 +1,6 @@
 #include "Connection.h"
-#include "Base/Packet.h"
+#include "Base/Package.h"
+#include "Base/PackageCodec.h"
 #include "Network.h"
 #include "Server.h"
 #include "Login/LoginAuth.h"
@@ -9,28 +10,21 @@
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <WinSock2.h>
-#else
-#include <arpa/inet.h>
-#include <endian.h>
-#endif
-
 
 using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
 
 
-UConnection::UConnection(ASslStream stream)
-    : mStream(std::move(stream)),
-      mChannel(mStream.next_layer().get_executor(), 1024),
-      mNetwork(nullptr),
-      mWatchdog(mStream.next_layer().get_executor()),
+UConnection::UConnection(IPackageCodec_Interface *codec)
+    : mNetwork(nullptr),
+      mCodec(codec),
+      mChannel(mCodec->GetSocket().get_executor(), 1024),
+      mWatchdog(mCodec->GetSocket().get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    mID = static_cast<int64_t>(mStream.next_layer().native_handle());
-    mStream.next_layer().set_option(asio::ip::tcp::no_delay(true));
-    mStream.next_layer().set_option(asio::ip::tcp::socket::keep_alive(true));
+    mID = static_cast<int64_t>(GetSocket().native_handle());
+    GetSocket().set_option(asio::ip::tcp::no_delay(true));
+    GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 }
 
 void UConnection::SetUpModule(UNetwork *owner) {
@@ -42,11 +36,11 @@ UConnection::~UConnection() {
 }
 
 bool UConnection::IsSocketOpen() const {
-    return mStream.next_layer().is_open();
+    return GetSocket().is_open();
 }
 
-ATcpSocket &UConnection::GetSocket() {
-    return mStream.next_layer();
+ATcpSocket &UConnection::GetSocket() const {
+    return mCodec->GetSocket();
 }
 
 UConnection::APackageChannel &UConnection::GetChannel() {
@@ -68,8 +62,7 @@ void UConnection::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        if (const auto [ec] = co_await self->mStream.async_handshake(asio::ssl::stream_base::server); ec) {
-            SPDLOG_ERROR("Connection[{}] Handshake Failed: {}", self->RemoteAddress().to_string(), ec.message());
+        if (const auto ret = co_await self->mCodec->Initial(); !ret) {
             co_return;
         }
 
@@ -105,7 +98,7 @@ UServer *UConnection::GetServer() const {
     return nullptr;
 }
 
-shared_ptr<FPacket> UConnection::BuildPackage() const {
+shared_ptr<IPackage_Interface> UConnection::BuildPackage() const {
     if (mNetwork)
         return mNetwork->BuildPackage();
     return nullptr;
@@ -113,7 +106,7 @@ shared_ptr<FPacket> UConnection::BuildPackage() const {
 
 asio::ip::address UConnection::RemoteAddress() const {
     if (IsSocketOpen()) {
-        return mStream.next_layer().remote_endpoint().address();
+        return GetSocket().remote_endpoint().address();
     }
     return {};
 }
@@ -126,7 +119,7 @@ int64_t UConnection::GetPlayerID() const {
     return mPlayerID;
 }
 
-void UConnection::SendPackage(const shared_ptr<FPacket> &pkg) {
+void UConnection::SendPackage(const shared_ptr<IPackage_Interface> &pkg) {
     if (pkg == nullptr)
         return;
 
@@ -148,48 +141,9 @@ awaitable<void> UConnection::WritePackage() {
             if (ec || pkg == nullptr)
                 co_return;
 
-            FPacket::FHeader header{};
-            memset(&header, 0, sizeof(FPacket::FHeader));
-
-            header.magic = htonl(pkg->mHeader.magic);
-            header.id = htonl(pkg->mHeader.id);
-
-            header.source = static_cast<int32_t>(htonl(pkg->mHeader.source));
-            header.target = static_cast<int32_t>(htonl(pkg->mHeader.target));
-
-#if defined(_WIN32) || defined(_WIN64)
-            header.length = htonll(pkg->mHeader.length);
-#else
-            header.length = htobe64(pkg->mHeader.length);
-#endif
-
-            if (pkg->mHeader.length > 0) {
-
-                const auto buffers = {
-                    asio::buffer(&header, FPacket::PACKAGE_HEADER_SIZE),
-                    asio::buffer(pkg->mPayload.RawRef()),
-                };
-
-                if (const auto [ec, len] = co_await async_write(mStream, buffers); ec || len == 0) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len == 0)
-                        SPDLOG_WARN("{:<20} - Package Length Equal Zero", __FUNCTION__);
-
-                    Disconnect();
-                    break;
-                }
-
-            } else {
-                if (const auto [ec, len] = co_await async_write(mStream, asio::buffer(&header, FPacket::PACKAGE_HEADER_SIZE)); ec || len == 0) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} - Failed To Write Package, Error Code: {}", __FUNCTION__, ec.message());
-                    if (len != FPacket::PACKAGE_HEADER_SIZE)
-                        SPDLOG_WARN("{:<20} - Write Package Header Length Not Equal", __FUNCTION__);
-
-                    Disconnect();
-                    break;
-                }
+            if (const auto ret = co_await mCodec->Encode(pkg); ret) {
+                Disconnect();
+                break;
             }
 
             // Can Do Something Here
@@ -212,39 +166,9 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPacket::PACKAGE_HEADER_SIZE)); ec || len == 0) {
-                if (ec)
-                    SPDLOG_WARN("{:<20} -  Failed To Read Package Header, Error Code: {}", __FUNCTION__, ec.message());
-                if (len != FPacket::PACKAGE_HEADER_SIZE)
-                    SPDLOG_WARN("{:<20} - Read Package Header Length Not Equal", __FUNCTION__);
-
+            if (const auto ret = co_await mCodec->Decode(pkg); ret) {
                 Disconnect();
                 break;
-            }
-
-            pkg->mHeader.magic = ntohl(pkg->mHeader.magic);
-            pkg->mHeader.id = ntohl(pkg->mHeader.id);
-
-            pkg->mHeader.source = static_cast<int32_t>(ntohl(pkg->mHeader.source));
-            pkg->mHeader.target = static_cast<int32_t>(ntohl(pkg->mHeader.target));
-
-#if defined(_WIN32) || defined(_WIN64)
-            pkg->mHeader.length = ntohll(pkg->mHeader.length);
-#else
-            pkg->mHeader.length = be64toh(pkg->mHeader.length);
-#endif
-
-            if (pkg->mHeader.length > 0) {
-                pkg->mPayload.Reserve(pkg->mHeader.length);
-                if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(pkg->RawRef())); ec || len != pkg->mHeader.length) {
-                    if (ec)
-                        SPDLOG_WARN("{:<20} - Fail To Read Package Payload, {}", __FUNCTION__, ec.message());
-                    if (len != pkg->mHeader.length)
-                        SPDLOG_WARN("{:<20} - The Payload Length Not Equal", __FUNCTION__);
-
-                    Disconnect();
-                    break;
-                }
             }
 
             const auto now = std::chrono::steady_clock::now();

@@ -1,5 +1,6 @@
 #include "CodecFactory.h"
 #include "PacketCodec.h"
+#include "Base/Recycler.h"
 
 UCodecFactory::UCodecFactory()
     : mSSLContext(asio::ssl::context::tlsv13_server) {
@@ -16,6 +17,10 @@ UCodecFactory::UCodecFactory()
 UCodecFactory::~UCodecFactory() {
 }
 
-IPackageCodec_Interface *UCodecFactory::CreateCodec(ATcpSocket socket) {
+IPackageCodec_Interface *UCodecFactory::CreatePackageCodec(ATcpSocket socket) {
     return new UPacketCodec(ASslStream(std::move(socket), mSSLContext));
+}
+
+std::shared_ptr<IRecyclerBase> UCodecFactory::CreatePackagePool() {
+    return make_shared<TRecycler<FPacket>>();
 }

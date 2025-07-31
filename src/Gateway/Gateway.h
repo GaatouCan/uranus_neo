@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 
-class FPacket;
+class IPackage_Interface;
 class IServiceBase;
 class IPlayerAgent;
 class UAgentContext;
@@ -39,13 +39,13 @@ public:
     int64_t GetConnectionID(int64_t pid) const;
     std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
 
-    void SendToPlayer(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
+    void SendToPlayer(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
     void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
-    void OnClientPackage(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
-    void SendToClient(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
+    void OnClientPackage(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
-    void OnHeartBeat(int64_t pid, const std::shared_ptr<FPacket> &pkg) const;
+    void OnHeartBeat(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
 private:
     FSharedLibrary mLibrary;

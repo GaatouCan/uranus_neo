@@ -1,7 +1,8 @@
 #include "Network.h"
+#include "Base/CodecFactory.h"
+#include "Base/Package.h"
 #include "Connection.h"
 #include "Server.h"
-#include "Base/Packet.h"
 #include "Config/Config.h"
 #include "Login/LoginAuth.h"
 #include "Monitor/Monitor.h"
@@ -11,12 +12,10 @@
 #include <spdlog/spdlog.h>
 
 
-// static const std::string key = "1d0fa7879b018b71a00109e7e29eb0c5037617e9eddc3d46e95294fc1fa3ad50";
-
 UNetwork::UNetwork()
-    : mSSLContext(asio::ssl::context::tlsv13_server),
-      mAcceptor(mIOContext),
-      mPackagePool(nullptr) {
+    : mAcceptor(mIOContext),
+      mPackagePool(nullptr),
+      mCodecFactory(nullptr) {
 }
 
 UNetwork::~UNetwork() {
@@ -31,16 +30,9 @@ void UNetwork::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
-    mSSLContext.use_certificate_chain_file("server.crt");
-    mSSLContext.use_private_key_file("server.key", asio::ssl::context::pem);
-    mSSLContext.set_options(
-        asio::ssl::context::no_sslv2 |
-        asio::ssl::context::no_sslv3 |
-        asio::ssl::context::default_workarounds |
-        asio::ssl::context::single_dh_use
-    );
+    assert(mCodecFactory != nullptr);
 
-    mPackagePool = make_shared<TRecycler<FPacket>>();
+    mPackagePool = mCodecFactory->CreatePackagePool();
     mPackagePool->Initial();
 
     mThread = std::thread([this] {
@@ -86,6 +78,12 @@ io_context &UNetwork::GetIOContext() {
     return mIOContext;
 }
 
+shared_ptr<IRecyclerBase> UNetwork::CreatePackagePool() const {
+    if (mCodecFactory)
+        return mCodecFactory->CreatePackagePool();
+    return nullptr;
+}
+
 awaitable<void> UNetwork::WaitForClient(uint16_t port) {
     try {
         mAcceptor.open(asio::ip::tcp::v4());
@@ -111,7 +109,7 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     }
                 }
 
-                const auto conn = make_shared<UConnection>(ASslStream(std::move(socket), mSSLContext));
+                const auto conn = make_shared<UConnection>(mCodecFactory->CreatePackageCodec(std::move(socket)));
                 conn->SetUpModule(this);
 
                 if (const auto id = conn->GetConnectionID(); id > 0) {
@@ -139,11 +137,11 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
     }
 }
 
-std::shared_ptr<FPacket> UNetwork::BuildPackage() const {
+std::shared_ptr<IPackage_Interface> UNetwork::BuildPackage() const {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    return std::dynamic_pointer_cast<FPacket>(mPackagePool->Acquire());
+    return std::dynamic_pointer_cast<IPackage_Interface>(mPackagePool->Acquire());
 }
 
 shared_ptr<UConnection> UNetwork::FindConnection(const int64_t cid) const {
@@ -171,7 +169,7 @@ void UNetwork::RemoveConnection(const int64_t cid, const int64_t pid) {
     }
 }
 
-void UNetwork::SendToClient(const int64_t cid, const shared_ptr<FPacket> &pkg) const {
+void UNetwork::SendToClient(const int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -183,7 +181,7 @@ void UNetwork::SendToClient(const int64_t cid, const shared_ptr<FPacket> &pkg) c
     }
 }
 
-void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared_ptr<FPacket> &pkg) const {
+void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -194,7 +192,7 @@ void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared
     conn->SendPackage(pkg);
 }
 
-void UNetwork::OnLoginFailure(const int64_t cid, const shared_ptr<FPacket> &pkg) const {
+void UNetwork::OnLoginFailure(const int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

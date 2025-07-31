@@ -1,9 +1,24 @@
 #include "PacketCodec.h"
 
 #include <spdlog/spdlog.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <WinSock2.h>
+#else
+#include <arpa/inet.h>
+#include <endian.h>
+#endif
 
 UPacketCodec::UPacketCodec(ASslStream stream)
     : mStream(std::move(stream)) {
+}
+
+awaitable<bool> UPacketCodec::Initial() {
+    if (const auto [ec] = co_await mStream.async_handshake(asio::ssl::stream_base::server); ec) {
+        SPDLOG_ERROR("Connection[{}] Handshake Failed: {}",
+            mStream.next_layer().remote_endpoint().address().to_string(), ec.message());
+        co_return false;
+    }
+    co_return true;
 }
 
 awaitable<bool> UPacketCodec::EncodeT(const shared_ptr<FPacket> &pkg) {

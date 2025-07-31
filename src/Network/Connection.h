@@ -3,25 +3,22 @@
 #include "Common.h"
 #include "Base/Types.h"
 
-#include <memory>
 
 class UNetwork;
 class UServer;
-class FPacket;
-
-using std::shared_ptr;
+class IPackage_Interface;
+class IPackageCodec_Interface;
 
 
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
-    using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<FPacket>)>;
+    using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<IPackage_Interface>)>;
     friend class UNetwork;
 
-    // ATcpSocket mSocket;
-    ASslStream mStream;
-    APackageChannel mChannel;
-
     UNetwork *mNetwork;
+
+    unique_ptr<IPackageCodec_Interface> mCodec;
+    APackageChannel mChannel;
 
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;
@@ -36,10 +33,10 @@ protected:
 public:
     UConnection() = delete;
 
-    explicit UConnection(ASslStream stream);
+    explicit UConnection(IPackageCodec_Interface *codec);
     ~UConnection();
 
-    [[nodiscard]] ATcpSocket &GetSocket();
+    [[nodiscard]] ATcpSocket &GetSocket() const;
     [[nodiscard]] bool IsSocketOpen() const;
     [[nodiscard]] APackageChannel &GetChannel();
 
@@ -52,13 +49,13 @@ public:
     [[nodiscard]] UNetwork *GetNetworkModule() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    shared_ptr<FPacket> BuildPackage() const;
+    shared_ptr<IPackage_Interface> BuildPackage() const;
 
     asio::ip::address RemoteAddress() const;
     [[nodiscard]] int64_t GetConnectionID() const;
     [[nodiscard]] int64_t GetPlayerID() const;
 
-    void SendPackage(const shared_ptr<FPacket> &pkg);
+    void SendPackage(const shared_ptr<IPackage_Interface> &pkg);
 
 private:
     awaitable<void> WritePackage();

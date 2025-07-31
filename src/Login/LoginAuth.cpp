@@ -19,8 +19,6 @@ void ULoginAuth::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
-    // GetServer()->GetServerHandler()->InitLoginAuth(this);
-
     mState = EModuleState::INITIALIZED;
 }
 
@@ -35,6 +33,7 @@ void ULoginAuth::Stop() {
     if (mState == EModuleState::STOPPED)
         return;
 
+    assert(mLoginHandler != nullptr);
     mState = EModuleState::STOPPED;
 }
 
@@ -43,7 +42,7 @@ bool ULoginAuth::VerifyAddress(const asio::ip::tcp::endpoint &endpoint) {
     return true;
 }
 
-void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<FPacket> &pkg) {
+void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<IPackage_Interface> &pkg) {
     if (mState != EModuleState::RUNNING)
         return;
 
