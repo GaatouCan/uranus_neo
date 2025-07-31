@@ -1,6 +1,6 @@
 #include "LoginAuth.h"
 #include "Server.h"
-#include "Base/Packet.h"
+#include "Base/Package.h"
 #include "Gateway/Gateway.h"
 #include "Network/Network.h"
 #include "Network/Connection.h"

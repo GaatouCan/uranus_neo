@@ -2,7 +2,7 @@
 #include "AgentContext.h"
 #include "Gateway.h"
 #include "Server.h"
-#include "Base/Packet.h"
+#include "Base/Package.h"
 #include "Timer/TimerModule.h"
 #include "Network/Network.h"
 #include "Event/EventModule.h"
@@ -31,7 +31,7 @@ int64_t IPlayerAgent::GetPlayerID() const {
     return dynamic_cast<UAgentContext *>(mContext)->GetPlayerID();
 }
 
-void IPlayerAgent::SendToPlayer(const int64_t pid, const std::shared_ptr<FPacket> &pkg) const {
+void IPlayerAgent::SendToPlayer(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -63,7 +63,7 @@ void IPlayerAgent::PostToPlayer(const int64_t pid, const std::function<void(ISer
     }
 }
 
-void IPlayerAgent::SendToClient(const std::shared_ptr<FPacket> &pkg) const {
+void IPlayerAgent::SendToClient(const std::shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -105,7 +105,7 @@ void IPlayerAgent::CancelTimer(const FTimerHandle &handle) {
     }
 }
 
-void IPlayerAgent::OnHeartBeat(const std::shared_ptr<FPacket> &pkg) {
+void IPlayerAgent::OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) {
 }
 
 void IPlayerAgent::ListenEvent(const int event) const {
@@ -120,6 +120,6 @@ void IPlayerAgent::RemoveListener(const int event) const {
     }
 }
 
-void IPlayerAgent::SendToClient(const int64_t, const std::shared_ptr<FPacket> &) const {
+void IPlayerAgent::SendToClient(const int64_t, const std::shared_ptr<IPackage_Interface> &) const {
     // Hide This Function In Player Agent, Do Nothing
 }

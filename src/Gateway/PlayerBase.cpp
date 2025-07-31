@@ -7,14 +7,6 @@ UPlayerBase::UPlayerBase()
 UPlayerBase::~UPlayerBase() {
 }
 
-void UPlayerBase::RegisterProtocol(const uint32_t id, const APlayerProtocol &func) {
-    mRoute.Register(id, func);
-}
-
-void UPlayerBase::OnPackage(const std::shared_ptr<FPacket> &pkg) {
-    mRoute.OnReceivePackage(pkg, this);
-}
-
 UComponentModule &UPlayerBase::GetComponentModule() {
     return mComponentModule;
 }

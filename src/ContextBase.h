@@ -9,7 +9,7 @@ class IModuleBase;
 class IRecyclerBase;
 class IDataAsset_Interface;
 class IEventParam_Interface;
-class FPacket;
+class IPackage_Interface;
 class UServer;
 
 enum class BASE_API EContextState {
@@ -55,13 +55,13 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
      */
     class BASE_API UPackageNode final : public INodeBase {
 
-        shared_ptr<FPacket> mPackage;
+        shared_ptr<IPackage_Interface> mPackage;
 
     public:
         explicit UPackageNode(IServiceBase *service);
         ~UPackageNode() override = default;
 
-        void SetPackage(const shared_ptr<FPacket> &pkg);
+        void SetPackage(const shared_ptr<IPackage_Interface> &pkg);
         void Execute() override;
     };
 
@@ -121,12 +121,12 @@ public:
     [[nodiscard]] UServer *GetServer() const;
     [[nodiscard]] IModuleBase *GetOwnerModule() const;
 
-    [[nodiscard]] shared_ptr<FPacket> BuildPackage() const;
+    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
 
     [[nodiscard]] IServiceBase *GetOwningService() const;
     [[nodiscard]] EContextState GetState() const;
 
-    void PushPackage(const shared_ptr<FPacket> &pkg);
+    void PushPackage(const shared_ptr<IPackage_Interface> &pkg);
     void PushTask(const std::function<void(IServiceBase *)> &task);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 

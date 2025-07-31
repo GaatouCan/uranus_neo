@@ -4,7 +4,6 @@
 
 
 class UGateway;
-class FPacket;
 
 
 class BASE_API UAgentContext final : public IContextBase {
@@ -27,5 +26,5 @@ public:
     [[nodiscard]] UGateway* GetGateway() const;
     [[nodiscard]] std::shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
 
-    void OnHeartBeat(const std::shared_ptr<FPacket> &pkg) const;
+    void OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) const;
 };

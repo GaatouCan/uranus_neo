@@ -1,12 +1,10 @@
 #pragma once
 
-#include "Recycle.h"
-#include "Package.h"
-#include "ByteArray.h"
+#include "../Base/Recycle.h"
+#include "../Base/Package.h"
+#include "../Base/ByteArray.h"
 
 #include <sstream>
-
-#include "Internal/PacketCodec.h"
 
 
 // Define Minimum And Maximum Available Package ID

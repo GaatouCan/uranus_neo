@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Base/Packet.h"
+#include "Package.h"
 
 #include <unordered_map>
 #include <memory>
 
-template<typename Functor>
+
+template<CPackageType Type, typename Functor>
 class TProtocolRoute {
 
 public:
@@ -19,7 +20,7 @@ public:
     }
 
     template<class ... Args>
-    void OnReceivePackage(const std::shared_ptr<FPacket> &pkg, Args && ... args) {
+    void OnReceivePackage(const std::shared_ptr<Type> &pkg, Args && ... args) {
         const auto iter = mProtocolMap.find(pkg->GetPackageID());
         if (iter == mProtocolMap.end())
             return;

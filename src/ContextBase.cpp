@@ -1,9 +1,8 @@
 #include "ContextBase.h"
 #include "ServiceBase.h"
-#include "Module.h"
 #include "Server.h"
-#include "Base/Recycler.h"
-#include "Base/Packet.h"
+#include "Network/Network.h"
+#include "Base/Package.h"
 #include "Base/EventParam.h"
 
 #include <spdlog/spdlog.h>
@@ -27,7 +26,7 @@ IContextBase::UPackageNode::UPackageNode(IServiceBase *service)
     : INodeBase(service) {
 }
 
-void IContextBase::UPackageNode::SetPackage(const shared_ptr<FPacket> &pkg) {
+void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
 }
 
@@ -105,6 +104,13 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
     if (GetServer() == nullptr)
         return false;
 
+    const auto network = GetServer()->GetModule<UNetwork>();
+    if (network == nullptr) {
+        SPDLOG_CRITICAL("Network Module Not Found");
+        GetServer()->Shutdown();
+        exit(-1);
+    }
+
     // Start To Create Service
     mState = EContextState::INITIALIZING;
 
@@ -126,7 +132,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
     mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
 
     // Create Package Pool For Data Exchange
-    mPackagePool = make_shared<TRecycler<FPacket> >();
+    mPackagePool = network->CreatePackagePool();
     mPackagePool->Initial();
 
     // Initial Service
@@ -251,7 +257,7 @@ EContextState IContextBase::GetState() const {
     return mState;
 }
 
-void IContextBase::PushPackage(const shared_ptr<FPacket> &pkg) {
+void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -309,12 +315,12 @@ IModuleBase *IContextBase::GetOwnerModule() const {
     return mModule;
 }
 
-shared_ptr<FPacket> IContextBase::BuildPackage() const {
+shared_ptr<IPackage_Interface> IContextBase::BuildPackage() const {
     if (mState != EContextState::IDLE || mState != EContextState::RUNNING)
         return nullptr;
 
     if (const auto elem = mPackagePool->Acquire())
-        return std::dynamic_pointer_cast<FPacket>(elem);
+        return std::dynamic_pointer_cast<IPackage_Interface>(elem);
 
     return nullptr;
 }

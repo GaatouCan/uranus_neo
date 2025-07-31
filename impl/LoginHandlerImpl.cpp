@@ -1,6 +1,6 @@
 #include "LoginHandlerImpl.h"
 #include "Server.h"
-#include "Base/Packet.h"
+#include "../src/Internal/Packet.h"
 #include "Service/ServiceModule.h"
 
 #include <login.pb.h>
