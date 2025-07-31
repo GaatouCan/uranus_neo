@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Recycle.h"
+#include "Package.h"
 #include "ByteArray.h"
 
 #include <sstream>
@@ -17,7 +18,7 @@ inline constexpr uint32_t MAXIMUM_PACKAGE_ID = 999999;
  * Use The Structure Of Header Plus Data Part;
  * The Header Occupies 24 Bytes And Uses Big-Endian Transmission In Network
  */
-class BASE_API FPacket final : public IRecycle_Interface {
+class BASE_API FPacket final : public IPackage_Interface, public IRecycle_Interface {
 
     friend class UConnection;
 
@@ -47,8 +48,8 @@ public:
     [[nodiscard]] bool IsUnused() const override;
     [[nodiscard]] bool IsAvailable() const override;
 
-    void SetPackageID(uint32_t id);
-    [[nodiscard]] uint32_t GetPackageID() const;
+    void SetPackageID(uint32_t id) override;
+    [[nodiscard]] uint32_t GetPackageID() const override;
 
     bool CopyFrom(IRecycle_Interface *other) override;
     bool CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) override;
@@ -63,11 +64,11 @@ public:
 
     [[nodiscard]] size_t GetPayloadLength() const;
 
-    void SetSource(int32_t source);
-    [[nodiscard]] int32_t GetSource() const;
+    void SetSource(int32_t source) override;
+    [[nodiscard]] int32_t GetSource() const override;
 
-    void SetTarget(int32_t target);
-    [[nodiscard]] int32_t GetTarget() const;
+    void SetTarget(int32_t target) override;
+    [[nodiscard]] int32_t GetTarget() const override;
 
     [[nodiscard]] std::string ToString() const;
     [[nodiscard]] const FByteArray &RawPayload() const;
