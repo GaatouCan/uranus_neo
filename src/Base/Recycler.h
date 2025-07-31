@@ -54,14 +54,23 @@ private:
 };
 
 
-template<class Type>
+template<class Type, class InitialFunctor = std::nullptr_t>
 requires std::derived_from<Type, IRecycle_Interface> && (!std::is_same_v<Type, IRecycle_Interface>)
-class TRecycler : public IRecyclerBase {
+class TRecycler final : public IRecyclerBase {
+
+    InitialFunctor mInitial;
 
 protected:
     IRecycle_Interface *Create() const override {
-        // You Can Override This Method And Do Yourself Constructor
-        return new Type();
+        auto *res = new Type();
+
+        if constexpr (!std::is_same_v<InitialFunctor, std::nullptr_t>) {
+            if (mInitial) {
+                std::invoke(mInitial, res);
+            }
+        }
+
+        return res;
     }
 
 public:
