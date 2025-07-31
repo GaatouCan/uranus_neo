@@ -3,6 +3,8 @@
 #include "Module.h"
 
 #include <yaml-cpp/yaml.h>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
 
 
 constexpr auto SERVER_CONFIG_FILE = "/server.yaml";
@@ -29,9 +31,12 @@ public:
 
     [[nodiscard]] const YAML::Node &GetServerConfig() const;
 
+    [[nodiscard]] const nlohmann::json *FindConfig(const std::string &path) const;
+
 protected:
     std::string mYAMLPath;
     std::string mJSONPath;
 
     YAML::Node mServerConfig;
+    std::unordered_map<std::string, nlohmann::json> mConfigMap;
 };
