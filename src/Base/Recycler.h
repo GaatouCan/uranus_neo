@@ -8,7 +8,6 @@
 #include <shared_mutex>
 
 
-
 /**
  * The Abstract Base Class Of Recycler,
  * Its Subclass Must Be Created By std::make_shared
@@ -61,13 +60,8 @@ class TRecycler : public IRecyclerBase {
 
 protected:
     IRecycle_Interface *Create() const override {
-        auto res = new Type();
-        this->OnCreateElement(res);
-        return res;
-    }
-
-    virtual void OnCreateElement(Type *) const {
-        // Can Do Something Here If You Need
+        // You Can Override This Method And Do Yourself Constructor
+        return new Type();
     }
 
 public:
