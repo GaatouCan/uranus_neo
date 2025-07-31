@@ -6,6 +6,8 @@
 
 #include <sstream>
 
+#include "Internal/PacketCodec.h"
+
 
 // Define Minimum And Maximum Available Package ID
 
@@ -20,7 +22,7 @@ inline constexpr uint32_t MAXIMUM_PACKAGE_ID = 999999;
  */
 class BASE_API FPacket final : public IPackage_Interface, public IRecycle_Interface {
 
-    friend class UConnection;
+    friend class UPacketCodec;
 
     /// Packet Header Define
     struct FHeader {
