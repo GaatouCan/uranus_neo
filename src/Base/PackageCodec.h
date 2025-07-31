@@ -25,7 +25,7 @@ class TPackageCodec : public IPackageCodec_Interface {
 public:
     asio::awaitable<bool> Encode(const std::shared_ptr<IPackage_Interface> &pkg) override {
         if (auto temp = std::dynamic_pointer_cast<Type>(pkg)) {
-            const auto ret = this->EncodeT(temp);
+            const auto ret = co_await this->EncodeT(temp);
             co_return ret;
         }
         co_return false;
@@ -33,7 +33,7 @@ public:
 
     asio::awaitable<bool> Decode(const std::shared_ptr<IPackage_Interface> &pkg) override {
         if (auto temp = std::dynamic_pointer_cast<Type>(pkg)) {
-            const auto ret = this->DecodeT(temp);
+            const auto ret = co_await this->DecodeT(temp);
             co_return ret;
         }
         co_return false;
