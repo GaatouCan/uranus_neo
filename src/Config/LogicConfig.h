@@ -2,6 +2,9 @@
 
 #include "Common.h"
 
+#include <vector>
+#include <nlohmann/json.hpp>
+
 class BASE_API ILogicConfig_Interface {
 
 public:
@@ -10,5 +13,7 @@ public:
 
     DISABLE_COPY_MOVE(ILogicConfig_Interface)
 
-    virtual bool Initial() = 0;
+    [[nodiscard]] virtual std::vector<std::string> InitialPathArray() const = 0;
+
+    virtual bool Initial(const std::map<std::string, nlohmann::json> &config) = 0;
 };

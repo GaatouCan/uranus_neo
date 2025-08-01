@@ -55,8 +55,8 @@ void UConfig::Initial() {
                 filepath = utils::StringReplace(filepath, '/', '.');
 #endif
 
-            // mJSONMap[filepath] = nlohmann::json::parse(fs);
-            // SPDLOG_INFO("\tLoaded {}.", filepath);
+            mConfigMap[filepath] = nlohmann::json::parse(fs);
+            SPDLOG_INFO("\tLoaded {}.", filepath);
         }
     });
 
