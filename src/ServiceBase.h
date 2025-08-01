@@ -2,6 +2,7 @@
 
 #include "Base/TimerHandle.h"
 #include "Base/EventParam.h"
+#include "DataAsset.h"
 #include "Server.h"
 
 #include <string>
@@ -11,7 +12,6 @@
 
 class IContextBase;
 class IPackage_Interface;
-class IDataAsset_Interface;
 
 enum class BASE_API EServiceState {
     CREATED,
@@ -45,7 +45,7 @@ public:
 
     [[nodiscard]] EServiceState GetState() const;
 
-    virtual bool Initial(const IDataAsset_Interface *data);
+    virtual bool Initial(std::unique_ptr<IDataAsset_Interface> data);
     virtual bool Start();
     virtual void Stop();
 

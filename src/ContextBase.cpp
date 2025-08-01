@@ -92,7 +92,7 @@ void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool IContextBase::Initial(const IDataAsset_Interface *data) {
+bool IContextBase::Initial(unique_ptr<IDataAsset_Interface> data) {
     if (mState != EContextState::CREATED)
         return false;
 
@@ -137,7 +137,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
 
     // Initial Service
     mService->SetUpContext(this);
-    mService->Initial(data);
+    mService->Initial(std::move(data));
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;

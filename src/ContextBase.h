@@ -2,15 +2,16 @@
 
 #include "Base/Types.h"
 #include "Base/SharedLibrary.h"
+#include "DataAsset.h"
 
 
 class IServiceBase;
 class IModuleBase;
 class IRecyclerBase;
-class IDataAsset_Interface;
 class IEventParam_Interface;
 class IPackage_Interface;
 class UServer;
+
 
 enum class BASE_API EContextState {
     CREATED,
@@ -108,7 +109,7 @@ public:
     void SetUpModule(IModuleBase *module);
     void SetUpLibrary(const FSharedLibrary &library);
 
-    virtual bool Initial(const IDataAsset_Interface *data);
+    virtual bool Initial(unique_ptr<IDataAsset_Interface> data);
 
     virtual int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func);
     int ForceShutdown();
