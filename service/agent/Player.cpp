@@ -1,8 +1,11 @@
 #include "Player.h"
 
-UPlayer::UPlayer() {
+#include <Config/Config.h>
 
+UPlayer::UPlayer() {
     LoadProtocol();
+
+    mConfig.LoadConfig(GetModule<UConfig>());
 }
 
 UPlayer::~UPlayer() {
