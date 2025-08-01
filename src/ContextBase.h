@@ -109,7 +109,7 @@ public:
     void SetUpModule(IModuleBase *module);
     void SetUpLibrary(const FSharedLibrary &library);
 
-    virtual bool Initial(unique_ptr<IDataAsset_Interface> data);
+    virtual bool Initial(const IDataAsset_Interface *data);
 
     virtual int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func);
     int ForceShutdown();

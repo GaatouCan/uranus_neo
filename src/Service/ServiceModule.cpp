@@ -1,7 +1,6 @@
 #include "ServiceModule.h"
 #include "ServiceContext.h"
 #include "Server.h"
-#include "DataAsset.h"
 #include "Config/Config.h"
 
 #include <spdlog/spdlog.h>
@@ -220,7 +219,7 @@ FSharedLibrary UServiceModule::FindServiceLibrary(const std::string &filename, c
     return iter != mExtendLibraryMap.end() ? iter->second : FSharedLibrary{};
 }
 
-std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, std::unique_ptr<IDataAsset_Interface> data) {
+std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
@@ -242,7 +241,7 @@ std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::st
     context->SetFilename(filename);
     context->SetServiceType(EServiceType::EXTEND);
 
-    if (!context->Initial(std::move(data))) {
+    if (!context->Initial(data)) {
         SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", __FUNCTION__, filename);
 
         context->ForceShutdown();

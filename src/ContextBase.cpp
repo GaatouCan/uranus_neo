@@ -12,6 +12,7 @@
 typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
+
 IContextBase::INodeBase::INodeBase(IServiceBase *service)
     : mService(service) {
 }
@@ -93,7 +94,7 @@ void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool IContextBase::Initial(unique_ptr<IDataAsset_Interface> data) {
+bool IContextBase::Initial(const IDataAsset_Interface *data) {
     if (mState != EContextState::CREATED)
         return false;
 
@@ -138,12 +139,15 @@ bool IContextBase::Initial(unique_ptr<IDataAsset_Interface> data) {
 
     // Initial Service
     mService->SetUpContext(this);
-    mService->Initial(std::move(data));
+    mService->Initial(data);
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
         __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+
+    // Delete The Data Asset For Initialization
+    delete data;
 
     return true;
 }

@@ -1,6 +1,5 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
-#include "DataAsset.h"
 #include "Base/Package.h"
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"
@@ -251,7 +250,7 @@ EServiceState IServiceBase::GetState() const {
     return mState;
 }
 
-bool IServiceBase::Initial(std::unique_ptr<IDataAsset_Interface> data) {
+bool IServiceBase::Initial(const IDataAsset_Interface *data) {
     if (mState != EServiceState::CREATED)
         return false;
 

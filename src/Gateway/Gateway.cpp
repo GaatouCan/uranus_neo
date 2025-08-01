@@ -2,7 +2,6 @@
 #include "AgentContext.h"
 #include "PlayerAgent.h"
 #include "Server.h"
-#include "DataAsset.h"
 #include "Base/Package.h"
 #include "Network/Network.h"
 #include "Service/ServiceModule.h"
