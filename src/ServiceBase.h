@@ -2,7 +2,6 @@
 
 #include "Base/TimerHandle.h"
 #include "Base/EventParam.h"
-#include "DataAsset.h"
 #include "Server.h"
 
 #include <string>
@@ -11,6 +10,7 @@
 
 
 class IContextBase;
+class IDataAsset_Interface;
 class IPackage_Interface;
 
 enum class BASE_API EServiceState {

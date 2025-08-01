@@ -1,6 +1,7 @@
 #include "ContextBase.h"
 #include "ServiceBase.h"
 #include "Server.h"
+#include "DataAsset.h"
 #include "Network/Network.h"
 #include "Base/Package.h"
 #include "Base/EventParam.h"

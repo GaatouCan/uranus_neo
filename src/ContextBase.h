@@ -2,13 +2,13 @@
 
 #include "Base/Types.h"
 #include "Base/SharedLibrary.h"
-#include "DataAsset.h"
 
 
 class IServiceBase;
 class IModuleBase;
 class IRecyclerBase;
 class IEventParam_Interface;
+class IDataAsset_Interface;
 class IPackage_Interface;
 class UServer;
 

@@ -1,5 +1,6 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
+#include "DataAsset.h"
 #include "Base/Package.h"
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"

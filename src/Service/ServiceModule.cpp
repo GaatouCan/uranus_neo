@@ -1,6 +1,7 @@
 #include "ServiceModule.h"
 #include "ServiceContext.h"
 #include "Server.h"
+#include "DataAsset.h"
 #include "Config/Config.h"
 
 #include <spdlog/spdlog.h>
