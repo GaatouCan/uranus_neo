@@ -79,7 +79,9 @@ const YAML::Node &UConfig::GetServerConfig() const {
     return mServerConfig;
 }
 
-const nlohmann::json *UConfig::FindConfig(const std::string &path) const {
+std::optional<nlohmann::json> UConfig::FindConfig(const std::string &path) const {
     const auto iter = mConfigMap.find(path);
-    return iter != mConfigMap.end() ? &iter->second : nullptr;
+    if (iter == mConfigMap.end())
+        return std::nullopt;
+    return iter->second;
 }
