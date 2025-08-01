@@ -6,6 +6,7 @@
 #include "Gateway/Gateway.h"
 #include "Event/EventModule.h"
 #include "Timer/TimerModule.h"
+#include "Logger/LoggerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -244,6 +245,17 @@ void IServiceBase::CancelTimer(const FTimerHandle &handle) {
             timer->CancelServiceTimer(GetServiceID());
         }
     }
+}
+
+void IServiceBase::TryCreateLogger(const std::string &name) const {
+    if (mState <= EServiceState::CREATED || mState >= EServiceState::TERMINATED)
+        return;
+
+    auto *module = GetModule<ULoggerModule>();
+    if (module == nullptr)
+        return;
+
+    module->TryCreateLogger(name);
 }
 
 EServiceState IServiceBase::GetState() const {

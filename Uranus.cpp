@@ -3,6 +3,7 @@
 #include <Login/LoginAuth.h>
 #include <Event/EventModule.h>
 #include <Timer/TimerModule.h>
+#include <Logger/LoggerModule.h>
 #include <Monitor/Monitor.h>
 #include <Service/ServiceModule.h>
 #include <Gateway/Gateway.h>
@@ -32,6 +33,7 @@ int main() {
 
     server->CreateModule<UEventModule>();
     server->CreateModule<UTimerModule>();
+    server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
     server->CreateModule<UServiceModule>();
     server->CreateModule<UGateway>();

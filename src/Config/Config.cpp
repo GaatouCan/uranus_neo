@@ -25,9 +25,9 @@ void UConfig::Initial() {
     assert(!mServerConfig["server"]["port"].IsNull());
     assert(!mServerConfig["server"]["worker"].IsNull());
     assert(!mServerConfig["server"]["cross"].IsNull());
-
-    assert(!mServerConfig["server"]["encryption"].IsNull());
-    assert(!mServerConfig["server"]["encryption"]["key"].IsNull());
+    assert(!mServerConfig["server"]["cross"].IsNull());
+    assert(!mServerConfig["server"]["logger"].IsNull());
+    assert(!mServerConfig["server"]["logger"]["directory"].IsNull());
 
     assert(!mServerConfig["package"].IsNull());
     assert(!mServerConfig["package"]["magic"].IsNull());

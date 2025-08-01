@@ -102,6 +102,8 @@ public:
     virtual void CancelTimer(const FTimerHandle &handle);
 #pragma endregion
 
+    void TryCreateLogger(const std::string &name) const;
+
 protected:
     IContextBase *mContext;
     std::atomic<EServiceState> mState;
