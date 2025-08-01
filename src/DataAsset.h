@@ -10,5 +10,4 @@ public:
     virtual ~IDataAsset_Interface() = default;
 
     virtual void SetUpServer(UServer *server) {}
-    virtual void LoadSynchronous() {}
 };
