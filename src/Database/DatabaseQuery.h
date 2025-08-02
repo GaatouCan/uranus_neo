@@ -3,11 +3,16 @@
 #include "DatabaseTask.h"
 
 
-class BASE_API UDatabase_Query final : public IDatabaseTask_Interface {
+template<class Callback>
+class  UDatabase_Query final : public IDatabaseTask_Interface {
+
+    Callback mCallback;
 
 public:
     ~UDatabase_Query() override = default;
 
-    void Execute(mongocxx::database &db) override;
+    void Execute(mongocxx::database &db) override {
+
+    }
 };
 
