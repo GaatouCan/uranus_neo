@@ -2,7 +2,7 @@
 
 #include "Module.h"
 #include "ConcurrentDeque.h"
-#include "DatabaseQuery.h"
+#include "DBTask_Query.h"
 
 #include <thread>
 #include <vector>
@@ -80,7 +80,7 @@ void UDataAccess::PushQuery(const std::string &collection, const bsoncxx::docume
     auto &[thread, deque] = mWorkerList[mNextIndex++];
     mNextIndex = mNextIndex % mWorkerList.size();
 
-    auto node = std::make_unique<UDatabase_Query<Callback>>(document, std::forward<Callback>(callback));
+    auto node = std::make_unique<UDBTask_Query<Callback>>(document, std::forward<Callback>(callback));
     node->SetCollectionName(collection);
 
     deque.PushBack(std::move(node));
