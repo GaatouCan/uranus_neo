@@ -4,16 +4,8 @@
 #include "ConcurrentDeque.h"
 
 #include <thread>
-#include <vector>
-#include <memory>
+#include <mongocxx/instance.hpp>
 #include <mongocxx/client.hpp>
-
-
-struct FDataAccessNode {
-    std::unique_ptr<std::thread> thread;
-    std::unique_ptr<mongocxx::client> client;
-    std::unique_ptr<TConcurrentDeque<int, true>> queue;
-};
 
 
 class BASE_API UDataAccess final : public IModuleBase {
@@ -24,6 +16,7 @@ protected:
     UDataAccess();
 
     void Initial() override;
+    void Stop() override;
 
 public:
     ~UDataAccess() override;
@@ -31,5 +24,12 @@ public:
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Data Access";
     }
+
+private:
+    mongocxx::instance mInstance;
+    mongocxx::client mClient;
+
+    std::thread mThread;
+    TConcurrentDeque<int, true> mDeque;
 };
 
