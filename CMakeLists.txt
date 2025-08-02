@@ -28,6 +28,7 @@ list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/nlohmann_json)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/zlib)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/YAML_CPP)
 list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/protobuf)
+list(APPEND CMAKE_PREFIX_PATH ${THIRD_LIBRARY_DIR}/mongo-cxx-driver)
 
 if (UNIX)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -39,6 +40,8 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(OpenSSL COMPONENTS REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
+find_package(mongocxx CONFIG REQUIRED)
+find_package(bsoncxx CONFIG REQUIRED)
 
 # The Core Library
 file(GLOB_RECURSE URANUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
@@ -63,6 +66,7 @@ target_link_libraries(core PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
 target_link_libraries(core PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(core PUBLIC protobuf::libprotobuf-lite)
+target_link_libraries(core PUBLIC mongo::mongocxx_shared mongo::bsoncxx_shared)
 
 target_include_directories(core PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
