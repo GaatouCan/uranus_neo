@@ -10,26 +10,31 @@ void UDataAccess::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
-    mClient = mongocxx::client(mongocxx::uri("mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10"));
+    mPool = std::make_unique<mongocxx::pool>(mongocxx::uri("mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10"));
 
-    mThread = std::thread([this] {
-        while (mDeque.IsRunning() && mState == EModuleState::RUNNING) {
-            mDeque.Wait();
+    mWorkerList = std::vector<FWorkerNode>(2);
+    for (auto &worker : mWorkerList) {
+        worker.thread = std::thread([this, &worker] {
+            auto client = mPool->acquire();
+            auto db = client["demo"];
 
-            if (!mDeque.IsRunning() && mState != EModuleState::RUNNING)
-                break;
+            while (worker.deque.IsRunning() && mState == EModuleState::RUNNING) {
+                worker.deque.Wait();
 
-            try {
-                const auto node = std::move(mDeque.PopFront());
-                // TODO: Real Handle Database Task
+                if (!worker.deque.IsRunning() || mState != EModuleState::RUNNING)
+                    break;
 
-            } catch (const std::exception &e) {
-                SPDLOG_ERROR("UDataAccess::RunInThread - Exception: {}", e.what());
+                try {
+                    const auto node = std::move(worker.deque.PopFront());
+                    // TODO: Real Handle Database Task
+                } catch (const std::exception &e) {
+                    SPDLOG_ERROR("UDataAccess::RunInThread - Exception: {}", e.what());
+                }
             }
-        }
 
-        mDeque.Clear();
-    });
+            worker.deque.Clear();
+        });
+    }
 
     mState = EModuleState::INITIALIZED;
 }
@@ -40,11 +45,15 @@ void UDataAccess::Stop() {
 
     mState = EModuleState::STOPPED;
 
-    mDeque.Quit();
+    for (auto &[thread, deque] : mWorkerList) {
+        deque.Quit();
+    }
 }
 
 UDataAccess::~UDataAccess() {
-    if (mThread.joinable()) {
-        mThread.join();
+    for (auto &[thread, deque] : mWorkerList) {
+        if (thread.joinable()) {
+            thread.join();
+        }
     }
 }

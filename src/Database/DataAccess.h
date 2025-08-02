@@ -4,8 +4,9 @@
 #include "ConcurrentDeque.h"
 
 #include <thread>
+#include <vector>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/client.hpp>
+#include <mongocxx/pool.hpp>
 
 
 class BASE_API UDataAccess final : public IModuleBase {
@@ -27,9 +28,13 @@ public:
 
 private:
     mongocxx::instance mInstance;
-    mongocxx::client mClient;
+    std::unique_ptr<mongocxx::pool> mPool;
 
-    std::thread mThread;
-    TConcurrentDeque<int, true> mDeque;
+    struct FWorkerNode {
+        std::thread thread;
+        TConcurrentDeque<int, true> deque;
+    };
+
+    std::vector<FWorkerNode> mWorkerList;
 };
 
