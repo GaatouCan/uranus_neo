@@ -1,9 +1,9 @@
 #include "ConfigManager.h"
+#include "Config.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>
 
-#include "Config.h"
 
 UConfigManager::UConfigManager() {
 }
@@ -26,10 +26,10 @@ int UConfigManager::LoadConfig(const UConfig *module) {
             return -2;
         }
 
-        std::map<std::string, nlohmann::json> result;
+        std::map<std::string, const nlohmann::json *> result;
         for (const auto &path : val->InitialPathArray()) {
-            if (const auto op = module->FindConfig(path); op.has_value()) {
-                result[path] = op.value();
+            if (const auto data = module->FindConfig(path); data != nullptr) {
+                result[path] = data;
             }
         }
 

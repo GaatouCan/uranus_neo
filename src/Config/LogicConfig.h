@@ -15,5 +15,5 @@ public:
 
     [[nodiscard]] virtual std::vector<std::string> InitialPathArray() const = 0;
 
-    virtual bool Initial(const std::map<std::string, nlohmann::json> &config) = 0;
+    virtual bool Initial(const std::map<std::string, const nlohmann::json *> &config) = 0;
 };
