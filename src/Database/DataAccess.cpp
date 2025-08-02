@@ -41,14 +41,14 @@ void UDataAccess::Initial() {
         });
     }
 
-    {
-        asio::co_spawn(GetServer()->GetIOContext(), [this]() -> asio::awaitable<void> {
-            auto builder = bsoncxx::builder::basic::document();
-            builder.append(bsoncxx::builder::basic::kvp("player_id", 1001));
-            auto doc = builder.extract();
-            auto res = co_await AsyncSelect("player", doc, asio::use_awaitable);
-        }, asio::detached);
-    }
+    // {
+    //     asio::co_spawn(GetServer()->GetIOContext(), [this]() -> asio::awaitable<void> {
+    //         auto builder = bsoncxx::builder::basic::document();
+    //         builder.append(bsoncxx::builder::basic::kvp("player_id", 1001));
+    //         auto doc = builder.extract();
+    //         auto res = co_await AsyncSelect("player", doc, asio::use_awaitable);
+    //     }, asio::detached);
+    // }
 
     mState = EModuleState::INITIALIZED;
 }
