@@ -15,8 +15,8 @@
 #include <mongocxx/pool.hpp>
 
 
-#define DEFINE_DATABASE_OPERATION_PARAMS(...)       __VA_ARGS__
-#define DEFINE_DATABASE_OPERATION_CALL_ARGS(...)    __VA_ARGS__
+#define DATABASE_OPERATION_PARAMS(...)       __VA_ARGS__
+#define DATABASE_OPERATION_CALL_ARGS(...)    __VA_ARGS__
 
 #define DEFINE_DATABASE_OPERATION(XX, PARAMS, CALL_ARGS, RETURN, RETURN_FAIL)                                                                                       \
     template<class Callback>                                                                                                                                        \
@@ -65,25 +65,25 @@ public:
         return "Data Access";
     }
 
+    DEFINE_DATABASE_OPERATION(FindOne,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
+        DATABASE_OPERATION_CALL_ARGS(document),
+        std::optional<bsoncxx::document::value>, std::nullopt)
+
     DEFINE_DATABASE_OPERATION(Find,
-        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
-        DEFINE_DATABASE_OPERATION_CALL_ARGS(document),
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
+        DATABASE_OPERATION_CALL_ARGS(document),
         std::optional<mongocxx::cursor>, std::nullopt)
 
-    DEFINE_DATABASE_OPERATION(FindOne,
-        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
-        DEFINE_DATABASE_OPERATION_CALL_ARGS(document),
-        std::optional<bsoncxx::document::value>, std::nullopt);
-
     DEFINE_DATABASE_OPERATION(InsertOne,
-        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
-        DEFINE_DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<mongocxx::result::insert_one>, std::nullopt);
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+        DATABASE_OPERATION_CALL_ARGS(document, options),
+        std::optional<mongocxx::result::insert_one>, std::nullopt)
 
     DEFINE_DATABASE_OPERATION(InsertMany,
-        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
-        DEFINE_DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<mongocxx::result::insert_many>, std::nullopt);
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+        DATABASE_OPERATION_CALL_ARGS(document, options),
+        std::optional<mongocxx::result::insert_many>, std::nullopt)
 
 private:
     void PushTask(std::unique_ptr<IDBTaskBase> task);
@@ -102,6 +102,6 @@ private:
 };
 
 
-#undef DEFINE_DATABASE_OPERATION_PARAMS
-#undef DEFINE_DATABASE_OPERATION_CALL_ARGS
+#undef DATABASE_OPERATION_PARAMS
+#undef DATABASE_OPERATION_CALL_ARGS
 #undef DEFINE_DATABASE_OPERATION
