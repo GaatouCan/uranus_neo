@@ -23,10 +23,8 @@
     void Push##XX(const std::string &collection, PARAMS, Callback &&callback) {                                                                                     \
         if (mState != EModuleState::RUNNING) return;                                                                                                                \
         if (mWorkerList.empty()) return;                                                                                                                            \
-        auto &[thread, deque] = mWorkerList[mNextIndex++];                                                                                                          \
-        mNextIndex = mNextIndex % mWorkerList.size();                                                                                                               \
         auto node = std::make_unique<TDBTask_##XX<Callback>>(collection, std::forward<Callback>(callback), CALL_ARGS);                                              \
-        deque.PushBack(std::move(node));                                                                                                                            \
+        this->PushTask(std::move(node));                                                                                                                            \
     }                                                                                                                                                               \
     template<asio::completion_token_for<void(RETURN)> CompletionToken>                                                                                              \
     auto Async##XX(const std::string &collection, PARAMS, CompletionToken &&token) {                                                                                \
@@ -86,6 +84,9 @@ public:
         DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
         DEFINE_DATABASE_OPERATION_CALL_ARGS(document, options),
         std::optional<mongocxx::result::insert_many>, std::nullopt);
+
+private:
+    void PushTask(std::unique_ptr<IDBTaskBase> task);
 
 private:
     mongocxx::instance mInstance;

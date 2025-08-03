@@ -72,3 +72,15 @@ UDataAccess::~UDataAccess() {
         }
     }
 }
+
+void UDataAccess::PushTask(std::unique_ptr<IDBTaskBase> task) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (mWorkerList.empty())
+        return;
+    auto &[thread, deque] = mWorkerList[mNextIndex++];
+    mNextIndex = mNextIndex % mWorkerList.size();
+
+    deque.PushBack(std::move(task));
+}
