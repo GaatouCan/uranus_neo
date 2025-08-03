@@ -34,7 +34,7 @@ protected:
     Callback mCallback;
 
 public:
-    TDBTaskBase() = default;
+    TDBTaskBase() = delete;
     ~TDBTaskBase() override = default;
 
     DISABLE_COPY_MOVE(TDBTaskBase)
@@ -44,5 +44,5 @@ public:
           mCallback(std::forward<Callback>(callback)) {
     }
 
-    void SetCallback(Callback &&callback) { mCallback = std::forward<Callback>(callback); }
+    // void SetCallback(Callback &&callback) { mCallback = std::forward<Callback>(callback); }
 };

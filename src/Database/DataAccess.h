@@ -2,13 +2,52 @@
 
 #include "Module.h"
 #include "ConcurrentDeque.h"
+
 #include "DBTask_Find.h"
+#include "DBTask_FindOne.h"
+#include "DBTask_InsertOne.h"
+#include "DBTask_InsertMany.h"
 
 #include <thread>
 #include <vector>
 #include <asio.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/pool.hpp>
+
+
+#define DEFINE_DATABASE_OPERATION_PARAMS(...)       __VA_ARGS__
+#define DEFINE_DATABASE_OPERATION_CALL_ARGS(...)    __VA_ARGS__
+
+#define DEFINE_DATABASE_OPERATION(XX, PARAMS, CALL_ARGS, RETURN, RETURN_FAIL)                                                                                       \
+    template<class Callback>                                                                                                                                        \
+    void Push##XX(const std::string &collection, PARAMS, Callback &&callback) {                                                                                     \
+        if (mState != EModuleState::RUNNING) return;                                                                                                                \
+        if (mWorkerList.empty()) return;                                                                                                                            \
+        auto &[thread, deque] = mWorkerList[mNextIndex++];                                                                                                          \
+        mNextIndex = mNextIndex % mWorkerList.size();                                                                                                               \
+        auto node = std::make_unique<TDBTask_##XX<Callback>>(collection, std::forward<Callback>(callback), CALL_ARGS);                                              \
+        deque.PushBack(std::move(node));                                                                                                                            \
+    }                                                                                                                                                               \
+    template<asio::completion_token_for<void(RETURN)> CompletionToken>                                                                                              \
+    auto Async##XX(const std::string &collection, PARAMS, CompletionToken &&token) {                                                                                \
+        auto init = [this](asio::completion_handler_for<void(RETURN)> auto handle, const std::string &collection, PARAMS) {                                         \
+            auto work = asio::make_work_guard(handle);                                                                                                              \
+            if (mState != EModuleState::RUNNING) {                                                                                                                  \
+                auto alloc = asio::get_associated_allocator(handle, asio::recycling_allocator<void>());                                                             \
+                asio::dispatch(work.get_executor(), asio::bind_allocator(alloc, [handle = std::move(handle)]() mutable {                                            \
+                    std::move(handle)(RETURN_FAIL);                                                                                                                 \
+                }));                                                                                                                                                \
+                return;                                                                                                                                             \
+            }                                                                                                                                                       \
+            this->Push##XX(collection, CALL_ARGS, [handle = std::move(handle), work = std::move(work)](RETURN result) mutable {                                     \
+                auto alloc = asio::get_associated_allocator(handle, asio::recycling_allocator<void>());                                                             \
+                asio::dispatch(work.get_executor(), asio::bind_allocator(alloc, [handle = std::move(handle), result = std::forward<RETURN>(result)]() mutable {     \
+                    std::move(handle)(std::move(result));                                                                                                           \
+                }));                                                                                                                                                \
+            });                                                                                                                                                     \
+        };                                                                                                                                                          \
+        return asio::async_initiate<CompletionToken, void(RETURN)>(init, token, collection, CALL_ARGS);                                                             \
+    };
 
 
 class BASE_API UDataAccess final : public IModuleBase {
@@ -28,33 +67,25 @@ public:
         return "Data Access";
     }
 
-    template<class Callback>
-    void PushQuery(const std::string &collection, const bsoncxx::document::value &document, Callback &&callback);
+    DEFINE_DATABASE_OPERATION(Find,
+        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
+        DEFINE_DATABASE_OPERATION_CALL_ARGS(document),
+        std::optional<mongocxx::cursor>, std::nullopt)
 
-    template<asio::completion_token_for<void(std::optional<mongocxx::cursor>)> CompletionToken>
-    auto AsyncQuery(const std::string &collection, const bsoncxx::document::value document, CompletionToken &&token) {
-        auto init = [this](asio::completion_handler_for<void(std::optional<mongocxx::cursor>)> auto handle, const std::string &collection, const bsoncxx::document::value &document) {
-            auto work = asio::make_work_guard(handle);
+    DEFINE_DATABASE_OPERATION(FindOne,
+        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
+        DEFINE_DATABASE_OPERATION_CALL_ARGS(document),
+        std::optional<bsoncxx::document::value>, std::nullopt);
 
-            if (mState != EModuleState::RUNNING) {
-                auto alloc = asio::get_associated_allocator(handle, asio::recycling_allocator<void>());
-                asio::dispatch(work.get_executor(), asio::bind_allocator(alloc, [handle = std::move(handle)]() mutable {
-                    std::move(handle)(std::nullopt);
-                }));
-                return;
-            }
+    DEFINE_DATABASE_OPERATION(InsertOne,
+        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+        DEFINE_DATABASE_OPERATION_CALL_ARGS(document, options),
+        std::optional<mongocxx::result::insert_one>, std::nullopt);
 
-            this->PushQuery(collection, document, [handle = std::move(handle), work = std::move(work)](std::optional<mongocxx::cursor> result) mutable {
-                auto alloc = asio::get_associated_allocator(handle, asio::recycling_allocator<void>());
-                asio::dispatch(work.get_executor(), asio::bind_allocator(alloc, [handle = std::move(handle), result = std::forward<std::optional<mongocxx::cursor>>(result)]() mutable {
-                    std::move(handle)(std::move(result));
-                }));
-            });
-        };
-
-        return asio::async_initiate<CompletionToken, void(std::optional<mongocxx::cursor>)>(init, token, collection, document);
-    };
-
+    DEFINE_DATABASE_OPERATION(InsertMany,
+        DEFINE_DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+        DEFINE_DATABASE_OPERATION_CALL_ARGS(document, options),
+        std::optional<mongocxx::result::insert_many>, std::nullopt);
 
 private:
     mongocxx::instance mInstance;
@@ -62,26 +93,14 @@ private:
 
     struct FWorkerNode {
         std::thread thread;
-        TConcurrentDeque<std::unique_ptr<TDBTaskBase>, true> deque;
+        TConcurrentDeque<std::unique_ptr<IDBTaskBase>, true> deque;
     };
 
     std::vector<FWorkerNode> mWorkerList;
     std::atomic_size_t mNextIndex;
 };
 
-template<class Callback>
-void UDataAccess::PushQuery(const std::string &collection, const bsoncxx::document::value &document, Callback &&callback) {
-    if (mState != EModuleState::RUNNING)
-        return;
 
-    if (mWorkerList.empty())
-        return;
-
-    auto &[thread, deque] = mWorkerList[mNextIndex++];
-    mNextIndex = mNextIndex % mWorkerList.size();
-
-    auto node = std::make_unique<UDBTask_Query<Callback>>(document, std::forward<Callback>(callback));
-    node->SetCollectionName(collection);
-
-    deque.PushBack(std::move(node));
-}
+#undef DEFINE_DATABASE_OPERATION_PARAMS
+#undef DEFINE_DATABASE_OPERATION_CALL_ARGS
+#undef DEFINE_DATABASE_OPERATION
