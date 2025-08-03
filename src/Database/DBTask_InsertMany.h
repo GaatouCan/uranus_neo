@@ -16,9 +16,14 @@ class BASE_API TDBTask_InsertMany final : public TDBTaskBase<Callback> {
 public:
     TDBTask_InsertMany() = delete;
 
-    TDBTask_InsertMany(std::string collection, Callback &&callback, std::vector<bsoncxx::document::value> values, mongocxx::options::insert options = {})
-        : TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-          mValues(std::move(values)), mOptions(std::move(options)) {
+    TDBTask_InsertMany(
+        std::string collection,
+        Callback &&callback,
+        std::vector<bsoncxx::document::value> values,
+        mongocxx::options::insert options = {}
+    ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
+       mValues(std::move(values)),
+       mOptions(std::move(options)) {
     }
 
     ~TDBTask_InsertMany() override = default;
