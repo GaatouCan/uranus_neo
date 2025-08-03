@@ -1,12 +1,12 @@
 #pragma once
 
-#include "DatabaseTask.h"
+#include "DBTaskBase.h"
 
 #include <bsoncxx/builder/stream/document.hpp>
 #include <utility>
 
 template<class Callback>
-class UDBTask_QueryOne final : public IDatabaseTask_Interface {
+class UDBTask_QueryOne final : public TDBTaskBase {
 
     std::string mCollectionName;
     bsoncxx::document::value mDocument;
@@ -28,6 +28,6 @@ public:
     void Execute(mongocxx::database &db) override {
         auto collection = db[mCollectionName];
         auto result = collection.find_one(mDocument.view());
-        std::invoke(mCallback, std::make_optional(std::move(result)));
+        std::invoke(mCallback, std::move(result));
     }
 };

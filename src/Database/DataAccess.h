@@ -32,7 +32,7 @@ public:
     void PushQuery(const std::string &collection, const bsoncxx::document::value &document, Callback &&callback);
 
     template<asio::completion_token_for<void(std::optional<mongocxx::cursor>)> CompletionToken>
-    auto AsyncSelect(const std::string &collection, const bsoncxx::document::value document, CompletionToken &&token) {
+    auto AsyncQuery(const std::string &collection, const bsoncxx::document::value document, CompletionToken &&token) {
         auto init = [this](asio::completion_handler_for<void(std::optional<mongocxx::cursor>)> auto handle, const std::string &collection, const bsoncxx::document::value &document) {
             auto work = asio::make_work_guard(handle);
 
@@ -62,7 +62,7 @@ private:
 
     struct FWorkerNode {
         std::thread thread;
-        TConcurrentDeque<std::unique_ptr<IDatabaseTask_Interface>, true> deque;
+        TConcurrentDeque<std::unique_ptr<TDBTaskBase>, true> deque;
     };
 
     std::vector<FWorkerNode> mWorkerList;

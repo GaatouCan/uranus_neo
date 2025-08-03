@@ -1,12 +1,12 @@
 #pragma once
 
-#include "DatabaseTask.h"
+#include "DBTaskBase.h"
 
 #include <bsoncxx/builder/stream/document.hpp>
 #include <utility>
 
 template<class Callback>
-class UDBTask_Query final : public IDatabaseTask_Interface {
+class UDBTask_Query final : public TDBTaskBase {
 
     std::string mCollectionName;
     bsoncxx::document::value mDocument;

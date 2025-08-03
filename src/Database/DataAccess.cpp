@@ -1,5 +1,5 @@
 #include "DataAccess.h"
-#include "DatabaseTask.h"
+#include "DBTaskBase.h"
 
 #include <mongocxx/uri.hpp>
 #include <spdlog/spdlog.h>

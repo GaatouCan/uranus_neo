@@ -1,9 +1,9 @@
 #pragma once
 
-#include "DatabaseTask.h"
+#include "DBTaskBase.h"
 
 
-class BASE_API UDBTask_Update final : public IDatabaseTask_Interface {
+class BASE_API UDBTask_Update final : public TDBTaskBase {
 
 public:
     UDBTask_Update();
