@@ -23,6 +23,7 @@
 #define DATABASE_OPERATION_PARAMS(...)       __VA_ARGS__
 #define DATABASE_OPERATION_CALL_ARGS(...)    __VA_ARGS__
 
+/** Database Operation Async Helper Macro **/
 #define DEFINE_DATABASE_OPERATION(XX, PARAMS, CALL_ARGS, RETURN, RETURN_FAIL)                                                                                       \
     template<class Callback>                                                                                                                                        \
     void Push##XX(const std::string &collection, PARAMS, Callback &&callback) {                                                                                     \
