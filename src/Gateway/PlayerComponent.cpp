@@ -12,6 +12,12 @@ void IPlayerComponent::SetUpModule(UComponentModule *module) {
     mModule = module;
 }
 
+bsoncxx::document::value IPlayerComponent::Serialize() const {
+}
+
+void IPlayerComponent::Deserialize(const bsoncxx::document::value &doc) {
+}
+
 UPlayerBase *IPlayerComponent::GetPlayer() const {
     if (mModule) {
         return mModule->GetPlayer();
