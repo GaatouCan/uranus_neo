@@ -72,6 +72,8 @@ public:
         return "Data Access";
     }
 
+    mongocxx::cursor SyncSelect(const std::string &collection, const bsoncxx::document::value &filter) const;
+
     DEFINE_DATABASE_OPERATION(FindOne,
         DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
         DATABASE_OPERATION_CALL_ARGS(document, options),

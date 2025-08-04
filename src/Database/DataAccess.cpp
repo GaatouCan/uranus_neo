@@ -73,6 +73,15 @@ UDataAccess::~UDataAccess() {
     }
 }
 
+mongocxx::cursor UDataAccess::SyncSelect(const std::string &collection, const bsoncxx::document::value &filter) const {
+    assert(mState == EModuleState::INITIALIZED);
+
+    const auto client = mPool->acquire();
+    const auto db = client["demo"];
+    auto col = db[collection];
+    return col.find(filter.view());
+}
+
 void UDataAccess::PushTask(std::unique_ptr<IDBTaskBase> task) {
     if (mState != EModuleState::RUNNING)
         return;
