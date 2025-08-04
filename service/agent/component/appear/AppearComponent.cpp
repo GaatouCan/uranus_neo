@@ -12,12 +12,26 @@ UAppearComponent::UAppearComponent()
 UAppearComponent::~UAppearComponent() {
 }
 
-DB_SERIALIZE_BEGIN(UAppearComponent)
-    DB_WRITE_FIELD("current_index", mCurrentIndex);
-    DB_WRITE_ARRAY("avatar_list", mAvatarList,
-        DB_WRITE_ARRAY_ELEMENT("index", index),
-        DB_WRITE_ARRAY_ELEMENT("active", active))
-DB_SERIALIZE_END
+// DB_SERIALIZE_BEGIN(UAppearComponent)
+ADocumentValue UAppearComponent::Serialize() const {
+    bsoncxx::builder::basic::document doc;
+    doc.append(bsoncxx::builder::basic::kvp("version", GetComponentName()));
+    //DB_WRITE_FIELD("current_index", mCurrentIndex);
+    doc.append(bsoncxx::builder::basic::kvp("current_index", mCurrentIndex));
+    // DB_WRITE_ARRAY("avatar_list", mAvatarList,
+    //     DB_WRITE_ARRAY_ELEMENT("index", index),
+    //     DB_WRITE_ARRAY_ELEMENT("active", active))
+    {
+        bsoncxx::builder::basic::array array_builder;
+        for (const auto &val: mAvatarList) {
+            array_builder.append(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("index", val.index),
+                                                                        bsoncxx::builder::basic::kvp(
+                                                                            "active", val.active)));
+        }
+        doc.append(bsoncxx::builder::basic::kvp("avatar_list", array_builder.extract()));
+    }
+    return doc.extract();
+}
 
 DB_DESERIALIZE_BEGIN(UAppearComponent)
     DB_READ_FIELD("current_index", int32, mCurrentIndex)

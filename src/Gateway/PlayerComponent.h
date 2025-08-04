@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <concepts>
+#include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/document/value.hpp>
 
 
@@ -12,7 +13,7 @@ class UPlayerBase;
 
 
 using ADocumentValue = bsoncxx::document::value;
-
+using ADocumentBuilder = bsoncxx::builder::basic::document;
 
 class BASE_API IPlayerComponent {
 
@@ -23,11 +24,11 @@ public:
 
     DISABLE_COPY_MOVE(IPlayerComponent)
 
-    [[nodiscard]] virtual const char *GetComponentName() const = 0;
+    [[nodiscard]] virtual std::pair<std::string, int> GetNameAndVersion() const = 0;
 
     void SetUpModule(UComponentModule* module);
 
-    virtual ADocumentValue Serialize() const;
+    virtual void Serialize(ADocumentBuilder &builder) const;
     virtual void Deserialize(const ADocumentValue& doc);
 
     [[nodiscard]] UPlayerBase* GetPlayer() const;

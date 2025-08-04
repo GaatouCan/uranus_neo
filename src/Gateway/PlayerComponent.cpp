@@ -12,7 +12,8 @@ void IPlayerComponent::SetUpModule(UComponentModule *module) {
     mModule = module;
 }
 
-bsoncxx::document::value IPlayerComponent::Serialize() const {
+void IPlayerComponent::Serialize(ADocumentBuilder &builder) const {
+
 }
 
 void IPlayerComponent::Deserialize(const bsoncxx::document::value &doc) {
