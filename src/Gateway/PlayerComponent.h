@@ -11,6 +11,9 @@ class UComponentModule;
 class UPlayerBase;
 
 
+using ADocumentValue = bsoncxx::document::value;
+
+
 class BASE_API IPlayerComponent {
 
 
@@ -20,10 +23,12 @@ public:
 
     DISABLE_COPY_MOVE(IPlayerComponent)
 
+    [[nodiscard]] virtual const char *GetComponentName() const = 0;
+
     void SetUpModule(UComponentModule* module);
 
-    virtual bsoncxx::document::value Serialize() const;
-    virtual void Deserialize(const bsoncxx::document::value& doc);
+    virtual ADocumentValue Serialize() const;
+    virtual void Deserialize(const ADocumentValue& doc);
 
     [[nodiscard]] UPlayerBase* GetPlayer() const;
     [[nodiscard]] int64_t GetPlayerID() const;
@@ -40,12 +45,13 @@ concept CComponentType = std::derived_from<T, IPlayerComponent>;
 
 
 #define DECLARE_COMPONENT_SERIALIZATION \
-bsoncxx::document::value Serialize() const override; \
-void Deserialize(const bsoncxx::document::value& doc) override;
+ADocumentValue Serialize() const override; \
+void Deserialize(const ADocumentValue& doc) override;
 
 #define DB_SERIALIZE_BEGIN(XX) \
-bsoncxx::document::value XX##::Serialize() const { \
-    bsoncxx::builder::basic::document doc;
+ADocumentValue XX##::Serialize() const { \
+    bsoncxx::builder::basic::document doc; \
+    doc.append(bsoncxx::builder::basic::kvp("version", GetComponentName()));
 
 #define DB_SERIALIZE_END \
     return doc.extract(); \
@@ -67,7 +73,9 @@ bsoncxx::document::value XX##::Serialize() const { \
 } \
 
 #define DB_DESERIALIZE_BEGIN(XX) \
-void XX##::Deserialize(const bsoncxx::document::value &doc) {
+void XX##::Deserialize(const ADocumentValue &doc) { \
+    if (const auto elem = doc["version"]; elem && elem.type() == bsoncxx::type::k_string) { \
+    if (const auto version = elem.get_string().value; version != GetComponentName()) return; };
 
 #define DB_DESERIALIZE_END }
 

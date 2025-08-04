@@ -16,6 +16,7 @@ UAppearComponent::~UAppearComponent() {
 }
 
 DB_SERIALIZE_BEGIN(UAppearComponent)
+
     DB_WRITE_FIELD("current_index", mCurrentIndex);
     DB_WRITE_ARRAY("avatar_list", mAvatarList,
         DB_WRITE_ARRAY_ELEMENT("index", index),
