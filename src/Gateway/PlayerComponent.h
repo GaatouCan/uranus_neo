@@ -13,6 +13,7 @@ class UPlayerBase;
 
 
 using ADocumentValue = bsoncxx::document::value;
+using ADocumentView = bsoncxx::document::view;
 using ADocumentBuilder = bsoncxx::builder::basic::document;
 
 class BASE_API IPlayerComponent {
@@ -29,7 +30,7 @@ public:
     void SetUpModule(UComponentModule* module);
 
     virtual void Serialize(ADocumentBuilder &builder) const;
-    virtual void Deserialize(const ADocumentValue& doc);
+    virtual void Deserialize(const ADocumentView& doc);
 
     [[nodiscard]] UPlayerBase* GetPlayer() const;
     [[nodiscard]] int64_t GetPlayerID() const;
@@ -55,7 +56,7 @@ private:
 
 #define COMPONENT_SERIALIZATION \
 void Serialize(ADocumentBuilder &builder) const override; \
-void Deserialize(const ADocumentValue& doc) override;
+void Deserialize(const ADocumentView& doc) override;
 
 #define DB_SERIALIZE_BEGIN(XX) \
 void XX##::Serialize(ADocumentBuilder &builder) const { \
@@ -82,7 +83,7 @@ void XX##::Serialize(ADocumentBuilder &builder) const { \
 } \
 
 #define DB_DESERIALIZE_BEGIN(XX) \
-void XX##::Deserialize(const ADocumentValue &doc) { \
+void XX##::Deserialize(const ADocumentView &doc) { \
     if (const auto elem = doc["version"]; elem && elem.type() == bsoncxx::type::k_int32) { \
     if (const auto version = elem.get_int32().value; version != GetNameAndVersion().second) return; };
 

@@ -6,6 +6,8 @@
 #include <typeindex>
 #include <memory>
 
+#include <bsoncxx/builder/basic/document.hpp>
+
 
 class UPlayerBase;
 
@@ -30,6 +32,9 @@ public:
 
     void OnLogin();
     void OnLogout();
+
+    void Serialize(bsoncxx::builder::basic::document &builder);
+    void Deserialize(const bsoncxx::document::value &document);
 
 private:
     UPlayerBase *mOwner;

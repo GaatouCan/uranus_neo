@@ -16,7 +16,7 @@ void IPlayerComponent::Serialize(ADocumentBuilder &builder) const {
 
 }
 
-void IPlayerComponent::Deserialize(const bsoncxx::document::value &doc) {
+void IPlayerComponent::Deserialize(const ADocumentView &doc) {
 }
 
 UPlayerBase *IPlayerComponent::GetPlayer() const {
