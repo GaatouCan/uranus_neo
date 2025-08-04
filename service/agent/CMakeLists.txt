@@ -17,9 +17,7 @@ add_library(agent SHARED ${PLAYER_AGENT_SRC} ${ORM_SOURCE_FILES})
 target_compile_definitions(agent PRIVATE URANUS_SERVICE)
 
 target_link_libraries(agent PUBLIC core)
-target_link_libraries(agent PUBLIC impl)
 target_link_libraries(agent PUBLIC proto_static)
 
-target_include_directories(agent PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../impl)
 target_include_directories(agent PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../protobuf/gen)
 target_include_directories(agent PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../generated)

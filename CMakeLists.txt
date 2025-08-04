@@ -127,6 +127,7 @@ target_link_libraries(uranus PUBLIC core)
 target_link_libraries(uranus PUBLIC impl)
 
 add_subdirectory(service/agent)
+add_subdirectory(service/gameworld)
 
 #target_include_directories(uranus PUBLIC
 #        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
