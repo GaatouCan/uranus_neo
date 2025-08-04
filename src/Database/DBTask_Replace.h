@@ -30,7 +30,7 @@ public:
 
     ~TDBTask_Replace() override = default;
 
-    void Execute(mongocxx::database &db) override {
+    void Execute(mongocxx::client &client, mongocxx::database &db) override {
         auto collection = db[IDBTaskBase::mCollection];
         auto result = collection.replace_one(mQueryFilter.view(), mDocument.view(), mOptions);
         std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

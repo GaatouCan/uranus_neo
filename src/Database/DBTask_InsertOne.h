@@ -27,7 +27,7 @@ public:
 
     ~TDBTask_InsertOne() override = default;
 
-    void Execute(mongocxx::database &db) override {
+    void Execute(mongocxx::client &client, mongocxx::database &db) override {
         auto collection = db[IDBTaskBase::mCollection];
         auto result = collection.insert_one(mDocument.view(), mOptions);
         std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

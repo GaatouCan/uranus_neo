@@ -23,7 +23,7 @@ public:
 
     ~TDBTask_FindOne() override = default;
 
-    void Execute(mongocxx::database &db) override {
+    void Execute(mongocxx::client &client, mongocxx::database &db) override {
         auto collection = db[IDBTaskBase::mCollection];
         auto result = collection.find_one(mQueryFilter.view());
         std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

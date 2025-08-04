@@ -27,7 +27,7 @@ public:
 
     ~TDBTask_DeleteMany() override = default;
 
-    void Execute(mongocxx::database &db) override {
+    void Execute(mongocxx::client &client, mongocxx::database &db) override {
         auto collection = db[IDBTaskBase::mCollection];
         auto result = collection.delete_many(mFilter.view(),  mOptions);
         std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

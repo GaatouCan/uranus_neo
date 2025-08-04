@@ -2,6 +2,7 @@
 
 #include "Common.h"
 
+#include "mongocxx/client.hpp"
 #include <mongocxx/database.hpp>
 #include <utility>
 
@@ -23,7 +24,7 @@ public:
     void SetCollection(const std::string &collection) { mCollection = collection; }
     [[nodiscard]] const std::string &GetCollectionName() const { return mCollection; }
 
-    virtual void Execute(mongocxx::database &db) = 0;
+    virtual void Execute(mongocxx::client &client, mongocxx::database &db) = 0;
 };
 
 

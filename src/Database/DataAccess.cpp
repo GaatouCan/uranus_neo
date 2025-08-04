@@ -20,7 +20,7 @@ void UDataAccess::Initial() {
     mWorkerList = std::vector<FWorkerNode>(2);
     for (auto &worker: mWorkerList) {
         worker.thread = std::thread([this, &worker] {
-            auto client = mPool->acquire();
+            const auto client = mPool->acquire();
             auto db = client["demo"];
 
             while (worker.deque.IsRunning() && mState == EModuleState::RUNNING) {
@@ -31,7 +31,7 @@ void UDataAccess::Initial() {
 
                 try {
                     const auto node = std::move(worker.deque.PopFront());
-                    node->Execute(db);
+                    node->Execute(*client, db);
                 } catch (const std::exception &e) {
                     SPDLOG_ERROR("UDataAccess::RunInThread - Exception: {}", e.what());
                 }
