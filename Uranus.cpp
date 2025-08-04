@@ -5,6 +5,7 @@
 #include <Timer/TimerModule.h>
 #include <Logger/LoggerModule.h>
 #include <Monitor/Monitor.h>
+#include <Database/DataAccess.h>
 #include <Service/ServiceModule.h>
 #include <Gateway/Gateway.h>
 #include <Network/Network.h>
@@ -35,6 +36,7 @@ int main() {
     server->CreateModule<UTimerModule>();
     server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
+    server->CreateModule<UDataAccess>();
     server->CreateModule<UServiceModule>();
     server->CreateModule<UGateway>();
 
