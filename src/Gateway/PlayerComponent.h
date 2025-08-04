@@ -44,18 +44,26 @@ private:
 template<class T>
 concept CComponentType = std::derived_from<T, IPlayerComponent>;
 
+#define DECLARE_COMPONENT(XX, VER) \
+using Super = IPlayerComponent; \
+public: \
+[[nodiscard]] constexpr std::pair<std::string, int> GetNameAndVersion() const override { \
+    return { XX, VER }; \
+} \
+private:
 
-#define DECLARE_COMPONENT_SERIALIZATION \
-ADocumentValue Serialize() const override; \
+
+#define COMPONENT_SERIALIZATION \
+void Serialize(ADocumentBuilder &builder) const override; \
 void Deserialize(const ADocumentValue& doc) override;
 
 #define DB_SERIALIZE_BEGIN(XX) \
-ADocumentValue XX##::Serialize() const { \
+void XX##::Serialize(ADocumentBuilder &builder) const { \
     bsoncxx::builder::basic::document doc; \
-    doc.append(bsoncxx::builder::basic::kvp("version", GetComponentName()));
+    doc.append(bsoncxx::builder::basic::kvp("version", GetNameAndVersion().second)); \
 
 #define DB_SERIALIZE_END \
-    return doc.extract(); \
+    builder.append(bsoncxx::builder::basic::kvp(GetNameAndVersion().first, doc.extract())); \
 }
 
 #define DB_MAKE_KVP(KEY, VALUE)                 bsoncxx::builder::basic::kvp(KEY, VALUE)
@@ -75,8 +83,8 @@ ADocumentValue XX##::Serialize() const { \
 
 #define DB_DESERIALIZE_BEGIN(XX) \
 void XX##::Deserialize(const ADocumentValue &doc) { \
-    if (const auto elem = doc["version"]; elem && elem.type() == bsoncxx::type::k_string) { \
-    if (const auto version = elem.get_string().value; version != GetComponentName()) return; };
+    if (const auto elem = doc["version"]; elem && elem.type() == bsoncxx::type::k_int32) { \
+    if (const auto version = elem.get_int32().value; version != GetNameAndVersion().second) return; };
 
 #define DB_DESERIALIZE_END }
 

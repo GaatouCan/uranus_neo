@@ -10,15 +10,14 @@ struct FAvatarInfo {
 };
 
 class UAppearComponent final : public IPlayerComponent {
+
+    DECLARE_COMPONENT("appear", 1)
+
 public:
     UAppearComponent();
     ~UAppearComponent() override;
 
-    [[nodiscard]] constexpr const char* GetComponentName() const override {
-        return "Appear_V0";
-    }
-
-    DECLARE_COMPONENT_SERIALIZATION
+    COMPONENT_SERIALIZATION
 
 private:
     int mCurrentIndex;
