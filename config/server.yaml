@@ -1,0 +1,24 @@
+server:
+  id: 1
+  port: 8080
+  worker: 6
+  cross: 0
+  logger:
+    directory: /log
+
+package:
+  magic: 23244435
+
+service:
+  core:
+    - name: "gameworld"
+#  extend:
+
+database:
+  pool: 2
+  mysql:
+    host: localhost
+    port: 33060
+    user: root
+    passwd: 12345678
+    schema: demo
