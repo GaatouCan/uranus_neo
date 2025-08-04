@@ -3,7 +3,7 @@
 #include "DBTaskBase.h"
 
 #include <bsoncxx/document/value.hpp>
-#include <mongocxx/options/replace.hpp.hpp>
+#include <mongocxx/options/replace.hpp>
 
 
 template<class Callback>

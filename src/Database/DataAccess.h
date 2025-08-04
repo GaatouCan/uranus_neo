@@ -7,6 +7,11 @@
 #include "DBTask_FindOne.h"
 #include "DBTask_InsertOne.h"
 #include "DBTask_InsertMany.h"
+#include "DBTask_UpdateOne.h"
+#include "DBTask_UpdateMany.h"
+#include "DBTask_Replace.h"
+#include "DBTask_DeleteOne.h"
+#include "DBTask_DeleteMany.h"
 
 #include <thread>
 #include <vector>
@@ -84,6 +89,31 @@ public:
         DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
         DATABASE_OPERATION_CALL_ARGS(document, options),
         std::optional<mongocxx::result::insert_many>, std::nullopt)
+
+    DEFINE_DATABASE_OPERATION(UpdateOne,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
+        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+        std::optional<mongocxx::result::update>, std::nullopt)
+
+    DEFINE_DATABASE_OPERATION(UpdateMany,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
+        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+        std::optional<mongocxx::result::update>, std::nullopt)
+
+    DEFINE_DATABASE_OPERATION(Replace,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::replace &options),
+        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+        std::optional<mongocxx::result::replace_one>, std::nullopt)
+
+    DEFINE_DATABASE_OPERATION(DeleteOne,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
+        DATABASE_OPERATION_CALL_ARGS(filter, options),
+        std::optional<mongocxx::result::delete_result>, std::nullopt)
+
+    DEFINE_DATABASE_OPERATION(DeleteMany,
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
+        DATABASE_OPERATION_CALL_ARGS(filter, options),
+        std::optional<mongocxx::result::delete_result>, std::nullopt)
 
 private:
     void PushTask(std::unique_ptr<IDBTaskBase> task);
