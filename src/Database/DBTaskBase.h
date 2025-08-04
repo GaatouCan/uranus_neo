@@ -2,9 +2,7 @@
 
 #include "Common.h"
 
-#include "mongocxx/client.hpp"
 #include <mongocxx/database.hpp>
-#include <utility>
 
 class BASE_API IDBTaskBase {
 
