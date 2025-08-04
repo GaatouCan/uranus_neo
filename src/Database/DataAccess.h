@@ -73,13 +73,13 @@ public:
     }
 
     DEFINE_DATABASE_OPERATION(FindOne,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
-        DATABASE_OPERATION_CALL_ARGS(document),
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
+        DATABASE_OPERATION_CALL_ARGS(document, options),
         std::optional<bsoncxx::document::value>, std::nullopt)
 
     DEFINE_DATABASE_OPERATION(Find,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document),
-        DATABASE_OPERATION_CALL_ARGS(document),
+        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
+        DATABASE_OPERATION_CALL_ARGS(document, options),
         std::optional<mongocxx::cursor>, std::nullopt)
 
     DEFINE_DATABASE_OPERATION(InsertOne,

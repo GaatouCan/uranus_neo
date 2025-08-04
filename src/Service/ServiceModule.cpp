@@ -219,19 +219,19 @@ FSharedLibrary UServiceModule::FindServiceLibrary(const std::string &filename, c
     return iter != mExtendLibraryMap.end() ? iter->second : FSharedLibrary{};
 }
 
-std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {
+void UServiceModule::BootExtendService(const std::string &filename, const IDataAsset_Interface *data) {
     if (mState != EModuleState::RUNNING)
-        return nullptr;
+        return;
 
     const auto handle = FindServiceLibrary(filename);
     if (!handle.IsValid()) {
         SPDLOG_WARN("{:<20} - Cannot Found Service Library[{}]", __FUNCTION__, filename);
-        return nullptr;
+        return;
     }
 
     const int32_t sid = mAllocator.AllocateTS();
     if (sid < 0)
-        return nullptr;
+        return;
 
     auto context = std::make_shared<UServiceContext>();
 
@@ -241,49 +241,51 @@ std::shared_ptr<UServiceContext> UServiceModule::BootExtendService(const std::st
     context->SetFilename(filename);
     context->SetServiceType(EServiceType::EXTEND);
 
-    if (!context->Initial(data)) {
-        SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", __FUNCTION__, filename);
+    co_spawn(GetServer()->GetIOContext(), [this, context, sid, data, filename, func = __FUNCTION__]() mutable -> awaitable<void> {
+        if (const auto ret = co_await context->AsyncInitial(data); !ret) {
+            SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", func, filename);
 
-        context->ForceShutdown();
-        mAllocator.RecycleTS(sid);
+            context->ForceShutdown();
+            mAllocator.RecycleTS(sid);
 
-        return nullptr;
-    }
-
-    // Check If Service Name Unique
-    bool bSuccess = true; {
-        std::shared_lock lock(mNameMutex);
-        if (mNameToServiceID.contains(context->GetServiceName())) {
-            SPDLOG_WARN("{:<20} - Service[{}] Has Already Exist.", __FUNCTION__, context->GetServiceName());
-            bSuccess = false;
+            co_return;
         }
-    }
 
-    // If Service Name Unique
-    if (bSuccess) {
-        if (context->BootService()) {
-            {
-                const auto name = context->GetServiceName();
+        // Check If Service Name Unique
+        bool bSuccess = true;
 
-                std::scoped_lock lock(mServiceMutex, mFileNameMutex, mNameMutex);
+        {
+            std::shared_lock lock(mNameMutex);
+            if (mNameToServiceID.contains(context->GetServiceName())) {
+                SPDLOG_WARN("{:<20} - Service[{}] Has Already Exist.", func, context->GetServiceName());
+                bSuccess = false;
+            }
+        }
 
-                mServiceMap[sid] = context;
-                mFilenameMapping[filename].insert(sid);
-                mNameToServiceID[name] = sid;
+        // If Service Name Unique
+        if (bSuccess) {
+            if (context->BootService()) {
+                {
+                    const auto name = context->GetServiceName();
+
+                    std::scoped_lock lock(mServiceMutex, mFileNameMutex, mNameMutex);
+
+                    mServiceMap[sid] = context;
+                    mFilenameMapping[filename].insert(sid);
+                    mNameToServiceID[name] = sid;
+                }
+
+                SPDLOG_INFO("{:<20} - Boot Extend Service[{}] Successfully", func, context->GetServiceName());
+                co_return;
             }
 
-            SPDLOG_INFO("{:<20} - Boot Extend Service[{}] Successfully", __FUNCTION__, context->GetServiceName());
-            return context;
+            SPDLOG_ERROR("{:<20} - Failed To Boot Extend Service[{}]", __FUNCTION__, context->GetServiceName());
         }
 
-        SPDLOG_ERROR("{:<20} - Failed To Boot Extend Service[{}]", __FUNCTION__, context->GetServiceName());
-    }
-
-    // If Not Unique, Service Force To Shut Down And Recycle The Service ID
-    context->ForceShutdown();
-    mAllocator.RecycleTS(sid);
-
-    return nullptr;
+        // If Not Unique, Service Force To Shut Down And Recycle The Service ID
+        context->ForceShutdown();
+        mAllocator.RecycleTS(sid);
+    }, detached);
 }
 
 void UServiceModule::ShutdownService(int32_t sid) {

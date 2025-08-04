@@ -44,7 +44,7 @@ public:
 
     [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
 
-    std::shared_ptr<UServiceContext> BootExtendService(const std::string &filename, const IDataAsset_Interface *data = nullptr);
+    void BootExtendService(const std::string &filename, const IDataAsset_Interface *data = nullptr);
     void ShutdownService(int32_t sid);
 
 private:

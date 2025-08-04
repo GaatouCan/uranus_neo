@@ -23,6 +23,7 @@ public:
     virtual void OnLogout();
 
 protected:
+    asio::awaitable<bool> AsyncInitial(const IDataAsset_Interface *data) override;
     bool Start() override;
     void Stop() override;
 

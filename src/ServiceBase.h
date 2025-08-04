@@ -46,6 +46,8 @@ public:
     [[nodiscard]] EServiceState GetState() const;
 
     virtual bool Initial(const IDataAsset_Interface *data);
+    virtual asio::awaitable<bool> AsyncInitial(const IDataAsset_Interface *data);
+
     virtual bool Start();
     virtual void Stop();
 

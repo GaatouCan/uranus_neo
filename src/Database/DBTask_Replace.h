@@ -9,7 +9,7 @@
 template<class Callback>
 class BASE_API TDBTask_Replace final : public TDBTaskBase<Callback> {
 
-    bsoncxx::document::value mQueryFilter;
+    bsoncxx::document::value mFilter;
     bsoncxx::document::value mDocument;
     mongocxx::options::replace mOptions;
 
@@ -23,7 +23,7 @@ public:
         bsoncxx::document::value document,
         mongocxx::options::replace options = {}
     ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-       mQueryFilter(std::move(filter)),
+       mFilter(std::move(filter)),
        mDocument(std::move(document)),
        mOptions(std::move(options)) {
     }
@@ -32,7 +32,7 @@ public:
 
     void Execute(mongocxx::client &client, mongocxx::database &db) override {
         auto collection = db[IDBTaskBase::mCollection];
-        auto result = collection.replace_one(mQueryFilter.view(), mDocument.view(), mOptions);
+        auto result = collection.replace_one(mFilter.view(), mDocument.view(), mOptions);
         std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
     }
 };

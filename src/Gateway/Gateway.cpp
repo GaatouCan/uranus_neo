@@ -6,6 +6,7 @@
 #include "Network/Network.h"
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"
+#include "Login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>
@@ -29,17 +30,26 @@ void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
     agent->SetPlayerID(pid);
     agent->SetConnectionID(cid);
 
-    {
-        std::unique_lock lock(mMutex);
+    co_spawn(GetServer()->GetIOContext(), [this, agent, cid, pid, func = __FUNCTION__]() -> awaitable<void> {
+        if (const auto ret = co_await agent->AsyncInitial(nullptr); ret) {
+            agent->BootService();
+            SPDLOG_INFO("{:<20} - Player[{}] Login", func, pid);
 
-        mPlayerMap[pid] = agent;
-        mConnToPlayer[cid] = pid;
-    }
+            // Add To Map
+            {
+                std::unique_lock lock(mMutex);
+                mPlayerMap[pid] = agent;
+                mConnToPlayer[cid] = pid;
+            }
+            co_return;
+        }
 
-    agent->Initial(nullptr);
-    agent->BootService();
+        if (const auto *auth = GetServer()->GetModule<ULoginAuth>()) {
+            auth->OnAgentError(cid, pid, "Could Not Create Agent Service.");
+        }
 
-    SPDLOG_INFO("{:<20} - Player[{}] Login", __FUNCTION__, pid);
+        agent->ForceShutdown();
+    }, detached);
 }
 
 void UGateway::OnPlayerLogout(const int64_t pid) {
@@ -123,7 +133,7 @@ void UGateway::Stop() {
 
     mState = EModuleState::STOPPED;
 
-    for (const auto &agent : mPlayerMap | std::views::values) {
+    for (const auto &agent: mPlayerMap | std::views::values) {
         agent->Shutdown(false, 0, nullptr);
     }
 

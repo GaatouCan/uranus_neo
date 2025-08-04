@@ -38,6 +38,8 @@ public:
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
     void OnPlayerLogin(int64_t cid, const std::shared_ptr<IPackage_Interface> &pkg);
 
+    void OnAgentError(int64_t cid, int64_t pid, const std::string &error) const;
+
 private:
     void OnLoginSuccess(int64_t cid, int64_t pid);
 

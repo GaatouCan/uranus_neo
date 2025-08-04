@@ -91,6 +91,13 @@ void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<IPackage
     OnLoginSuccess(cid, pid);
 }
 
+void ULoginAuth::OnAgentError(const int64_t cid, int64_t pid, const std::string &error) const {
+    if (const auto *network = GetServer()->GetModule<UNetwork>()) {
+        // FIXME: Send A Message
+        network->OnLoginFailure(cid, nullptr);
+    }
+}
+
 void ULoginAuth::OnLoginSuccess(const int64_t cid, const int64_t pid) {
     {
         std::unique_lock lock(mMutex);

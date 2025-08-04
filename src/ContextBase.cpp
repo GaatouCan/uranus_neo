@@ -139,7 +139,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
 
     // Initial Service
     mService->SetUpContext(this);
-    mService->Initial(data);
+    const auto ret = mService->Initial(data);
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
@@ -149,7 +149,65 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
     // Delete The Data Asset For Initialization
     delete data;
 
-    return true;
+    return ret;
+}
+
+awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *data) {
+    if (mState != EContextState::CREATED)
+        co_return false;
+
+    if (mModule == nullptr || !mLibrary.IsValid()) {
+        SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
+        co_return false;
+    }
+
+    if (GetServer() == nullptr)
+        co_return false;
+
+    const auto network = GetServer()->GetModule<UNetwork>();
+    if (network == nullptr) {
+        SPDLOG_CRITICAL("Network Module Not Found");
+        GetServer()->Shutdown();
+        exit(-1);
+    }
+
+    // Start To Create Service
+    mState = EContextState::INITIALIZING;
+
+    auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
+    if (creator == nullptr) {
+        SPDLOG_ERROR("{:<20} - Can't Load Creator", __FUNCTION__);
+        mState = EContextState::CREATED;
+        co_return false;
+    }
+
+    mService = std::invoke(creator);
+    if (mService == nullptr) {
+        SPDLOG_ERROR("{:<20} - Can't Create Service", __FUNCTION__);
+        mState = EContextState::CREATED;
+        co_return false;
+    }
+
+    // Create Node Channel
+    mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
+
+    // Create Package Pool For Data Exchange
+    mPackagePool = network->CreatePackagePool();
+    mPackagePool->Initial();
+
+    // Initial Service
+    mService->SetUpContext(this);
+    const auto ret = co_await mService->AsyncInitial(data);
+
+    // Context And Service Initialized
+    mState = EContextState::INITIALIZED;
+    SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
+        __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+
+    // Delete The Data Asset For Initialization
+    delete data;
+
+    co_return ret;
 }
 
 int IContextBase::Shutdown(const bool bForce, int second, const std::function<void(IContextBase *)> &func) {

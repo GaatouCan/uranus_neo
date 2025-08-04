@@ -84,6 +84,11 @@ void UConnection::Disconnect() {
     mNetwork->RemoveConnection(mID, mPlayerID);
 
     if (mPlayerID > 0) {
+        if (GetServer() != nullptr) {
+            if (auto *gateway = GetServer()->GetModule<UGateway>()) {
+                gateway->OnPlayerLogout(mPlayerID);
+            }
+        }
         mPlayerID = -1;
     }
 }

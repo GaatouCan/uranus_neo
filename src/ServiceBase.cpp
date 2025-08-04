@@ -270,8 +270,22 @@ bool IServiceBase::Initial(const IDataAsset_Interface *data) {
         SPDLOG_ERROR("{:<20} - Context Is Null", __FUNCTION__);
         return false;
     }
+
     mState = EServiceState::INITIALIZED;
     return true;
+}
+
+awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *data) {
+    if (mState != EServiceState::CREATED)
+        co_return false;
+
+    if (mContext == nullptr) {
+        SPDLOG_ERROR("{:<20} - Context Is Null", __FUNCTION__);
+        co_return false;
+    }
+
+    mState = EServiceState::INITIALIZED;
+    co_return true;
 }
 
 bool IServiceBase::Start() {

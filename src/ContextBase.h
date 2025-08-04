@@ -110,6 +110,7 @@ public:
     void SetUpLibrary(const FSharedLibrary &library);
 
     virtual bool Initial(const IDataAsset_Interface *data);
+    virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *data);
 
     virtual int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func);
     int ForceShutdown();
