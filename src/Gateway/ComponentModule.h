@@ -34,7 +34,7 @@ public:
     void OnLogout();
 
     void Serialize(bsoncxx::builder::basic::document &builder);
-    void Deserialize(const bsoncxx::document::value &document);
+    void Deserialize(const bsoncxx::document::view &document);
 
 private:
     UPlayerBase *mOwner;

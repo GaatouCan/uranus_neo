@@ -42,7 +42,7 @@ void UComponentModule::Serialize(bsoncxx::builder::basic::document &builder) {
     builder.append(bsoncxx::builder::basic::kvp("components", doc.extract()));
 }
 
-void UComponentModule::Deserialize(const bsoncxx::document::value &document) {
+void UComponentModule::Deserialize(const bsoncxx::document::view &document) {
     for (const auto &component: mComponents | std::views::values) {
         const auto name = component->GetNameAndVersion().first;
         if (auto elem = document[name]; elem && elem.type() == bsoncxx::type::k_document) {
