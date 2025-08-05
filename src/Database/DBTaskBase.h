@@ -2,11 +2,14 @@
 
 #include "Common.h"
 
-#include <mongocxx/database.hpp>
+
+struct IDBContextBase;
+
 
 class BASE_API IDBTaskBase {
 
 protected:
+    std::string mDatabase;
     std::string mCollection;
 
 public:
@@ -15,20 +18,23 @@ public:
 
     DISABLE_COPY_MOVE(IDBTaskBase)
 
-    explicit IDBTaskBase(std::string collection)
-        : mCollection(std::move(collection)) {
+    IDBTaskBase(std::string db, std::string col)
+        : mDatabase(std::move(db)),
+          mCollection(std::move(col)) {
     }
+
+    void SetDatabase(const std::string &database) { mDatabase = database; }
+    [[nodiscard]] const std::string &GetDatabaseName() const { return mDatabase; }
 
     void SetCollection(const std::string &collection) { mCollection = collection; }
     [[nodiscard]] const std::string &GetCollectionName() const { return mCollection; }
 
-    virtual void Execute(mongocxx::client &client, mongocxx::database &db) = 0;
+    virtual void Execute(IDBContextBase *context) = 0;
 };
 
 
-template<class Callback>
+template<class Callback = decltype(NoOperateCallback)>
 class TDBTaskBase : public IDBTaskBase {
-
 protected:
     Callback mCallback;
 
@@ -38,10 +44,8 @@ public:
 
     DISABLE_COPY_MOVE(TDBTaskBase)
 
-    TDBTaskBase(std::string collection, Callback &&callback)
-        : IDBTaskBase(std::move(collection)),
+    TDBTaskBase(std::string col, std::string db, Callback &&callback = NoOperateCallback)
+        : IDBTaskBase(std::move(col), std::move(db)),
           mCallback(std::forward<Callback>(callback)) {
     }
-
-    // void SetCallback(Callback &&callback) { mCallback = std::forward<Callback>(callback); }
 };

@@ -74,55 +74,55 @@ public:
 
     mongocxx::cursor SyncSelect(const std::string &collection, const bsoncxx::document::value &filter) const;
 
-    DEFINE_DATABASE_OPERATION(FindOne,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
-        DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<bsoncxx::document::value>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(Find,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
-        DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<mongocxx::cursor>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(InsertOne,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
-        DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<mongocxx::result::insert_one>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(InsertMany,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
-        DATABASE_OPERATION_CALL_ARGS(document, options),
-        std::optional<mongocxx::result::insert_many>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(UpdateOne,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
-        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
-        std::optional<mongocxx::result::update>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(UpdateMany,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
-        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
-        std::optional<mongocxx::result::update>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(Replace,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::replace &options),
-        DATABASE_OPERATION_CALL_ARGS(filter, document, options),
-        std::optional<mongocxx::result::replace_one>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(DeleteOne,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
-        DATABASE_OPERATION_CALL_ARGS(filter, options),
-        std::optional<mongocxx::result::delete_result>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(DeleteMany,
-        DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
-        DATABASE_OPERATION_CALL_ARGS(filter, options),
-        std::optional<mongocxx::result::delete_result>, std::nullopt)
-
-    DEFINE_DATABASE_OPERATION(Transaction,
-        DATABASE_OPERATION_PARAMS(const mongocxx::client_session::with_transaction_cb &transaction, const mongocxx::options::transaction &options),
-        DATABASE_OPERATION_CALL_ARGS(transaction, options),
-        int, 0)
+    // DEFINE_DATABASE_OPERATION(FindOne,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
+    //     DATABASE_OPERATION_CALL_ARGS(document, options),
+    //     std::optional<bsoncxx::document::value>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(Find,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
+    //     DATABASE_OPERATION_CALL_ARGS(document, options),
+    //     std::optional<mongocxx::cursor>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(InsertOne,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+    //     DATABASE_OPERATION_CALL_ARGS(document, options),
+    //     std::optional<mongocxx::result::insert_one>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(InsertMany,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::insert &options),
+    //     DATABASE_OPERATION_CALL_ARGS(document, options),
+    //     std::optional<mongocxx::result::insert_many>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(UpdateOne,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
+    //     DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+    //     std::optional<mongocxx::result::update>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(UpdateMany,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::update &options),
+    //     DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+    //     std::optional<mongocxx::result::update>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(Replace,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const bsoncxx::document::value &document, const mongocxx::options::replace &options),
+    //     DATABASE_OPERATION_CALL_ARGS(filter, document, options),
+    //     std::optional<mongocxx::result::replace_one>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(DeleteOne,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
+    //     DATABASE_OPERATION_CALL_ARGS(filter, options),
+    //     std::optional<mongocxx::result::delete_result>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(DeleteMany,
+    //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &filter, const mongocxx::options::delete_options &options),
+    //     DATABASE_OPERATION_CALL_ARGS(filter, options),
+    //     std::optional<mongocxx::result::delete_result>, std::nullopt)
+    //
+    // DEFINE_DATABASE_OPERATION(Transaction,
+    //     DATABASE_OPERATION_PARAMS(const mongocxx::client_session::with_transaction_cb &transaction, const mongocxx::options::transaction &options),
+    //     DATABASE_OPERATION_CALL_ARGS(transaction, options),
+    //     int, 0)
 
 private:
     void PushTask(std::unique_ptr<IDBTaskBase> task);

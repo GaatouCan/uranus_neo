@@ -1,5 +1,6 @@
 #include "MongoAdapter.h"
 #include "MongoAdapterStartUp.h"
+#include "MongoContext.h"
 #include "Database/DBTaskBase.h"
 
 #include <spdlog/spdlog.h>
@@ -16,28 +17,10 @@ void UMongoAdapter::Initial(const IDataAsset_Interface *data) {
         return;
 
     mPool = std::make_unique<mongocxx::pool>(mongocxx::uri(startUp->mUri));
+    mDatabaseName = startUp->mDatabaseName;
+}
 
-    mWorkerList = std::vector<FWorkerNode>(2);
-    for (auto &worker: mWorkerList) {
-        worker.thread = std::thread([this, &worker] {
-            const auto client = mPool->acquire();
-            auto db = client["demo"];
-
-            while (worker.deque.IsRunning()) {
-                worker.deque.Wait();
-
-                if (!worker.deque.IsRunning())
-                    break;
-
-                try {
-                    const auto node = std::move(worker.deque.PopFront());
-                    node->Execute(*client, db);
-                } catch (const std::exception &e) {
-                    SPDLOG_ERROR("UDataAccess::RunInThread - Exception: {}", e.what());
-                }
-            }
-
-            worker.deque.Clear();
-        });
-    }
+IDBContextBase *UMongoAdapter::AcquireContext() {
+    const auto res = new FMongoContext(mPool->acquire());
+    return res;
 }
