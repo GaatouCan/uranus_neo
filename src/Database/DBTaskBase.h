@@ -2,6 +2,8 @@
 
 #include "Common.h"
 
+#include <string>
+
 
 struct IDBContext_Interface;
 

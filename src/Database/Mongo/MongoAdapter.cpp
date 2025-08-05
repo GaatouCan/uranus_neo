@@ -4,7 +4,8 @@
 
 #include <spdlog/spdlog.h>
 
-UMongoAdapter::UMongoAdapter() {
+UMongoAdapter::UMongoAdapter()
+    : bQuit(false) {
 }
 
 UMongoAdapter::~UMongoAdapter() {
@@ -17,6 +18,10 @@ void UMongoAdapter::Initial(const IDataAsset_Interface *data) {
 
     mPool = std::make_unique<mongocxx::pool>(mongocxx::uri(startUp->mUri));
     mDatabaseName = startUp->mDatabaseName;
+}
+
+void UMongoAdapter::Stop() {
+    bQuit = true;
 }
 
 IDBContext_Interface *UMongoAdapter::AcquireContext() {
