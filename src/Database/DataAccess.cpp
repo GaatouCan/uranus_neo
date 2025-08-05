@@ -16,10 +16,11 @@ void UDataAccess::Initial() {
     assert(mAdapter != nullptr);
 
     // FIXME: Create Other StartUp Data
-    auto *stratUp = new FMongoAdapterStartUp();
-    stratUp->mUri = "mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10";
+    FMongoAdapterStartUp stratUp;
+    stratUp.mUri = "mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10";
+    stratUp.mDatabaseName = "demo";
 
-    mAdapter->Initial(stratUp);
+    mAdapter->Initial(&stratUp);
 
     mWorkerList = std::vector<FWorkerNode>(2);
     for (auto &worker: mWorkerList) {
@@ -45,19 +46,7 @@ void UDataAccess::Initial() {
         });
     }
 
-    // Test
-    // {
-    //     asio::co_spawn(GetServer()->GetIOContext(), [this]() -> asio::awaitable<void> {
-    //         auto builder = bsoncxx::builder::basic::document();
-    //         builder.append(bsoncxx::builder::basic::kvp("player_id", 1001));
-    //         const auto doc = builder.extract();
-    //         auto res = co_await AsyncFind("player", doc, asio::use_awaitable);
-    //     }, asio::detached);
-    // }
-
     mState = EModuleState::INITIALIZED;
-
-    delete stratUp;
 }
 
 void UDataAccess::Stop() {
