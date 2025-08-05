@@ -55,6 +55,8 @@ void UDataAccess::Stop() {
 
     mState = EModuleState::STOPPED;
 
+    mAdapter->Stop();
+
     for (auto &[thread, deque]: mWorkerList) {
         deque.Quit();
     }
