@@ -1,10 +1,9 @@
 #include "DataAccess.h"
 #include "DBTaskBase.h"
+#include "DBContextBase.h"
+#include "Database/Mongo/MongoAdapterStartUp.h"
 
-#include <mongocxx/uri.hpp>
 #include <spdlog/spdlog.h>
-
-#include "Server.h"
 
 UDataAccess::UDataAccess()
     : mNextIndex(0) {
@@ -14,14 +13,18 @@ void UDataAccess::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
-    mPool = std::make_unique<mongocxx::pool>(
-        mongocxx::uri("mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10"));
+    assert(mAdapter != nullptr);
+
+    // FIXME: Create Other StartUp Data
+    auto *stratUp = new FMongoAdapterStartUp();
+    stratUp->mUri = "mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10";
+
+    mAdapter->Initial(stratUp);
 
     mWorkerList = std::vector<FWorkerNode>(2);
     for (auto &worker: mWorkerList) {
         worker.thread = std::thread([this, &worker] {
-            const auto client = mPool->acquire();
-            auto db = client["demo"];
+            auto *ctx = mAdapter->AcquireContext();
 
             while (worker.deque.IsRunning() && mState == EModuleState::RUNNING) {
                 worker.deque.Wait();
@@ -31,13 +34,14 @@ void UDataAccess::Initial() {
 
                 try {
                     const auto node = std::move(worker.deque.PopFront());
-                    node->Execute(*client, db);
+                    node->Execute(ctx);
                 } catch (const std::exception &e) {
                     SPDLOG_ERROR("UDataAccess::RunInThread - Exception: {}", e.what());
                 }
             }
 
             worker.deque.Clear();
+            delete ctx;
         });
     }
 
@@ -52,6 +56,8 @@ void UDataAccess::Initial() {
     // }
 
     mState = EModuleState::INITIALIZED;
+
+    delete stratUp;
 }
 
 void UDataAccess::Stop() {
@@ -73,13 +79,10 @@ UDataAccess::~UDataAccess() {
     }
 }
 
-mongocxx::cursor UDataAccess::SyncSelect(const std::string &collection, const bsoncxx::document::value &filter) const {
-    assert(mState == EModuleState::INITIALIZED);
-
-    const auto client = mPool->acquire();
-    const auto db = client["demo"];
-    auto col = db[collection];
-    return col.find(filter.view());
+IDBAdapterBase *UDataAccess::GetAdapter() const {
+    if (mAdapter == nullptr)
+        return nullptr;
+    return mAdapter.get();
 }
 
 void UDataAccess::PushTask(std::unique_ptr<IDBTaskBase> task) {

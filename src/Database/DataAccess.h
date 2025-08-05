@@ -2,23 +2,10 @@
 
 #include "Module.h"
 #include "ConcurrentDeque.h"
-
-#include "DBTask_Find.h"
-#include "DBTask_FindOne.h"
-#include "DBTask_InsertOne.h"
-#include "DBTask_InsertMany.h"
-#include "DBTask_UpdateOne.h"
-#include "DBTask_UpdateMany.h"
-#include "DBTask_Replace.h"
-#include "DBTask_DeleteOne.h"
-#include "DBTask_DeleteMany.h"
-#include "DBTask_Transaction.h"
+#include "DBAdapterBase.h"
 
 #include <thread>
 #include <vector>
-#include <asio.hpp>
-#include <mongocxx/instance.hpp>
-#include <mongocxx/pool.hpp>
 
 
 #define DATABASE_OPERATION_PARAMS(...)       __VA_ARGS__
@@ -55,6 +42,8 @@
     };
 
 
+class IDBTaskBase;
+
 class BASE_API UDataAccess final : public IModuleBase {
 
     DECLARE_MODULE(UDataAccess)
@@ -71,8 +60,6 @@ public:
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Data Access";
     }
-
-    mongocxx::cursor SyncSelect(const std::string &collection, const bsoncxx::document::value &filter) const;
 
     // DEFINE_DATABASE_OPERATION(FindOne,
     //     DATABASE_OPERATION_PARAMS(const bsoncxx::document::value &document, const mongocxx::options::find &options),
@@ -124,12 +111,16 @@ public:
     //     DATABASE_OPERATION_CALL_ARGS(transaction, options),
     //     int, 0)
 
-private:
+    template<class Type>
+    requires std::derived_from<Type, IDBAdapterBase>
+    void SetDatabaseAdapter();
+
+    [[nodiscard]] IDBAdapterBase *GetAdapter() const;
+
     void PushTask(std::unique_ptr<IDBTaskBase> task);
 
 private:
-    mongocxx::instance mInstance;
-    std::unique_ptr<mongocxx::pool> mPool;
+    std::unique_ptr<IDBAdapterBase> mAdapter;
 
     struct FWorkerNode {
         std::thread thread;
@@ -141,6 +132,12 @@ private:
 };
 
 
+template<class Type> requires std::derived_from<Type, IDBAdapterBase>
+inline void UDataAccess::SetDatabaseAdapter() {
+    if (mState != EModuleState::CREATED)
+        return;
+    mAdapter = std::make_unique<Type>();
+}
 #undef DATABASE_OPERATION_PARAMS
 #undef DATABASE_OPERATION_CALL_ARGS
 #undef DEFINE_DATABASE_OPERATION
