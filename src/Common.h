@@ -45,6 +45,8 @@ DISABLE_MOVE(clazz)
 
 #define SPDLOG_NO_SOURCE_LOC
 
+inline constexpr auto NoOperateCallback = [](auto && ...){};
+
 inline constexpr int PLAYER_AGENT_ID = -1;
 inline constexpr int CLIENT_TARGET_ID = -2;
 inline constexpr int SERVER_SOURCE_ID = -3;
