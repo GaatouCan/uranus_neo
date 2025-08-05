@@ -1,7 +1,6 @@
 #include "MongoAdapter.h"
 #include "MongoStartUpData.h"
 #include "MongoContext.h"
-#include "Database/DBTaskBase.h"
 
 #include <spdlog/spdlog.h>
 
