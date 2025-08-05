@@ -6,9 +6,10 @@
 #include <bsoncxx/document/value.hpp>
 #include <mongocxx/options/update.hpp>
 
+
 namespace mongo {
     template<class Callback>
-    class BASE_API TDBTask_UpdateOne final : public TDBTaskBase<Callback> {
+    class TDBTask_UpdateOne final : public TDBTaskBase<Callback> {
 
         bsoncxx::document::value mFilter;
         bsoncxx::document::value mDocument;
@@ -38,7 +39,7 @@ namespace mongo {
                 return;
             }
 
-            auto db = context->mEntry[IDBTaskBase::mDatabase];
+            auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
             auto result = collection.update_one(mFilter.view(), mDocument.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

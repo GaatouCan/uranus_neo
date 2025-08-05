@@ -3,32 +3,32 @@
 #include "Database/DBTaskBase.h"
 #include "Database/Mongo/MongoContext.h"
 
-#include <vector>
 #include <bsoncxx/document/value.hpp>
-#include <mongocxx/options/insert.hpp>
+#include <mongocxx/options/find.hpp>
+#include <optional>
 
 
 namespace mongo {
     template<class Callback>
-    class TDBTask_InsertMany final : public TDBTaskBase<Callback> {
+    class TDBTask_Find final : public TDBTaskBase<Callback> {
 
-        std::vector<bsoncxx::document::value> mValues;
-        mongocxx::options::insert mOptions;
+        bsoncxx::document::value mFilter;
+        mongocxx::options::find mOptions;
 
     public:
-        TDBTask_InsertMany() = delete;
+        TDBTask_Find() = delete;
 
-        TDBTask_InsertMany(
+        TDBTask_Find(
             std::string collection,
             Callback &&callback,
-            std::vector<bsoncxx::document::value> values,
-            mongocxx::options::insert options = {}
+            bsoncxx::document::value filter,
+            mongocxx::options::find options
         ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-           mValues(std::move(values)),
+           mFilter(std::move(filter)),
            mOptions(std::move(options)) {
         }
 
-        ~TDBTask_InsertMany() override = default;
+        ~TDBTask_Find() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
             auto *context = dynamic_cast<FMongoContext *>(ctx);
@@ -39,8 +39,8 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
-            auto result = collection.insert_many(mValues, mOptions);
-            std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
+            auto result = collection.find(mFilter.view(), mOptions);
+            std::invoke(TDBTaskBase<Callback>::mCallback, std::make_optional(std::move(result)));
         }
     };
 }

@@ -3,32 +3,31 @@
 #include "Database/DBTaskBase.h"
 #include "Database/Mongo/MongoContext.h"
 
-#include <vector>
 #include <bsoncxx/document/value.hpp>
-#include <mongocxx/options/insert.hpp>
+#include <mongocxx/options/delete.hpp>
 
 
 namespace mongo {
     template<class Callback>
-    class TDBTask_InsertMany final : public TDBTaskBase<Callback> {
+    class TDBTask_DeleteMany final : public TDBTaskBase<Callback> {
 
-        std::vector<bsoncxx::document::value> mValues;
-        mongocxx::options::insert mOptions;
+        bsoncxx::document::value mFilter;
+        mongocxx::options::delete_options mOptions;
 
     public:
-        TDBTask_InsertMany() = delete;
+        TDBTask_DeleteMany() = delete;
 
-        TDBTask_InsertMany(
+        TDBTask_DeleteMany(
             std::string collection,
             Callback &&callback,
-            std::vector<bsoncxx::document::value> values,
-            mongocxx::options::insert options = {}
+            bsoncxx::document::value filter,
+            mongocxx::options::delete_options options = {}
         ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-           mValues(std::move(values)),
+           mFilter(std::move(filter)),
            mOptions(std::move(options)) {
         }
 
-        ~TDBTask_InsertMany() override = default;
+        ~TDBTask_DeleteMany() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
             auto *context = dynamic_cast<FMongoContext *>(ctx);
@@ -39,7 +38,7 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
-            auto result = collection.insert_many(mValues, mOptions);
+            auto result = collection.delete_many(mFilter.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
         }
     };

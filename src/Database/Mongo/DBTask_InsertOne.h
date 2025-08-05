@@ -6,9 +6,11 @@
 #include <bsoncxx/document/value.hpp>
 #include <mongocxx/options/insert.hpp>
 
+
 namespace mongo {
     template<class Callback>
     class TDBTask_InsertOne final : public TDBTaskBase<Callback> {
+
         bsoncxx::document::value mDocument;
         mongocxx::options::insert mOptions;
 
@@ -34,7 +36,7 @@ namespace mongo {
                 return;
             }
 
-            auto db = context->mEntry[IDBTaskBase::mDatabase];
+            auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
             auto result = collection.insert_one(mDocument.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));

@@ -3,32 +3,34 @@
 #include "Database/DBTaskBase.h"
 #include "Database/Mongo/MongoContext.h"
 
-#include <vector>
 #include <bsoncxx/document/value.hpp>
-#include <mongocxx/options/insert.hpp>
+#include <mongocxx/options/replace.hpp>
 
 
 namespace mongo {
     template<class Callback>
-    class TDBTask_InsertMany final : public TDBTaskBase<Callback> {
+    class TDBTask_Replace final : public TDBTaskBase<Callback> {
 
-        std::vector<bsoncxx::document::value> mValues;
-        mongocxx::options::insert mOptions;
+        bsoncxx::document::value mFilter;
+        bsoncxx::document::value mDocument;
+        mongocxx::options::replace mOptions;
 
     public:
-        TDBTask_InsertMany() = delete;
+        TDBTask_Replace() = delete;
 
-        TDBTask_InsertMany(
+        TDBTask_Replace(
             std::string collection,
             Callback &&callback,
-            std::vector<bsoncxx::document::value> values,
-            mongocxx::options::insert options = {}
+            bsoncxx::document::value filter,
+            bsoncxx::document::value document,
+            mongocxx::options::replace options = {}
         ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-           mValues(std::move(values)),
+           mFilter(std::move(filter)),
+           mDocument(std::move(document)),
            mOptions(std::move(options)) {
         }
 
-        ~TDBTask_InsertMany() override = default;
+        ~TDBTask_Replace() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
             auto *context = dynamic_cast<FMongoContext *>(ctx);
@@ -39,7 +41,7 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
-            auto result = collection.insert_many(mValues, mOptions);
+            auto result = collection.replace_one(mFilter.view(), mDocument.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
         }
     };

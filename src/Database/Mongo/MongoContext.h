@@ -5,9 +5,9 @@
 #include <mongocxx/pool.hpp>
 
 struct BASE_API FMongoContext final : public IDBContext_Interface {
-    mongocxx::pool::entry mEntry;
+    mongocxx::pool::entry entry;
 
-    explicit FMongoContext(mongocxx::pool::entry entry)
-        : mEntry(std::move(entry)) {
+    explicit FMongoContext(mongocxx::pool::entry e)
+        : entry(std::move(e)) {
     }
 };
