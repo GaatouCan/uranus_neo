@@ -3,7 +3,7 @@
 #include "Common.h"
 
 
-struct IDBContextBase;
+struct IDBContext_Interface;
 
 
 class BASE_API IDBTaskBase {
@@ -29,7 +29,7 @@ public:
     void SetCollection(const std::string &collection) { mCollection = collection; }
     [[nodiscard]] const std::string &GetCollectionName() const { return mCollection; }
 
-    virtual void Execute(IDBContextBase *context) = 0;
+    virtual void Execute(IDBContext_Interface *context) = 0;
 };
 
 

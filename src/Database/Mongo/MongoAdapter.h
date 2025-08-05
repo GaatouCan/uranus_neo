@@ -17,7 +17,7 @@ public:
 
     void Initial(const IDataAsset_Interface *data) override;
 
-    IDBContextBase *AcquireContext() override;
+    IDBContext_Interface *AcquireContext() override;
 
 private:
     mongocxx::instance mInstance;

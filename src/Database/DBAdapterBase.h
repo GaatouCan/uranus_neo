@@ -2,13 +2,16 @@
 
 #include "Common.h"
 
+#include <memory>
+
 class IDataAsset_Interface;
-struct IDBContextBase;
+struct IDBContext_Interface;
 class UDataAccess;
+class IDBTaskBase;
 
 class BASE_API IDBAdapterBase {
 
-    UDataAccess *mOwner;
+    UDataAccess *mDataAccess;
 
 public:
     IDBAdapterBase();
@@ -23,5 +26,8 @@ public:
     virtual void Initial(const IDataAsset_Interface *data);
     virtual void Stop();
 
-    virtual IDBContextBase *AcquireContext() = 0;
+    virtual IDBContext_Interface *AcquireContext() = 0;
+
+protected:
+    void PushTask(std::unique_ptr<IDBTaskBase> &&task) const;
 };

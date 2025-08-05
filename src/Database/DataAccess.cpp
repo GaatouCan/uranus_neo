@@ -1,7 +1,7 @@
 #include "DataAccess.h"
 #include "DBTaskBase.h"
-#include "DBContextBase.h"
-#include "Database/Mongo/MongoAdapterStartUp.h"
+#include "DBContext.h"
+#include "Database/Mongo/MongoStartUpData.h"
 
 #include <spdlog/spdlog.h>
 
@@ -16,7 +16,7 @@ void UDataAccess::Initial() {
     assert(mAdapter != nullptr);
 
     // FIXME: Create Other StartUp Data
-    FMongoAdapterStartUp stratUp;
+    FMongoStartUpData stratUp;
     stratUp.mUri = "mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10";
     stratUp.mDatabaseName = "demo";
 
@@ -74,7 +74,7 @@ IDBAdapterBase *UDataAccess::GetAdapter() const {
     return mAdapter.get();
 }
 
-void UDataAccess::PushTask(std::unique_ptr<IDBTaskBase> task) {
+void UDataAccess::PushTask(std::unique_ptr<IDBTaskBase> &&task) {
     if (mState != EModuleState::RUNNING)
         return;
 

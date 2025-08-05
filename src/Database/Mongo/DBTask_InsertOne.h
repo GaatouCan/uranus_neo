@@ -27,7 +27,7 @@ namespace mongo {
 
         ~TDBTask_InsertOne() override = default;
 
-        void Execute(IDBContextBase *ctx) override {
+        void Execute(IDBContext_Interface *ctx) override {
             auto *context = dynamic_cast<FMongoContext *>(ctx);
             if (context == nullptr) {
                 std::invoke(TDBTaskBase<Callback>::mCallback, std::nullopt);

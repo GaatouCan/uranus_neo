@@ -1,5 +1,5 @@
 #include "MongoAdapter.h"
-#include "MongoAdapterStartUp.h"
+#include "MongoStartUpData.h"
 #include "MongoContext.h"
 #include "Database/DBTaskBase.h"
 
@@ -12,7 +12,7 @@ UMongoAdapter::~UMongoAdapter() {
 }
 
 void UMongoAdapter::Initial(const IDataAsset_Interface *data) {
-    const auto *startUp = dynamic_cast<const FMongoAdapterStartUp *>(data);
+    const auto *startUp = dynamic_cast<const FMongoStartUpData *>(data);
     if (startUp == nullptr)
         return;
 
@@ -20,7 +20,7 @@ void UMongoAdapter::Initial(const IDataAsset_Interface *data) {
     mDatabaseName = startUp->mDatabaseName;
 }
 
-IDBContextBase *UMongoAdapter::AcquireContext() {
+IDBContext_Interface *UMongoAdapter::AcquireContext() {
     const auto res = new FMongoContext(mPool->acquire());
     return res;
 }

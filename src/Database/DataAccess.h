@@ -48,6 +48,8 @@ class BASE_API UDataAccess final : public IModuleBase {
 
     DECLARE_MODULE(UDataAccess)
 
+    friend class IDBAdapterBase;
+
 protected:
     UDataAccess();
 
@@ -117,7 +119,8 @@ public:
 
     [[nodiscard]] IDBAdapterBase *GetAdapter() const;
 
-    void PushTask(std::unique_ptr<IDBTaskBase> task);
+private:
+    void PushTask(std::unique_ptr<IDBTaskBase> &&task);
 
 private:
     std::unique_ptr<IDBAdapterBase> mAdapter;

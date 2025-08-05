@@ -4,7 +4,7 @@
 
 #include <string>
 
-class BASE_API FMongoAdapterStartUp final : public IDataAsset_Interface {
+class BASE_API FMongoStartUpData final : public IDataAsset_Interface {
 public:
     std::string mUri;
     std::string mDatabaseName;
