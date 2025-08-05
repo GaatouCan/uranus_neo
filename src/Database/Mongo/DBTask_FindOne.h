@@ -18,19 +18,24 @@ namespace mongo {
         TDBTask_FindOne() = delete;
 
         TDBTask_FindOne(
-            std::string collection,
-            Callback &&callback,
+            std::string db,
+            std::string col,
+            Callback &&cb,
             bsoncxx::document::value filter,
-            mongocxx::options::find options
-        ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
+            mongocxx::options::find opt
+        ): TDBTaskBase<Callback>(
+               std::move(db),
+               std::move(col),
+               std::forward<Callback>(cb)
+           ),
            mFilter(std::move(filter)),
-           mOptions(std::move(options)) {
+           mOptions(std::move(opt)) {
         }
 
         ~TDBTask_FindOne() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
-            auto *context = dynamic_cast<FMongoContext *>(ctx);
+            const auto *context = dynamic_cast<FMongoContext *>(ctx);
             if (context == nullptr) {
                 std::invoke(TDBTaskBase<Callback>::mCallback, std::nullopt);
                 return;
@@ -38,6 +43,7 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
+
             auto result = collection.find_one(mFilter.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
         }

@@ -11,6 +11,7 @@
 namespace mongo {
     template<class Callback>
     class TDBTask_Transaction final : public TDBTaskBase<Callback> {
+
         mongocxx::client_session::with_transaction_cb mTransaction;
         mongocxx::options::transaction mOptions;
 
@@ -18,13 +19,18 @@ namespace mongo {
         TDBTask_Transaction() = delete;
 
         TDBTask_Transaction(
-            std::string collection,
-            Callback &&callback,
-            mongocxx::client_session::with_transaction_cb transaction,
-            mongocxx::options::transaction options = {}
-        ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
-           mTransaction(std::move(transaction)),
-           mOptions(std::move(options)) {
+            std::string db,
+            std::string col,
+            Callback &&cb,
+            mongocxx::client_session::with_transaction_cb trans,
+            mongocxx::options::transaction opt = {}
+        ): TDBTaskBase<Callback>(
+               std::move(db),
+               std::move(col),
+               std::forward<Callback>(cb)
+           ),
+           mTransaction(std::move(trans)),
+           mOptions(std::move(opt)) {
         }
 
         ~TDBTask_Transaction() override = default;

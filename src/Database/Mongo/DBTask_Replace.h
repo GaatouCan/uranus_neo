@@ -19,21 +19,26 @@ namespace mongo {
         TDBTask_Replace() = delete;
 
         TDBTask_Replace(
-            std::string collection,
-            Callback &&callback,
+            std::string db,
+            std::string col,
+            Callback &&cb,
             bsoncxx::document::value filter,
-            bsoncxx::document::value document,
-            mongocxx::options::replace options = {}
-        ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
+            bsoncxx::document::value doc,
+            mongocxx::options::replace opt = {}
+        ): TDBTaskBase<Callback>(
+               std::move(db),
+               std::move(col),
+               std::forward<Callback>(cb)
+           ),
            mFilter(std::move(filter)),
-           mDocument(std::move(document)),
-           mOptions(std::move(options)) {
+           mDocument(std::move(doc)),
+           mOptions(std::move(opt)) {
         }
 
         ~TDBTask_Replace() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
-            auto *context = dynamic_cast<FMongoContext *>(ctx);
+            const auto *context = dynamic_cast<FMongoContext *>(ctx);
             if (context == nullptr) {
                 std::invoke(TDBTaskBase<Callback>::mCallback, std::nullopt);
                 return;
@@ -41,6 +46,7 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
+
             auto result = collection.replace_one(mFilter.view(), mDocument.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
         }

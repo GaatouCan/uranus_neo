@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Database/DBAdapterBase.h"
-#include "ConcurrentDeque.h"
+
+#include "DBTask_InsertOne.h"
 
 #include <mongocxx/instance.hpp>
 #include <mongocxx/pool.hpp>
@@ -18,6 +19,12 @@ public:
     void Initial(const IDataAsset_Interface *data) override;
 
     IDBContext_Interface *AcquireContext() override;
+
+    template<class Callback = decltype(NoOperateCallback)>
+    void PushInsertOne(const std::string &col, const bsoncxx::document::value &doc, const mongocxx::options::insert &opt, Callback &&cb = NoOperateCallback) {
+        auto task = std::make_unique<mongo::TDBTask_InsertOne<Callback>>(mDatabaseName, col, doc, opt, std::forward<Callback>(cb));
+        this->PushTask(std::move(task));
+    }
 
 private:
     mongocxx::instance mInstance;

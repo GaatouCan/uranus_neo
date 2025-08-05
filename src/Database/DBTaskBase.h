@@ -44,8 +44,8 @@ public:
 
     DISABLE_COPY_MOVE(TDBTaskBase)
 
-    TDBTaskBase(std::string col, std::string db, Callback &&callback = NoOperateCallback)
-        : IDBTaskBase(std::move(col), std::move(db)),
+    TDBTaskBase(std::string db, std::string col, Callback &&callback = NoOperateCallback)
+        : IDBTaskBase(std::move(db), std::move(col)),
           mCallback(std::forward<Callback>(callback)) {
     }
 };

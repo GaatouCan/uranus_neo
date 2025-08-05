@@ -18,19 +18,24 @@ namespace mongo {
         TDBTask_DeleteMany() = delete;
 
         TDBTask_DeleteMany(
-            std::string collection,
-            Callback &&callback,
+            std::string db,
+            std::string col,
+            Callback &&cb,
             bsoncxx::document::value filter,
-            mongocxx::options::delete_options options = {}
-        ): TDBTaskBase<Callback>(std::move(collection), std::forward<Callback>(callback)),
+            mongocxx::options::delete_options opt = {}
+        ): TDBTaskBase<Callback>(
+               std::move(db),
+               std::move(col),
+               std::forward<Callback>(cb)
+           ),
            mFilter(std::move(filter)),
-           mOptions(std::move(options)) {
+           mOptions(std::move(opt)) {
         }
 
         ~TDBTask_DeleteMany() override = default;
 
         void Execute(IDBContext_Interface *ctx) override {
-            auto *context = dynamic_cast<FMongoContext *>(ctx);
+            const auto *context = dynamic_cast<FMongoContext *>(ctx);
             if (context == nullptr) {
                 std::invoke(TDBTaskBase<Callback>::mCallback, std::nullopt);
                 return;
@@ -38,6 +43,7 @@ namespace mongo {
 
             auto db = context->entry[IDBTaskBase::mDatabase];
             auto collection = db[IDBTaskBase::mCollection];
+
             auto result = collection.delete_many(mFilter.view(), mOptions);
             std::invoke(TDBTaskBase<Callback>::mCallback, std::move(result));
         }
