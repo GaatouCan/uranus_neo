@@ -116,7 +116,6 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
 private:
-    void PushScheduleNode(std::unique_ptr<ISchedule_Interface> &&node);
     awaitable<void> ProcessChannel();
 
 private:
