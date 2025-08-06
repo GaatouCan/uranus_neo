@@ -39,7 +39,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         virtual ~ISchedule_Interface() = default;
 
         DISABLE_COPY_MOVE(ISchedule_Interface)
-        virtual void Execute(IServiceBase *service);
+        virtual void Execute(IServiceBase *service) = 0;
     };
 
     /**

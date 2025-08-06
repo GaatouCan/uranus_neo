@@ -13,16 +13,12 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
-void IContextBase::ISchedule_Interface::Execute(IServiceBase *service) {
-}
-
-
 void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
 }
 
 void IContextBase::UPackageNode::Execute(IServiceBase *service) {
-    if (service != nullptr && mPackage != nullptr) {
+    if (service && mPackage ) {
         service->OnPackage(mPackage);
     }
 }
@@ -42,7 +38,7 @@ void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interf
 }
 
 void IContextBase::UEventNode::Execute(IServiceBase *service) {
-    if (service != nullptr && mEvent != nullptr) {
+    if (service && mEvent ) {
         service->OnEvent(mEvent);
     }
 }
