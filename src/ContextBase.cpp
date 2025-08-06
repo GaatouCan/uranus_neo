@@ -387,7 +387,7 @@ IServiceBase *IContextBase::GetOwningService() const {
     return mService;
 }
 
-void IContextBase::PushNode(std::unique_ptr<INodeBase> node) {
+void IContextBase::PushNode(std::unique_ptr<INodeBase> &&node) {
     if (GetServer() == nullptr)
         return;
 

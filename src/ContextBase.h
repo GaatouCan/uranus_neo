@@ -125,7 +125,7 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
 private:
-    void PushNode(std::unique_ptr<INodeBase> node);
+    void PushNode(std::unique_ptr<INodeBase> &&node);
     awaitable<void> ProcessChannel();
 
 private:
