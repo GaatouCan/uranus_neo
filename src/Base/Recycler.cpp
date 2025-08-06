@@ -25,28 +25,28 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
         return nullptr;
 
     // Custom Deleter Of The Smart Pointer
-    auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
-        if (const auto self = weak.lock()) {
-            self->Recycle(pElem);
-        } else {
-            delete pElem;
-        }
-    };
+    // auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
+    //     if (const auto self = weak.lock()) {
+    //         self->Recycle(pElem);
+    //     } else {
+    //         delete pElem;
+    //     }
+    // };
 
     // Pop The Front From The Queue If It Is Not Empty
     {
         std::unique_lock lock(mMutex);
         if (!mQueue.empty()) {
-            auto *pElem = mQueue.front().release();
+            auto pElem = mQueue.front();
             mQueue.pop();
 
             SPDLOG_TRACE("{:<20} - Recycler[{:p}] - Acquire Recyclable[{:p}] From Queue",
-                         __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem));
+                __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem.get()));
 
             pElem->Initial();
             ++mUsage;
 
-            return {pElem, deleter};
+            return pElem;
         }
     }
 
@@ -59,11 +59,11 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     }
 
     // The Last One Directly Return
-    std::vector<IRecycle_Interface *> elems(num - 1);
-    IRecycle_Interface *pResult = nullptr;
+    std::vector<std::shared_ptr<IRecycle_Interface>> elems(num - 1);
+    std::shared_ptr<IRecycle_Interface> pResult = nullptr;
 
     while (num-- > 0) {
-        auto *pElem = Create();
+        auto pElem = Create();
 
         if (pElem == nullptr)
             continue;
@@ -95,7 +95,7 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     pResult->Initial();
     ++mUsage;
 
-    return { pResult, deleter };
+    return pResult;
 }
 
 size_t IRecyclerBase::GetUsage() const {
@@ -182,7 +182,7 @@ void IRecyclerBase::Initial(const size_t capacity) {
         return;
 
     for (size_t count = 0; count < capacity; count++) {
-        auto *pElem = Create();
+        auto pElem = Create();
         pElem->OnCreate();
 
         mQueue.emplace(pElem);

@@ -15,7 +15,7 @@
 class BASE_API IRecyclerBase : public std::enable_shared_from_this<IRecyclerBase> {
 
     /** Internal Container */
-    std::queue<unique_ptr<IRecycle_Interface>> mQueue;
+    std::queue<shared_ptr<IRecycle_Interface>> mQueue;
     mutable std::shared_mutex mMutex;
 
     std::atomic_int64_t mUsage;
@@ -32,8 +32,7 @@ protected:
     IRecyclerBase();
     explicit IRecyclerBase(size_t capacity);
 
-    [[nodiscard]] virtual IRecycle_Interface *Create() const = 0;
-
+    [[nodiscard]] virtual shared_ptr<IRecycle_Interface> Create() = 0;
 public:
     virtual ~IRecyclerBase();
 
@@ -49,7 +48,6 @@ public:
     [[nodiscard]] size_t GetIdle() const;
     [[nodiscard]] size_t GetCapacity() const;
 
-private:
     void Recycle(IRecycle_Interface *pElem);
 };
 
@@ -61,8 +59,15 @@ class TRecycler final : public IRecyclerBase {
     InitialFunctor mInitial;
 
 protected:
-    IRecycle_Interface *Create() const override {
-        auto *res = new Type();
+    shared_ptr<IRecycle_Interface> Create() override {
+        auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) mutable  {
+            if (const auto self = weak.lock()) {
+                self->Recycle(pElem);
+                return;
+            }
+            delete pElem;
+        };
+        auto res = new Type();
 
         if constexpr (!std::is_same_v<InitialFunctor, std::nullptr_t>) {
             if (mInitial) {
@@ -70,11 +75,11 @@ protected:
             }
         }
 
-        return res;
+        return { res, deleter };
     }
 
 public:
-    TRecycler() : IRecyclerBase() { }
+    TRecycler() = default;
     explicit TRecycler(const size_t capacity) : IRecyclerBase(capacity) { }
 
     shared_ptr<Type> AcquireT() {
