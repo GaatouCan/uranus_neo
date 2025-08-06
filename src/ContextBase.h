@@ -35,7 +35,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
     class BASE_API INodeBase {
 
     public:
-        INodeBase();
+        INodeBase() = default;
         virtual ~INodeBase() = default;
 
         DISABLE_COPY_MOVE(INodeBase)
@@ -51,9 +51,6 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         shared_ptr<IPackage_Interface> mPackage;
 
     public:
-        UPackageNode();
-        ~UPackageNode() override = default;
-
         void SetPackage(const shared_ptr<IPackage_Interface> &pkg);
         void Execute(IServiceBase *service) override;
     };
@@ -67,9 +64,6 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         std::function<void(IServiceBase *)> mTask;
 
     public:
-        UTaskNode();
-        ~UTaskNode() override = default;
-
         void SetTask(const std::function<void(IServiceBase *)> &task);
         void Execute(IServiceBase *service) override;
     };
@@ -83,9 +77,6 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         shared_ptr<IEventParam_Interface> mEvent;
 
     public:
-        UEventNode();
-        ~UEventNode() override = default;
-
         void SetEventParam(const shared_ptr<IEventParam_Interface> &event);
         void Execute(IServiceBase *service) override;
     };

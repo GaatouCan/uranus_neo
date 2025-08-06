@@ -13,14 +13,9 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
-IContextBase::INodeBase::INodeBase() {
-}
-
 void IContextBase::INodeBase::Execute(IServiceBase *service) {
 }
 
-IContextBase::UPackageNode::UPackageNode() {
-}
 
 void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
@@ -32,9 +27,6 @@ void IContextBase::UPackageNode::Execute(IServiceBase *service) {
     }
 }
 
-IContextBase::UTaskNode::UTaskNode() {
-}
-
 void IContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
     mTask = task;
 }
@@ -43,9 +35,6 @@ void IContextBase::UTaskNode::Execute(IServiceBase *service) {
     if (service && mTask) {
         std::invoke(mTask, service);
     }
-}
-
-IContextBase::UEventNode::UEventNode() {
 }
 
 void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
