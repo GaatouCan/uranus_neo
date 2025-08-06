@@ -34,20 +34,12 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
      */
     class BASE_API INodeBase {
 
-    protected:
-        IServiceBase *const mService;
-
     public:
-        INodeBase() = delete;
-
-        explicit INodeBase(IServiceBase *service);
+        INodeBase();
         virtual ~INodeBase() = default;
 
         DISABLE_COPY_MOVE(INodeBase)
-
-        [[nodiscard]] IServiceBase *GetService() const;
-
-        virtual void Execute();
+        virtual void Execute(IServiceBase *service);
     };
 
     /**
@@ -59,11 +51,11 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         shared_ptr<IPackage_Interface> mPackage;
 
     public:
-        explicit UPackageNode(IServiceBase *service);
+        UPackageNode();
         ~UPackageNode() override = default;
 
         void SetPackage(const shared_ptr<IPackage_Interface> &pkg);
-        void Execute() override;
+        void Execute(IServiceBase *service) override;
     };
 
     /**
@@ -75,11 +67,11 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         std::function<void(IServiceBase *)> mTask;
 
     public:
-        explicit UTaskNode(IServiceBase *service);
+        UTaskNode();
         ~UTaskNode() override = default;
 
         void SetTask(const std::function<void(IServiceBase *)> &task);
-        void Execute() override;
+        void Execute(IServiceBase *service) override;
     };
 
     /**
@@ -91,11 +83,11 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         shared_ptr<IEventParam_Interface> mEvent;
 
     public:
-        explicit UEventNode(IServiceBase *service);
+        UEventNode();
         ~UEventNode() override = default;
 
         void SetEventParam(const shared_ptr<IEventParam_Interface> &event);
-        void Execute() override;
+        void Execute(IServiceBase *service) override;
     };
 
     using AContextChannel = TConcurrentChannel<void(std::error_code, std::shared_ptr<INodeBase>)>;

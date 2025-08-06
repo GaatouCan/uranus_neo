@@ -13,56 +13,48 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
-IContextBase::INodeBase::INodeBase(IServiceBase *service)
-    : mService(service) {
+IContextBase::INodeBase::INodeBase() {
 }
 
-IServiceBase *IContextBase::INodeBase::GetService() const {
-    return mService;
+void IContextBase::INodeBase::Execute(IServiceBase *service) {
 }
 
-void IContextBase::INodeBase::Execute() {
-}
-
-IContextBase::UPackageNode::UPackageNode(IServiceBase *service)
-    : INodeBase(service) {
+IContextBase::UPackageNode::UPackageNode() {
 }
 
 void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
 }
 
-void IContextBase::UPackageNode::Execute() {
-    if (mService != nullptr && mPackage != nullptr) {
-        mService->OnPackage(mPackage);
+void IContextBase::UPackageNode::Execute(IServiceBase *service) {
+    if (service != nullptr && mPackage != nullptr) {
+        service->OnPackage(mPackage);
     }
 }
 
-IContextBase::UTaskNode::UTaskNode(IServiceBase *service)
-    : INodeBase(service) {
+IContextBase::UTaskNode::UTaskNode() {
 }
 
 void IContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
     mTask = task;
 }
 
-void IContextBase::UTaskNode::Execute() {
-    if (mService && mTask) {
-        std::invoke(mTask, mService);
+void IContextBase::UTaskNode::Execute(IServiceBase *service) {
+    if (service && mTask) {
+        std::invoke(mTask, service);
     }
 }
 
-IContextBase::UEventNode::UEventNode(IServiceBase *service)
-    : INodeBase(service) {
+IContextBase::UEventNode::UEventNode() {
 }
 
 void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
     mEvent = event;
 }
 
-void IContextBase::UEventNode::Execute() {
-    if (mService != nullptr && mEvent != nullptr) {
-        mService->OnEvent(mEvent);
+void IContextBase::UEventNode::Execute(IServiceBase *service) {
+    if (service != nullptr && mEvent != nullptr) {
+        service->OnEvent(mEvent);
     }
 }
 
@@ -330,7 +322,7 @@ void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Package From {}",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName(), pkg->GetSource());
 
-    const auto node = make_shared<UPackageNode>(mService);
+    const auto node = make_shared<UPackageNode>();
     node->SetPackage(pkg);
 
     PushNode(node);
@@ -346,7 +338,7 @@ void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
-    const auto node = make_shared<UTaskNode>(mService);
+    const auto node = make_shared<UTaskNode>();
     node->SetTask(task);
 
     PushNode(node);
@@ -362,7 +354,7 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Event Type {}",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName(), event->GetEventType());
 
-    const auto node = make_shared<UEventNode>(mService);
+    const auto node = make_shared<UEventNode>();
     node->SetEventParam(event);
 
     PushNode(node);
@@ -427,7 +419,7 @@ awaitable<void> IContextBase::ProcessChannel() {
 
         mState = EContextState::RUNNING;
         try {
-            node->Execute();
+            node->Execute(mService);
         } catch (const std::exception &e) {
             SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
         }
