@@ -13,7 +13,7 @@ class IPackage_Interface;
 class UServer;
 
 
-enum class BASE_API EContextState {
+enum class EContextState {
     CREATED,
     INITIALIZING,
     INITIALIZED,
