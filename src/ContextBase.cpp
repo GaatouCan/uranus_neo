@@ -13,7 +13,7 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
-void IContextBase::INodeBase::Execute(IServiceBase *service) {
+void IContextBase::ISchedule_Interface::Execute(IServiceBase *service) {
 }
 
 
@@ -314,7 +314,7 @@ void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
     auto node = make_unique<UPackageNode>();
     node->SetPackage(pkg);
 
-    PushNode(std::move(node));
+    PushScheduleNode(std::move(node));
 }
 
 void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
@@ -330,7 +330,7 @@ void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
     auto node = make_unique<UTaskNode>();
     node->SetTask(task);
 
-    PushNode(std::move(node));
+    PushScheduleNode(std::move(node));
 }
 
 void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
@@ -346,7 +346,7 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
 
-    PushNode(std::move(node));
+    PushScheduleNode(std::move(node));
 }
 
 UServer *IContextBase::GetServer() const {
@@ -376,7 +376,7 @@ IServiceBase *IContextBase::GetOwningService() const {
     return mService;
 }
 
-void IContextBase::PushNode(std::unique_ptr<INodeBase> &&node) {
+void IContextBase::PushScheduleNode(std::unique_ptr<ISchedule_Interface> &&node) {
     if (GetServer() == nullptr)
         return;
 

@@ -32,13 +32,13 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
     /**
      * The Base Channel Node For Internal Channel
      */
-    class BASE_API INodeBase {
+    class BASE_API ISchedule_Interface {
 
     public:
-        INodeBase() = default;
-        virtual ~INodeBase() = default;
+        ISchedule_Interface() = default;
+        virtual ~ISchedule_Interface() = default;
 
-        DISABLE_COPY_MOVE(INodeBase)
+        DISABLE_COPY_MOVE(ISchedule_Interface)
         virtual void Execute(IServiceBase *service);
     };
 
@@ -46,7 +46,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
      * The Wrapper Of Package,
      * While Service Received Package
      */
-    class BASE_API UPackageNode final : public INodeBase {
+    class BASE_API UPackageNode final : public ISchedule_Interface {
 
         shared_ptr<IPackage_Interface> mPackage;
 
@@ -59,7 +59,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
      * The Wrapper Of Task,
      * While The Service Received The Task
      */
-    class BASE_API UTaskNode final : public INodeBase {
+    class BASE_API UTaskNode final : public ISchedule_Interface {
 
         std::function<void(IServiceBase *)> mTask;
 
@@ -72,7 +72,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
      * The Wrapper Of Event,
      * While The Service Received Event Parameter
      */
-    class BASE_API UEventNode final : public INodeBase {
+    class BASE_API UEventNode final : public ISchedule_Interface {
 
         shared_ptr<IEventParam_Interface> mEvent;
 
@@ -81,7 +81,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         void Execute(IServiceBase *service) override;
     };
 
-    using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<INodeBase>)>;
+    using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<ISchedule_Interface>)>;
 
 public:
     IContextBase();
@@ -116,7 +116,7 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
 private:
-    void PushNode(std::unique_ptr<INodeBase> &&node);
+    void PushScheduleNode(std::unique_ptr<ISchedule_Interface> &&node);
     awaitable<void> ProcessChannel();
 
 private:
