@@ -6,7 +6,7 @@
 #include <concepts>
 
 
-enum class BASE_API EModuleState {
+enum class EModuleState {
     CREATED,
     INITIALIZED,
     RUNNING,

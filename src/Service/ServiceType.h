@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Common.h"
-
-enum class BASE_API EServiceType {
+enum class EServiceType {
     CORE,
     EXTEND
 };

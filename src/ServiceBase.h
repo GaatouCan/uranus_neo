@@ -13,7 +13,7 @@ class IContextBase;
 class IDataAsset_Interface;
 class IPackage_Interface;
 
-enum class BASE_API EServiceState {
+enum class EServiceState {
     CREATED,
     INITIALIZED,
     RUNNING,

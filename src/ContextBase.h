@@ -90,7 +90,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         void Execute(IServiceBase *service) override;
     };
 
-    using AContextChannel = TConcurrentChannel<void(std::error_code, std::shared_ptr<INodeBase>)>;
+    using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<INodeBase>)>;
 
 public:
     IContextBase();
@@ -125,7 +125,7 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
 private:
-    void PushNode(const shared_ptr<INodeBase> &node);
+    void PushNode(std::unique_ptr<INodeBase> node);
     awaitable<void> ProcessChannel();
 
 private:

@@ -322,10 +322,10 @@ void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Package From {}",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName(), pkg->GetSource());
 
-    const auto node = make_shared<UPackageNode>();
+    auto node = make_unique<UPackageNode>();
     node->SetPackage(pkg);
 
-    PushNode(node);
+    PushNode(std::move(node));
 }
 
 void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
@@ -338,10 +338,10 @@ void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
-    const auto node = make_shared<UTaskNode>();
+    auto node = make_unique<UTaskNode>();
     node->SetTask(task);
 
-    PushNode(node);
+    PushNode(std::move(node));
 }
 
 void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
@@ -354,10 +354,10 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Event Type {}",
         __FUNCTION__, static_cast<const void *>(this), GetServiceName(), event->GetEventType());
 
-    const auto node = make_shared<UEventNode>();
+    auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
 
-    PushNode(node);
+    PushNode(std::move(node));
 }
 
 UServer *IContextBase::GetServer() const {
@@ -387,7 +387,7 @@ IServiceBase *IContextBase::GetOwningService() const {
     return mService;
 }
 
-void IContextBase::PushNode(const shared_ptr<INodeBase> &node) {
+void IContextBase::PushNode(std::unique_ptr<INodeBase> node) {
     if (GetServer() == nullptr)
         return;
 
@@ -397,8 +397,8 @@ void IContextBase::PushNode(const shared_ptr<INodeBase> &node) {
     if (node == nullptr)
         return;
 
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node]() -> awaitable<void> {
-        co_await self->mChannel->async_send(std::error_code{}, node);
+    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
     }, detached);
 }
 
@@ -407,7 +407,7 @@ awaitable<void> IContextBase::ProcessChannel() {
         co_return;
 
     while (mChannel->is_open()) {
-        const auto [ec, node] = co_await mChannel->async_receive();
+        auto [ec, node] = co_await mChannel->async_receive();
         if (ec)
             co_return;
 
