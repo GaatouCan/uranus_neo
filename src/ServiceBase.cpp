@@ -11,10 +11,10 @@
 #include <spdlog/spdlog.h>
 
 
-void IServiceBase::SetUpContext(IContextBase *context) {
+void IServiceBase::SetUpContext(IContextBase *pContext) {
     if (mState != EServiceState::CREATED)
         return;
-    mContext = context;
+    mContext = pContext;
 }
 
 IContextBase *IServiceBase::GetContext() const {
@@ -262,7 +262,7 @@ EServiceState IServiceBase::GetState() const {
     return mState;
 }
 
-bool IServiceBase::Initial(const IDataAsset_Interface *data) {
+bool IServiceBase::Initial(const IDataAsset_Interface *pData) {
     if (mState != EServiceState::CREATED)
         return false;
 
@@ -275,7 +275,7 @@ bool IServiceBase::Initial(const IDataAsset_Interface *data) {
     return true;
 }
 
-awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *data) {
+awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *pData) {
     if (mState != EServiceState::CREATED)
         co_return false;
 

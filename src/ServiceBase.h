@@ -13,6 +13,7 @@ class IContextBase;
 class IDataAsset_Interface;
 class IPackage_Interface;
 
+
 enum class EServiceState {
     CREATED,
     INITIALIZED,
@@ -25,7 +26,7 @@ class BASE_API IServiceBase {
     friend class IContextBase;
 
 protected:
-    void SetUpContext(IContextBase *context);
+    void SetUpContext(IContextBase *pContext);
     [[nodiscard]] IContextBase *GetContext() const;
 
 public:
@@ -45,8 +46,8 @@ public:
 
     [[nodiscard]] EServiceState GetState() const;
 
-    virtual bool Initial(const IDataAsset_Interface *data);
-    virtual asio::awaitable<bool> AsyncInitial(const IDataAsset_Interface *data);
+    virtual bool Initial(const IDataAsset_Interface *pData);
+    virtual asio::awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
     virtual bool Start();
     virtual void Stop();
@@ -134,11 +135,11 @@ inline void IServiceBase::PostTaskT(int32_t target, Callback &&func, Args &&...a
 template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-        auto *ptr = dynamic_cast<Type *>(ser);
-        if (ptr == nullptr)
+        auto *pService = dynamic_cast<Type *>(ser);
+        if (pService == nullptr)
             return;
 
-        std::invoke(func, ptr, args...);
+        std::invoke(func, pService, args...);
     };
     this->PostTask(name, task);
 }
@@ -146,11 +147,11 @@ inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Ar
 template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...args) {
     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-        auto *ptr = dynamic_cast<Type *>(ser);
-        if (ptr == nullptr)
+        auto *pService = dynamic_cast<Type *>(ser);
+        if (pService == nullptr)
             return;
 
-        std::invoke(func, ptr, args...);
+        std::invoke(func, pService, args...);
     };
     this->PostToPlayer(pid, task);
 }

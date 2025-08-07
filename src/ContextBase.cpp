@@ -17,9 +17,9 @@ void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface>
     mPackage = pkg;
 }
 
-void IContextBase::UPackageNode::Execute(IServiceBase *service) {
-    if (service && mPackage ) {
-        service->OnPackage(mPackage);
+void IContextBase::UPackageNode::Execute(IServiceBase *pService) {
+    if (pService && mPackage ) {
+        pService->OnPackage(mPackage);
     }
 }
 
@@ -27,9 +27,9 @@ void IContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> 
     mTask = task;
 }
 
-void IContextBase::UTaskNode::Execute(IServiceBase *service) {
-    if (service && mTask) {
-        std::invoke(mTask, service);
+void IContextBase::UTaskNode::Execute(IServiceBase *pService) {
+    if (pService && mTask) {
+        std::invoke(mTask, pService);
     }
 }
 
@@ -37,9 +37,9 @@ void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interf
     mEvent = event;
 }
 
-void IContextBase::UEventNode::Execute(IServiceBase *service) {
-    if (service && mEvent ) {
-        service->OnEvent(mEvent);
+void IContextBase::UEventNode::Execute(IServiceBase *pService) {
+    if (pService && mEvent ) {
+        pService->OnEvent(mEvent);
     }
 }
 
@@ -59,10 +59,10 @@ IContextBase::~IContextBase() {
     }
 }
 
-void IContextBase::SetUpModule(IModuleBase *module) {
+void IContextBase::SetUpModule(IModuleBase *pModule) {
     if (mState != EContextState::CREATED)
         return;
-    mModule = module;
+    mModule = pModule;
 }
 
 void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
@@ -71,7 +71,7 @@ void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool IContextBase::Initial(const IDataAsset_Interface *data) {
+bool IContextBase::Initial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
         return false;
 
@@ -116,7 +116,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
 
     // Initial Service
     mService->SetUpContext(this);
-    const auto ret = mService->Initial(data);
+    const auto ret = mService->Initial(pData);
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
@@ -124,12 +124,12 @@ bool IContextBase::Initial(const IDataAsset_Interface *data) {
         __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
-    delete data;
+    delete pData;
 
     return ret;
 }
 
-awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *data) {
+awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
         co_return false;
 
@@ -174,7 +174,7 @@ awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *data) {
 
     // Initial Service
     mService->SetUpContext(this);
-    const auto ret = co_await mService->AsyncInitial(data);
+    const auto ret = co_await mService->AsyncInitial(pData);
 
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
@@ -182,7 +182,7 @@ awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *data) {
         __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
-    delete data;
+    delete pData;
 
     co_return ret;
 }

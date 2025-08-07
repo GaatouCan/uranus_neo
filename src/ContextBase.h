@@ -39,7 +39,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         virtual ~ISchedule_Interface() = default;
 
         DISABLE_COPY_MOVE(ISchedule_Interface)
-        virtual void Execute(IServiceBase *service) = 0;
+        virtual void Execute(IServiceBase *pService) = 0;
     };
 
     /**
@@ -52,7 +52,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
 
     public:
         void SetPackage(const shared_ptr<IPackage_Interface> &pkg);
-        void Execute(IServiceBase *service) override;
+        void Execute(IServiceBase *pService) override;
     };
 
     /**
@@ -65,7 +65,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
 
     public:
         void SetTask(const std::function<void(IServiceBase *)> &task);
-        void Execute(IServiceBase *service) override;
+        void Execute(IServiceBase *pService) override;
     };
 
     /**
@@ -78,7 +78,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
 
     public:
         void SetEventParam(const shared_ptr<IEventParam_Interface> &event);
-        void Execute(IServiceBase *service) override;
+        void Execute(IServiceBase *pService) override;
     };
 
     using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<ISchedule_Interface>)>;
@@ -89,11 +89,11 @@ public:
 
     DISABLE_COPY_MOVE(IContextBase)
 
-    void SetUpModule(IModuleBase *module);
+    void SetUpModule(IModuleBase *pModule);
     void SetUpLibrary(const FSharedLibrary &library);
 
-    virtual bool Initial(const IDataAsset_Interface *data);
-    virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *data);
+    virtual bool Initial(const IDataAsset_Interface *pData);
+    virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
     virtual int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func);
     int ForceShutdown();
