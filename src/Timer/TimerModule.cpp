@@ -12,6 +12,52 @@
 UTimerModule::UTimerModule() {
 }
 
+void UTimerModule::Initial() {
+    if (mState != EModuleState::CREATED)
+        return;
+
+    mTickTimer = std::make_unique<ASteadyTimer>(GetServer()->GetIOContext());
+
+    mState = EModuleState::INITIALIZED;
+}
+
+void UTimerModule::Start() {
+    if (mState != EModuleState::INITIALIZED)
+        return;
+
+    co_spawn(GetServer()->GetIOContext(), [this]() -> awaitable<void> {
+        ASteadyTimePoint tickPoint = std::chrono::steady_clock::now();
+        constexpr ASteadyDuration delta = std::chrono::milliseconds(100);
+
+        while (mState == EModuleState::RUNNING) {
+            tickPoint += delta;
+            mTickTimer->expires_at(tickPoint);
+
+            if (const auto [ec] = co_await mTickTimer->async_wait(); ec) {
+                break;
+            }
+
+            if (const auto *module = GetServer()->GetModule<UGateway>()) {
+                for (const auto &pid : mPlayerTickSet) {
+                    if (const auto agent = module->FindPlayerAgent(pid)) {
+                        agent->PushTicker(tickPoint, delta);
+                    }
+                }
+            }
+
+            if (const auto *module = GetServer()->GetModule<UServiceModule>()) {
+                for (const auto &sid : mServiceTickSet) {
+                    if (const auto service = module->FindService(sid)) {
+                        service->PushTicker(tickPoint, delta);
+                    }
+                }
+            }
+        }
+    }, detached);
+
+    mState = EModuleState::RUNNING;
+}
+
 UTimerModule::~UTimerModule() {
     Stop();
 }
@@ -255,13 +301,82 @@ void UTimerModule::CancelPlayerTimer(const int64_t pid) {
     }
 }
 
+void UTimerModule::AddUpdatePlayer(const int64_t pid) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (pid <= 0)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    mPlayerTickSet.insert(pid);
+}
+
+void UTimerModule::AddUpdateService(const int32_t sid) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (sid <= 0)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    mServiceTickSet.insert(sid);
+}
+
+void UTimerModule::RemoveUpdatePlayer(const int64_t pid) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (pid <= 0)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    mPlayerTickSet.erase(pid);
+}
+
+void UTimerModule::RemoveUpdatePlayer(const std::set<int64_t> &set) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    for (const auto &pid : set) {
+        mPlayerTickSet.erase(pid);
+    }
+}
+
+void UTimerModule::RemoveUpdateService(const int32_t sid) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (sid <= 0)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    mServiceTickSet.erase(sid);
+}
+
+void UTimerModule::RemoveUpdateService(const std::set<int32_t> &set) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    for (const auto &sid : set) {
+        mServiceTickSet.erase(sid);
+    }
+}
+
 void UTimerModule::Stop() {
     if (mState == EModuleState::STOPPED)
         return;
 
     mState = EModuleState::STOPPED;
+    mTickTimer->cancel();
 
     for (const auto &val : mSteadyTimerMap | std::views::values) {
+        val.timer->cancel();
+    }
+
+    for (const auto &val : mSystemTimerMap | std::views::values) {
         val.timer->cancel();
     }
 }

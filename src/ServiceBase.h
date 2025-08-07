@@ -55,7 +55,7 @@ public:
 
     virtual void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg);
     virtual void OnEvent(const std::shared_ptr<IEventParam_Interface> &event);
-    virtual void OnUpdate(ASystemTimePoint now, ASystemDuration delta);
+    virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
 
 #pragma region Package
     /// Send To Other Service Use Target In Package

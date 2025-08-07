@@ -47,11 +47,11 @@ IContextBase::UTickerNode::UTickerNode()
     : mDeltaTime(0) {
 }
 
-void IContextBase::UTickerNode::SetCurrentTickTime(const ASystemTimePoint timepoint) {
+void IContextBase::UTickerNode::SetCurrentTickTime(const ASteadyTimePoint timepoint) {
     mTickTime = timepoint;
 }
 
-void IContextBase::UTickerNode::SetDeltaTime(const ASystemDuration delta) {
+void IContextBase::UTickerNode::SetDeltaTime(const ASteadyDuration delta) {
     mDeltaTime = delta;
 }
 
@@ -373,7 +373,7 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     }, detached);
 }
 
-void IContextBase::PushTicker(const ASystemTimePoint timepoint, const ASystemDuration delta) {
+void IContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 

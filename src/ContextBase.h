@@ -83,14 +83,14 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
 
     class BASE_API UTickerNode final : public ISchedule_Interface {
 
-        ASystemTimePoint mTickTime;
-        ASystemDuration mDeltaTime;
+        ASteadyTimePoint mTickTime;
+        ASteadyDuration mDeltaTime;
 
     public:
         UTickerNode();
 
-        void SetCurrentTickTime(ASystemTimePoint timepoint);
-        void SetDeltaTime(ASystemDuration delta);
+        void SetCurrentTickTime(ASteadyTimePoint timepoint);
+        void SetDeltaTime(ASteadyDuration delta);
 
         void Execute(IServiceBase *pService) override;
     };
@@ -128,7 +128,7 @@ public:
     void PushPackage(const shared_ptr<IPackage_Interface> &pkg);
     void PushTask(const std::function<void(IServiceBase *)> &task);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
-    void PushTicker(ASystemTimePoint timepoint, ASystemDuration delta);
+    void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
 
 private:
     awaitable<void> ProcessChannel();

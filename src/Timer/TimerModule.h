@@ -8,6 +8,7 @@
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 #include <shared_mutex>
 
 
@@ -36,6 +37,8 @@ class BASE_API UTimerModule final : public IModuleBase {
 protected:
     UTimerModule();
 
+    void Initial() override;
+    void Start() override;
     void Stop() override;
 
 public:
@@ -52,6 +55,15 @@ public:
 
     void CancelServiceTimer(int32_t sid);
     void CancelPlayerTimer(int64_t pid);
+
+    void AddUpdatePlayer(int64_t pid);
+    void AddUpdateService(int32_t sid);
+
+    void RemoveUpdatePlayer(int64_t pid);
+    void RemoveUpdatePlayer(const std::set<int64_t> &set);
+
+    void RemoveUpdateService(int32_t sid);
+    void RemoveUpdateService(const std::set<int32_t> &set);
 
 private:
     void RemoveSteadyTimer(int64_t id);
@@ -70,5 +82,14 @@ private:
     APlayerToTimerMap mPlayerToSystemTimer;
 
     mutable std::shared_mutex mTimerMutex;
+
+#pragma region Update
+    std::unique_ptr<ASteadyTimer> mTickTimer;
+
+    std::unordered_set<int32_t> mServiceTickSet;
+    std::unordered_set<int64_t> mPlayerTickSet;
+
+    mutable std::shared_mutex mTickMutex;
+#pragma endregion
 };
 

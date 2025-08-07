@@ -307,6 +307,6 @@ void IServiceBase::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
 void IServiceBase::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {
 }
 
-void IServiceBase::OnUpdate(ASystemTimePoint now, ASystemDuration delta) {
+void IServiceBase::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
 
 }
