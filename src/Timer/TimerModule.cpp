@@ -55,16 +55,19 @@ FTimerHandle UTimerModule::SetSteadyTimer(const int32_t sid, const int64_t pid, 
                     if (const auto *service = GetServer()->GetModule<UServiceModule>()) {
                         if (const auto context = service->FindService(sid)) {
                             context->PushTask(task);
+                            continue;
                         }
                     }
                 } else {
                     if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
                         if (const auto player = gateway->FindPlayerAgent(pid)) {
                             player->PushTask(task);
+                            continue;
                         }
                     }
                 }
 
+                break;
             } while (rate > 0 && mState == EModuleState::RUNNING);
         } catch (const std::exception &e) {
             SPDLOG_ERROR("{:<20} - Exception: {}", "UTimerModule::SetTimer", e.what());
@@ -116,16 +119,20 @@ FTimerHandle UTimerModule::SetSystemTimer(int32_t sid, int64_t pid, const ATimer
                     if (const auto *service = GetServer()->GetModule<UServiceModule>()) {
                         if (const auto context = service->FindService(sid)) {
                             context->PushTask(task);
+                            continue;
                         }
                     }
                 } else {
                     if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
                         if (const auto player = gateway->FindPlayerAgent(pid)) {
                             player->PushTask(task);
+                            continue;
                         }
                     }
                 }
 
+                // If Target Not Exist, Stop The Timer
+                break;
             } while (rate > 0 && mState == EModuleState::RUNNING);
         } catch (const std::exception &e) {
             SPDLOG_ERROR("{:<20} - Exception: {}", "UTimerModule::SetTimer", e.what());
@@ -278,7 +285,7 @@ void UTimerModule::RemoveSteadyTimer(const int64_t id) {
     mSteadyTimerMap.erase(iter);
 }
 
-void UTimerModule::RemoveSystemTimer(int64_t id) {
+void UTimerModule::RemoveSystemTimer(const int64_t id) {
     std::unique_lock lock(mTimerMutex);
     const auto iter = mSystemTimerMap.find(id);
     if (iter == mSystemTimerMap.end())
