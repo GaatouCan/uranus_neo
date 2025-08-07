@@ -110,6 +110,8 @@ public:
 protected:
     IContextBase *mContext;
     std::atomic<EServiceState> mState;
+
+    bool bUpdatePerTick;
 };
 
 template<CModuleType Module>

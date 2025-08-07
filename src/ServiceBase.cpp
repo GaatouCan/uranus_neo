@@ -23,7 +23,8 @@ IContextBase *IServiceBase::GetContext() const {
 
 IServiceBase::IServiceBase()
     : mContext(nullptr),
-      mState(EServiceState::CREATED) {
+      mState(EServiceState::CREATED),
+      bUpdatePerTick(true) {
 }
 
 IServiceBase::~IServiceBase() {
