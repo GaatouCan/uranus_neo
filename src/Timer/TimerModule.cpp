@@ -29,6 +29,12 @@ void UTimerModule::Start() {
         ASteadyTimePoint tickPoint = std::chrono::steady_clock::now();
         constexpr ASteadyDuration delta = std::chrono::milliseconds(100);
 
+        std::unordered_set<int64_t> players;
+        std::unordered_set<int32_t> services;
+
+        std::set<int64_t> playerDel;
+        std::set<int32_t> serviceDel;
+
         while (mState == EModuleState::RUNNING) {
             tickPoint += delta;
             mTickTimer->expires_at(tickPoint);
@@ -37,21 +43,42 @@ void UTimerModule::Start() {
                 break;
             }
 
+            players.clear();
+            services.clear();
+            playerDel.clear();
+            serviceDel.clear();
+
+            {
+                std::shared_lock lock(mTickMutex);
+                players = mPlayerTickSet;
+                services = mServiceTickSet;
+            }
+
             if (const auto *module = GetServer()->GetModule<UGateway>()) {
-                for (const auto &pid : mPlayerTickSet) {
+                for (const auto &pid : players) {
                     if (const auto agent = module->FindPlayerAgent(pid)) {
                         agent->PushTicker(tickPoint, delta);
+                    } else {
+                        playerDel.insert(pid);
                     }
                 }
             }
 
             if (const auto *module = GetServer()->GetModule<UServiceModule>()) {
-                for (const auto &sid : mServiceTickSet) {
+                for (const auto &sid : services) {
                     if (const auto service = module->FindService(sid)) {
                         service->PushTicker(tickPoint, delta);
+                    } else {
+                        serviceDel.insert(sid);
                     }
                 }
             }
+
+            if (!playerDel.empty())
+                this->RemoveUpdatePlayer(playerDel);
+
+            if (!serviceDel.empty())
+                this->RemoveUpdateService(serviceDel);
         }
     }, detached);
 
