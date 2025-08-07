@@ -108,17 +108,17 @@ void IPlayerAgent::SendToClient(const std::shared_ptr<IPackage_Interface> &pkg) 
 void IPlayerAgent::OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) {
 }
 
-void IPlayerAgent::ListenEvent(const int event) const {
-    if (auto *module = GetModule<UEventModule>()) {
-        module->ListenEvent(event, PLAYER_AGENT_ID, GetPlayerID());
-    }
-}
-
-void IPlayerAgent::RemoveListener(const int event) const {
-     if (auto *module = GetModule<UEventModule>()) {
-        module->RemoveListener(event, PLAYER_AGENT_ID, GetPlayerID());
-    }
-}
+// void IPlayerAgent::ListenEvent(const int event) const {
+//     if (auto *module = GetModule<UEventModule>()) {
+//         module->ListenEvent(event, PLAYER_AGENT_ID, GetPlayerID());
+//     }
+// }
+//
+// void IPlayerAgent::RemoveListener(const int event) const {
+//      if (auto *module = GetModule<UEventModule>()) {
+//         module->RemoveListener(event, PLAYER_AGENT_ID, GetPlayerID());
+//     }
+// }
 
 void IPlayerAgent::SendToClient(const int64_t, const std::shared_ptr<IPackage_Interface> &) const {
     // Hide This Function In Player Agent, Do Nothing

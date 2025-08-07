@@ -29,8 +29,8 @@ public:
 
     virtual void OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg);
 
-    void ListenEvent(int event) const final;
-    void RemoveListener(int event) const final;
+    // void ListenEvent(int event) const final;
+    // void RemoveListener(int event) const final;
 
 private:
     void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const final;

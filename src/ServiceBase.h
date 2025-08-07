@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Base/EventParam.h"
 #include "Server.h"
 #include "Base/Types.h"
 
@@ -10,6 +9,7 @@
 class IContextBase;
 class IDataAsset_Interface;
 class IPackage_Interface;
+class IEventParam_Interface;
 
 
 enum class EServiceState {
@@ -88,21 +88,16 @@ public:
 
     virtual void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
-#pragma region Event
-    virtual void ListenEvent(int event) const;
-    virtual void RemoveListener(int event) const;
+// #pragma region Event
+//     virtual void ListenEvent(int event) const;
+//     virtual void RemoveListener(int event) const;
+//
+//     void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
+//
+//     template<CEventType Type, class ... Args>
+//     void DispatchEventT(Args && ... args) const;
+// #pragma endregion
 
-    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
-
-    template<CEventType Type, class ... Args>
-    void DispatchEventT(Args && ... args) const;
-#pragma endregion
-
-#pragma region Timer
-    // virtual FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
-    // virtual FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
-    // virtual void CancelTimer(const FTimerHandle &handle);
-#pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
 
@@ -157,8 +152,8 @@ inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...
     this->PostToPlayer(pid, task);
 }
 
-template<CEventType Type, class ... Args>
-inline void IServiceBase::DispatchEventT(Args &&...args) const {
-    auto event = std::make_shared<Type>(std::forward<Args>(args)...);
-    this->DispatchEvent(event);
-}
+// template<CEventType Type, class ... Args>
+// inline void IServiceBase::DispatchEventT(Args &&...args) const {
+//     auto event = std::make_shared<Type>(std::forward<Args>(args)...);
+//     this->DispatchEvent(event);
+// }

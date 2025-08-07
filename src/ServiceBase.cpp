@@ -204,23 +204,23 @@ void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<IPackage_Inte
     }
 }
 
-void IServiceBase::ListenEvent(const int event) const {
-    if (auto *module = GetModule<UEventModule>()) {
-        module->ListenEvent(event, GetServiceID());
-    }
-}
-
-void IServiceBase::RemoveListener(const int event) const {
-    if (auto *module = GetModule<UEventModule>()) {
-        module->RemoveListener(event, GetServiceID());
-    }
-}
-
-void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
-    if (auto *module = GetModule<UEventModule>()) {
-        module->Dispatch(event);
-    }
-}
+// void IServiceBase::ListenEvent(const int event) const {
+//     if (auto *module = GetModule<UEventModule>()) {
+//         module->ListenEvent(event, GetServiceID());
+//     }
+// }
+//
+// void IServiceBase::RemoveListener(const int event) const {
+//     if (auto *module = GetModule<UEventModule>()) {
+//         module->RemoveListener(event, GetServiceID());
+//     }
+// }
+//
+// void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
+//     if (auto *module = GetModule<UEventModule>()) {
+//         module->Dispatch(event);
+//     }
+// }
 
 // FTimerHandle IServiceBase::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
 //     if (auto *timer = GetModule<UTimerModule>()) {

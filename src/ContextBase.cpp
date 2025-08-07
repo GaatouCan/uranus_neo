@@ -4,11 +4,10 @@
 #include "DataAsset.h"
 #include "Network/Network.h"
 #include "Base/Package.h"
-#include "Base/EventParam.h"
+#include "Event/EventModule.h"
+#include "Timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
-
-#include "Timer/TimerModule.h"
 
 
 typedef IServiceBase *(*AServiceCreator)();
@@ -423,6 +422,39 @@ void IContextBase::CancelTimer(const int64_t tid) const {
         return;
 
     module->CancelTimer(tid);
+}
+
+void IContextBase::ListenEvent(const int event) {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->ListenEvent(weak_from_this(), event);
+}
+
+void IContextBase::RemoveListener(const int event) {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->RemoveListenEvent(weak_from_this(), event);
+}
+
+void IContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || param == nullptr)
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->Dispatch(param);
 }
 
 UServer *IContextBase::GetServer() const {

@@ -1,8 +1,6 @@
 #include "TimerModule.h"
 #include "Server.h"
-#include "Gateway/Gateway.h"
-#include "Service/ServiceModule.h"
-#include "Service/ServiceContext.h"
+#include "ContextBase.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>

@@ -135,6 +135,12 @@ public:
     void CancelTimer(int64_t tid) const;
 #pragma endregion
 
+#pragma region Event
+    void ListenEvent(int event);
+    void RemoveListener(int event);
+    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const;
+#pragma endregion
+
 private:
     awaitable<void> ProcessChannel();
 
