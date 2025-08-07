@@ -60,14 +60,14 @@ public:
     void AddUpdateService(int32_t sid);
 
     void RemoveUpdatePlayer(int64_t pid);
-    void RemoveUpdatePlayer(const std::set<int64_t> &set);
-
     void RemoveUpdateService(int32_t sid);
-    void RemoveUpdateService(const std::set<int32_t> &set);
 
 private:
     void RemoveSteadyTimer(int64_t id);
     void RemoveSystemTimer(int64_t id);
+
+    void RemoveUpdatePlayer(const std::set<int64_t> &set);
+    void RemoveUpdateService(const std::set<int32_t> &set);
 
 private:
     TIdentAllocator<int64_t, true> mAllocator;

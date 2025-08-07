@@ -8,6 +8,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "Timer/TimerModule.h"
+
 
 typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
@@ -301,7 +303,9 @@ bool IContextBase::BootService() {
     }, detached);
 
     if (mService->bUpdatePerTick) {
-
+        if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+            // module->AddUpdateService(GetServiceID());
+        }
     }
 
     return true;
