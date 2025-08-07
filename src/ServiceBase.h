@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Base/TimerHandle.h"
 #include "Base/EventParam.h"
 #include "Server.h"
 #include "Base/Types.h"
@@ -100,9 +99,9 @@ public:
 #pragma endregion
 
 #pragma region Timer
-    virtual FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
-    virtual FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
-    virtual void CancelTimer(const FTimerHandle &handle);
+    // virtual FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
+    // virtual FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const;
+    // virtual void CancelTimer(const FTimerHandle &handle);
 #pragma endregion
 
     void TryCreateLogger(const std::string &name) const;

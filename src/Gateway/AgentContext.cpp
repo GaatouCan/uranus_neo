@@ -1,7 +1,6 @@
 #include "AgentContext.h"
 #include "Gateway.h"
 #include "PlayerAgent.h"
-#include "Timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -61,16 +60,4 @@ void UAgentContext::OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) 
 
     SPDLOG_TRACE("{:<20} - Heartbeat From Player[{}]", __FUNCTION__, mPlayerID);
     dynamic_cast<IPlayerAgent *>(GetOwningService())->OnHeartBeat(pkg);
-}
-
-int UAgentContext::Shutdown(const bool bForce, const int second, const std::function<void(IContextBase *)> &func) {
-    if (const auto ret = IContextBase::Shutdown(bForce, second, func); ret != 1) {
-        return ret;
-    }
-
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-        module->CancelPlayerTimer(mPlayerID);
-    }
-
-    return 1;
 }

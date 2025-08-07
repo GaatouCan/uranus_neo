@@ -80,30 +80,30 @@ void IPlayerAgent::SendToClient(const std::shared_ptr<IPackage_Interface> &pkg) 
     }
 }
 
-
-FTimerHandle IPlayerAgent::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
-    if (auto *module = GetModule<UTimerModule>()) {
-        return module->SetSteadyTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
-    }
-    return { -1, true };
-}
-
-FTimerHandle IPlayerAgent::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-    if (auto *module = GetModule<UTimerModule>()) {
-        return module->SetSystemTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
-    }
-    return { -1, false };
-}
-
-void IPlayerAgent::CancelTimer(const FTimerHandle &handle) {
-    if (auto *module = GetModule<UTimerModule>()) {
-        if (handle.id > 0) {
-            module->CancelTimer(handle);
-        } else {
-            module->CancelPlayerTimer(GetPlayerID());
-        }
-    }
-}
+//
+// FTimerHandle IPlayerAgent::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
+//     if (auto *module = GetModule<UTimerModule>()) {
+//         return module->SetSteadyTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
+//     }
+//     return { -1, true };
+// }
+//
+// FTimerHandle IPlayerAgent::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
+//     if (auto *module = GetModule<UTimerModule>()) {
+//         return module->SetSystemTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
+//     }
+//     return { -1, false };
+// }
+//
+// void IPlayerAgent::CancelTimer(const FTimerHandle &handle) {
+//     if (auto *module = GetModule<UTimerModule>()) {
+//         if (handle.id > 0) {
+//             module->CancelTimer(handle);
+//         } else {
+//             module->CancelPlayerTimer(GetPlayerID());
+//         }
+//     }
+// }
 
 void IPlayerAgent::OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) {
 }

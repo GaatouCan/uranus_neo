@@ -4,14 +4,11 @@
 #include "Utils.h"
 #include "Base/Types.h"
 #include "Base/IdentAllocator.h"
-#include "Base/TimerHandle.h"
 
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
-#include <set>
 #include <shared_mutex>
-
 
 class IServiceBase;
 class IContextBase;
@@ -20,21 +17,15 @@ class BASE_API UTimerModule final : public IModuleBase {
 
     DECLARE_MODULE(UTimerModule)
 
+    using ATickerSet = std::unordered_set<std::weak_ptr<IContextBase>, FWeakPointerHash<IContextBase>, FWeakPointerEqual<IContextBase>>;
     using ATimerTask = std::function<void(IServiceBase *)>;
-    using AServiceToTimerMap = std::unordered_map<int32_t, std::unordered_set<int64_t>>;
-    using APlayerToTimerMap = std::unordered_map<int64_t, std::unordered_set<int64_t>>;
 
-    struct FSteadyTimerNode final {
-        int32_t sid;
-        int64_t pid;
-        shared_ptr<ASteadyTimer> timer;
+    struct FTimerNode {
+        std::weak_ptr<IContextBase> wPointer;
+        std::shared_ptr<ASteadyTimer> timer;
     };
 
-    struct FSystemTimerNode final {
-        int32_t sid;
-        int64_t pid;
-        shared_ptr<ASystemTimer> timer;
-    };
+    using ATimerMap = std::unordered_map<int64_t, FTimerNode>;
 
 protected:
     UTimerModule();
@@ -50,39 +41,23 @@ public:
         return "Timer Module";
     }
 
-    FTimerHandle SetSteadyTimer(int32_t sid, int64_t pid, const ATimerTask &task, int delay, int rate = -1);
-    FTimerHandle SetSystemTimer(int32_t sid, int64_t pid, const ATimerTask &task, int delay, int rate = -1);
-
-    void CancelTimer(const FTimerHandle &handle);
-
-    void CancelServiceTimer(int32_t sid);
-    void CancelPlayerTimer(int64_t pid);
-
     void AddTicker(const std::weak_ptr<IContextBase> &ticker);
 
+    int64_t CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const ATimerTask &task, int delay, int rate = -1);
+
+    void CancelTimer(int64_t tid);
+    void CancelTimer(const std::weak_ptr<IContextBase> &wPtr);
+
 private:
-    void RemoveSteadyTimer(int64_t id);
-    void RemoveSystemTimer(int64_t id);
+    void RemoveTimer(int64_t tid);
 
 private:
     TIdentAllocator<int64_t, true> mAllocator;
-
-    std::unordered_map<int64_t, FSteadyTimerNode> mSteadyTimerMap;
-    std::unordered_map<int64_t, FSystemTimerNode> mSystemTimerMap;
-
-    AServiceToTimerMap mServiceToSteadyTimer;
-    AServiceToTimerMap mServiceToSystemTimer;
-
-    APlayerToTimerMap mPlayerToSteadyTimer;
-    APlayerToTimerMap mPlayerToSystemTimer;
-
+    ATimerMap mTimerMap;
     mutable std::shared_mutex mTimerMutex;
 
 #pragma region Update
     std::unique_ptr<ASteadyTimer> mTickTimer;
-
-    using ATickerSet = std::unordered_set<std::weak_ptr<IContextBase>, FWeakPointerHash<IContextBase>, FWeakPointerEqual<IContextBase>>;
-
     ATickerSet mTickers;
     mutable std::shared_mutex mTickMutex;
 #pragma endregion

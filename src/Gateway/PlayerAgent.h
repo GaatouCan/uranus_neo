@@ -23,9 +23,9 @@ public:
 
     void SendToClient(const std::shared_ptr<IPackage_Interface> &pkg) const;
 
-    FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
-    FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
-    void CancelTimer(const FTimerHandle &handle) final;
+    // FTimerHandle SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
+    // FTimerHandle SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const final;
+    // void CancelTimer(const FTimerHandle &handle) final;
 
     virtual void OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg);
 

@@ -222,31 +222,31 @@ void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &e
     }
 }
 
-FTimerHandle IServiceBase::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-    if (auto *timer = GetModule<UTimerModule>()) {
-        return timer->SetSteadyTimer(GetServiceID(), -1, task, delay, rate);
-    }
+// FTimerHandle IServiceBase::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
+//     if (auto *timer = GetModule<UTimerModule>()) {
+//         return timer->SetSteadyTimer(GetServiceID(), -1, task, delay, rate);
+//     }
+//
+//     return { -1, true };
+// }
+//
+// FTimerHandle IServiceBase::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
+//     if (auto *timer = GetModule<UTimerModule>()) {
+//         return timer->SetSystemTimer(GetServiceID(), -1, task, delay, rate);
+//     }
+//
+//     return { -1, false };
+// }
 
-    return { -1, true };
-}
-
-FTimerHandle IServiceBase::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-    if (auto *timer = GetModule<UTimerModule>()) {
-        return timer->SetSystemTimer(GetServiceID(), -1, task, delay, rate);
-    }
-
-    return { -1, false };
-}
-
-void IServiceBase::CancelTimer(const FTimerHandle &handle) {
-    if (auto *timer = GetModule<UTimerModule>()) {
-        if (handle.id > 0) {
-            timer->CancelTimer(handle);
-        } else {
-            timer->CancelServiceTimer(GetServiceID());
-        }
-    }
-}
+// void IServiceBase::CancelTimer(const FTimerHandle &handle) {
+//     if (auto *timer = GetModule<UTimerModule>()) {
+//         if (handle.id > 0) {
+//             timer->CancelTimer(handle);
+//         } else {
+//             timer->CancelServiceTimer(GetServiceID());
+//         }
+//     }
+// }
 
 void IServiceBase::TryCreateLogger(const std::string &name) const {
     if (mState <= EServiceState::CREATED || mState >= EServiceState::TERMINATED)
