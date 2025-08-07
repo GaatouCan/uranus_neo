@@ -12,12 +12,15 @@
 UEventModule::UEventModule() {
 }
 
-void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event) const {
+void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event) {
     if (mState != EModuleState::RUNNING)
         return;
 
     unordered_set<int32_t> serviceSet;
     unordered_set<int64_t> playerSet;
+
+    unordered_set<int32_t> serviceDel;
+    unordered_set<int64_t> playerDel;
 
     {
         std::shared_lock lock(mListenerMutex);
@@ -40,12 +43,32 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
     for (const auto &sid : serviceSet) {
         if (const auto context = service->FindService(sid)) {
             context->PushEvent(event);
+        } else {
+            serviceDel.insert(sid);
         }
     }
 
     for (const auto &player : playerSet) {
         if (const auto agent = gateway->FindPlayerAgent(player)) {
             agent->PushEvent(event);
+        } else {
+            playerDel.insert(player);
+        }
+    }
+
+    if (serviceDel.empty() && playerDel.empty())
+        return;
+
+    // Erase Expired Services And Agents
+    std::unique_lock lock(mListenerMutex);
+    if (const auto iter = mServiceListener.find(event->GetEventType()); iter != mServiceListener.end()) {
+        for (const auto &sid : serviceDel) {
+            iter->second.erase(sid);
+        }
+    }
+    if (const auto iter = mPlayerListener.find(event->GetEventType()); iter != mPlayerListener.end()) {
+        for (const auto &sid : playerDel) {
+            iter->second.erase(sid);
         }
     }
 }

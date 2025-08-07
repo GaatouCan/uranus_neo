@@ -30,7 +30,7 @@ public:
     template<CEventType Type>
     std::shared_ptr<Type> CreateEvent() const;
 
-    void Dispatch(const std::shared_ptr<IEventParam_Interface> &event) const;
+    void Dispatch(const std::shared_ptr<IEventParam_Interface> &event);
 
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);

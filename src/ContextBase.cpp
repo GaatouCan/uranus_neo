@@ -43,6 +43,24 @@ void IContextBase::UEventNode::Execute(IServiceBase *pService) {
     }
 }
 
+IContextBase::UTickerNode::UTickerNode()
+    : mDeltaTime(0) {
+}
+
+void IContextBase::UTickerNode::SetCurrentTickTime(const ASystemTimePoint timepoint) {
+    mTickTime = timepoint;
+}
+
+void IContextBase::UTickerNode::SetDeltaTime(const ASystemDuration delta) {
+    mDeltaTime = delta;
+}
+
+void IContextBase::UTickerNode::Execute(IServiceBase *pService) {
+    if (pService) {
+        pService->OnUpdate(mTickTime, mDeltaTime);
+    }
+}
+
 IContextBase::IContextBase()
     : mModule(nullptr),
       mService(nullptr) {
@@ -282,6 +300,10 @@ bool IContextBase::BootService() {
         co_await self->ProcessChannel();
     }, detached);
 
+    if (mService->bUpdatePerTick) {
+
+    }
+
     return true;
 }
 
@@ -345,6 +367,25 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
 
     auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
+
+    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+    }, detached);
+}
+
+void IContextBase::PushTicker(const ASystemTimePoint timepoint, const ASystemDuration delta) {
+    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+        return;
+
+    if (GetServer() == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
+        __FUNCTION__, static_cast<const void *>(this), GetServiceName());
+
+    auto node = make_unique<UTickerNode>();
+    node->SetCurrentTickTime(timepoint);
+    node->SetDeltaTime(delta);
 
     co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
         co_await self->mChannel->async_send(std::error_code{}, std::move(node));

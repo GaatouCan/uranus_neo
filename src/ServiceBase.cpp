@@ -217,7 +217,7 @@ void IServiceBase::RemoveListener(int event) const {
 }
 
 void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
-    if (const auto *module = GetModule<UEventModule>()) {
+    if (auto *module = GetModule<UEventModule>()) {
         module->Dispatch(event);
     }
 }
@@ -305,4 +305,8 @@ void IServiceBase::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
 }
 
 void IServiceBase::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {
+}
+
+void IServiceBase::OnUpdate(ASystemTimePoint now, ASystemDuration delta) {
+
 }
