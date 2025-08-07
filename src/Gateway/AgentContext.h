@@ -27,4 +27,6 @@ public:
     [[nodiscard]] std::shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
 
     void OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) const;
+
+    int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func) override;
 };

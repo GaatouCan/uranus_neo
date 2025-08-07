@@ -35,5 +35,7 @@ public:
 
     [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(int32_t sid) const;
     [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(const std::string &name) const;
+
+    int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func) override;
 };
 

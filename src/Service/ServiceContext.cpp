@@ -1,5 +1,8 @@
 #include "ServiceContext.h"
+
+#include "Server.h"
 #include "ServiceModule.h"
+#include "Timer/TimerModule.h"
 
 UServiceContext::UServiceContext()
     : mServiceID(INVALID_SERVICE_ID),
@@ -80,4 +83,16 @@ std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const std::str
     }
 
     return nullptr;
+}
+
+int UServiceContext::Shutdown(const bool bForce, const int second, const std::function<void(IContextBase *)> &func) {
+    if (const auto ret = IContextBase::Shutdown(bForce, second, func); ret != 1) {
+        return ret;
+    }
+
+    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+        module->CancelServiceTimer(mServiceID);
+    }
+
+    return 1;
 }

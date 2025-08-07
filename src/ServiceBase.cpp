@@ -210,7 +210,7 @@ void IServiceBase::ListenEvent(const int event) const {
     }
 }
 
-void IServiceBase::RemoveListener(int event) const {
+void IServiceBase::RemoveListener(const int event) const {
     if (auto *module = GetModule<UEventModule>()) {
         module->RemoveListener(event, GetServiceID());
     }
