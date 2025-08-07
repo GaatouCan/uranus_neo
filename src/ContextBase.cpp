@@ -215,6 +215,13 @@ int IContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     if (bForce ? mState >= EContextState::SHUTTING_DOWN : mState >= EContextState::WAITING)
         return -1;
 
+    // Do Something While Shutdown
+    {
+        if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+            module->CancelTimer(weak_from_this());
+        }
+    }
+
     // If Not Force To Shut Down, Turn To Waiting Current Schedule Node Execute Complete
     if (!bForce && mState == EContextState::RUNNING) {
         mState = EContextState::WAITING;
@@ -394,6 +401,28 @@ void IContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDur
     co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
         co_await self->mChannel->async_send(std::error_code{}, std::move(node));
     }, detached);
+}
+
+int64_t IContextBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || task == nullptr)
+        return 0;
+
+    auto *module = GetServer()->GetModule<UTimerModule>();
+    if (module == nullptr)
+        return 0;
+
+    return module->CreateTimer(weak_from_this(), task, delay, rate);
+}
+
+void IContextBase::CancelTimer(const int64_t tid) const {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || tid <= 0)
+        return;
+
+    auto *module = GetServer()->GetModule<UTimerModule>();
+    if (module == nullptr)
+        return;
+
+    module->CancelTimer(tid);
 }
 
 UServer *IContextBase::GetServer() const {

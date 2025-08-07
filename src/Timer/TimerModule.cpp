@@ -116,7 +116,6 @@ int64_t UTimerModule::CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const
         }
 
         RemoveTimer(tid);
-        mAllocator.RecycleTS(tid);
     }, detached);
 
     return tid;
@@ -174,6 +173,7 @@ void UTimerModule::RemoveTimer(const int64_t tid) {
         ++iter;
     }
     mTimerMap.erase(tid);
+    mAllocator.RecycleTS(tid);
 }
 
 void UTimerModule::Stop() {

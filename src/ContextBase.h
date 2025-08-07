@@ -130,6 +130,11 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
 
+#pragma region Timer
+    int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
+    void CancelTimer(int64_t tid) const;
+#pragma endregion
+
 private:
     awaitable<void> ProcessChannel();
 
