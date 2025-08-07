@@ -23,9 +23,6 @@ IRecyclerBase::IRecyclerBase(const size_t capacity)
     Initial(capacity);
 }
 
-IRecyclerBase::~IRecyclerBase() {
-}
-
 std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     // Not Initialized
     if (mUsage < 0)
@@ -35,16 +32,16 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     {
         std::unique_lock lock(mMutex);
         if (!mQueue.empty()) {
-            auto pElem = mQueue.front();
+            auto pElem = mQueue.front().release();
             mQueue.pop();
 
             SPDLOG_TRACE("{:<20} - Recycler[{:p}] - Acquire Recyclable[{:p}] From Queue",
-                __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem.get()));
+                __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem));
 
             pElem->Initial();
             ++mUsage;
 
-            return pElem;
+            return { pElem, mDeleter };
         }
     }
 
@@ -86,7 +83,7 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     if (!elems.empty()) {
         std::unique_lock lock(mMutex);
         for (const auto &pElem: elems) {
-            mQueue.emplace(pElem, mDeleter);
+            mQueue.emplace(pElem);
         }
     }
 
@@ -126,10 +123,11 @@ void IRecyclerBase::Shrink() {
         std::shared_lock lock(mMutex);
 
         // Recycler Total Capacity
-        const size_t total = mQueue.size() + mUsage.load();
+        const size_t usage = mUsage.load();
+        const size_t total = mQueue.size() + usage;
 
         // Usage Less Than Shrink Threshold
-        if (static_cast<float>(mUsage.load()) < std::ceil(static_cast<float>(total) * RECYCLER_SHRINK_THRESHOLD)) {
+        if (static_cast<float>(usage) < std::ceil(static_cast<float>(total) * RECYCLER_SHRINK_THRESHOLD)) {
             num = static_cast<size_t>(std::floor(static_cast<float>(total) * RECYCLER_SHRINK_RATE));
 
             const auto rest = total - num;
@@ -143,20 +141,22 @@ void IRecyclerBase::Shrink() {
         }
     }
 
-    if (num > 0) {
-        SPDLOG_TRACE("{:<20} - Recycler[{:p}] Need To Release {} Elements",
-            __FUNCTION__, static_cast<void *>(this), num);
+    if (num <= 0)
+        return;
 
-        std::unique_lock lock(mMutex);
 
-        while (num-- > 0 && !mQueue.empty()) {
-            const auto elem = std::move(mQueue.front());
-            mQueue.pop();
-        }
+    SPDLOG_TRACE("{:<20} - Recycler[{:p}] Need To Release {} Elements",
+        __FUNCTION__, static_cast<void *>(this), num);
 
-        SPDLOG_TRACE("{:<20} - Recycler[{:p}] Shrink Finished",
-            __FUNCTION__, static_cast<void *>(this));
+    std::unique_lock lock(mMutex);
+
+    while (num --> 0 && !mQueue.empty()) {
+        // const auto elem = std::move(mQueue.front());
+        mQueue.pop();
     }
+
+    SPDLOG_TRACE("{:<20} - Recycler[{:p}] Shrink Finished",
+        __FUNCTION__, static_cast<void *>(this));
 }
 
 void IRecyclerBase::Recycle(IRecycle_Interface *pElem) {
@@ -183,7 +183,7 @@ void IRecyclerBase::Initial(const size_t capacity) {
         auto pElem = Create();
         pElem->OnCreate();
 
-        mQueue.emplace(pElem, mDeleter);
+        mQueue.emplace(pElem);
     }
 
     mUsage = 0;

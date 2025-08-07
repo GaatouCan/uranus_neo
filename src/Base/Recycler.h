@@ -16,7 +16,7 @@
 class BASE_API IRecyclerBase : public std::enable_shared_from_this<IRecyclerBase> {
 
     /** Internal Container */
-    std::queue<shared_ptr<IRecycle_Interface>> mQueue;
+    std::queue<unique_ptr<IRecycle_Interface>> mQueue;
     mutable std::shared_mutex mMutex;
 
     std::atomic_int64_t mUsage;
@@ -36,7 +36,7 @@ protected:
 
     [[nodiscard]] virtual IRecycle_Interface *Create() const = 0;
 public:
-    virtual ~IRecyclerBase();
+    virtual ~IRecyclerBase() = default;
 
     DISABLE_COPY_MOVE(IRecyclerBase)
 
