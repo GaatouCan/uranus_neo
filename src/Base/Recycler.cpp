@@ -9,6 +9,13 @@
 IRecyclerBase::IRecyclerBase()
     : mUsage(-1) {
     static_assert(RECYCLER_SHRINK_RATE > RECYCLER_SHRINK_THRESHOLD);
+    mDeleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
+        if (const auto self = weak.lock()) {
+            self->Recycle(pElem);
+            return;
+        }
+        delete pElem;
+    };
 }
 
 IRecyclerBase::IRecyclerBase(const size_t capacity)
@@ -23,15 +30,6 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     // Not Initialized
     if (mUsage < 0)
         return nullptr;
-
-    // Custom Deleter Of The Smart Pointer
-    // auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
-    //     if (const auto self = weak.lock()) {
-    //         self->Recycle(pElem);
-    //     } else {
-    //         delete pElem;
-    //     }
-    // };
 
     // Pop The Front From The Queue If It Is Not Empty
     {
@@ -59,8 +57,8 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     }
 
     // The Last One Directly Return
-    std::vector<std::shared_ptr<IRecycle_Interface>> elems(num - 1);
-    std::shared_ptr<IRecycle_Interface> pResult = nullptr;
+    std::vector<IRecycle_Interface *> elems(num - 1);
+    IRecycle_Interface *pResult = nullptr;
 
     while (num-- > 0) {
         auto pElem = Create();
@@ -88,14 +86,14 @@ std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
     if (!elems.empty()) {
         std::unique_lock lock(mMutex);
         for (const auto &pElem: elems) {
-            mQueue.emplace(pElem);
+            mQueue.emplace(pElem, mDeleter);
         }
     }
 
     pResult->Initial();
     ++mUsage;
 
-    return pResult;
+    return { pResult, mDeleter };
 }
 
 size_t IRecyclerBase::GetUsage() const {
@@ -185,7 +183,7 @@ void IRecyclerBase::Initial(const size_t capacity) {
         auto pElem = Create();
         pElem->OnCreate();
 
-        mQueue.emplace(pElem);
+        mQueue.emplace(pElem, mDeleter);
     }
 
     mUsage = 0;

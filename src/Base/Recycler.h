@@ -4,6 +4,7 @@
 
 #include <queue>
 #include <concepts>
+#include <functional>
 #include <atomic>
 #include <shared_mutex>
 
@@ -19,6 +20,7 @@ class BASE_API IRecyclerBase : public std::enable_shared_from_this<IRecyclerBase
     mutable std::shared_mutex mMutex;
 
     std::atomic_int64_t mUsage;
+    std::function<void(IRecycle_Interface *)> mDeleter;
 
     static constexpr float      RECYCLER_EXPAND_THRESHOLD   = 0.75f;
     static constexpr float      RECYCLER_EXPAND_RATE        = 1.f;
@@ -32,7 +34,7 @@ protected:
     IRecyclerBase();
     explicit IRecyclerBase(size_t capacity);
 
-    [[nodiscard]] virtual shared_ptr<IRecycle_Interface> Create() = 0;
+    [[nodiscard]] virtual IRecycle_Interface *Create() const = 0;
 public:
     virtual ~IRecyclerBase();
 
@@ -59,14 +61,7 @@ class TRecycler final : public IRecyclerBase {
     InitialFunctor mInitial;
 
 protected:
-    shared_ptr<IRecycle_Interface> Create() override {
-        auto deleter = [weak = weak_from_this()](IRecycle_Interface *pElem) mutable  {
-            if (const auto self = weak.lock()) {
-                self->Recycle(pElem);
-                return;
-            }
-            delete pElem;
-        };
+    IRecycle_Interface *Create() const override {
         auto res = new Type();
 
         if constexpr (!std::is_same_v<InitialFunctor, std::nullptr_t>) {
@@ -75,7 +70,7 @@ protected:
             }
         }
 
-        return { res, deleter };
+        return res;
     }
 
 public:
