@@ -146,7 +146,7 @@ awaitable<void> UConnection::WritePackage() {
             if (ec || pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Encode(pkg); ret) {
+            if (const auto ret = co_await mCodec->Encode(pkg); !ret) {
                 Disconnect();
                 break;
             }
@@ -171,7 +171,7 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Decode(pkg); ret) {
+            if (const auto ret = co_await mCodec->Decode(pkg); !ret) {
                 Disconnect();
                 break;
             }
