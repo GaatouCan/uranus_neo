@@ -304,7 +304,7 @@ bool IContextBase::BootService() {
 
     if (mService->bUpdatePerTick) {
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-            // module->AddUpdateService(GetServiceID());
+            module->AddTicker(weak_from_this());
         }
     }
 

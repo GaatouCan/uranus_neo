@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include "Utils.h"
+#include "Base/Types.h"
 #include "Base/IdentAllocator.h"
 #include "Base/TimerHandle.h"
 
@@ -13,6 +14,7 @@
 
 
 class IServiceBase;
+class IContextBase;
 
 class BASE_API UTimerModule final : public IModuleBase {
 
@@ -56,18 +58,11 @@ public:
     void CancelServiceTimer(int32_t sid);
     void CancelPlayerTimer(int64_t pid);
 
-    void AddUpdatePlayer(int64_t pid);
-    void AddUpdateService(int32_t sid);
-
-    void RemoveUpdatePlayer(int64_t pid);
-    void RemoveUpdateService(int32_t sid);
+    void AddTicker(const std::weak_ptr<IContextBase> &ticker);
 
 private:
     void RemoveSteadyTimer(int64_t id);
     void RemoveSystemTimer(int64_t id);
-
-    void RemoveUpdatePlayer(const std::set<int64_t> &set);
-    void RemoveUpdateService(const std::set<int32_t> &set);
 
 private:
     TIdentAllocator<int64_t, true> mAllocator;
@@ -86,9 +81,9 @@ private:
 #pragma region Update
     std::unique_ptr<ASteadyTimer> mTickTimer;
 
-    std::unordered_set<int32_t> mServiceTickSet;
-    std::unordered_set<int64_t> mPlayerTickSet;
+    using ATickerSet = std::unordered_set<std::weak_ptr<IContextBase>, FWeakPointerHash<IContextBase>, FWeakPointerEqual<IContextBase>>;
 
+    ATickerSet mTickers;
     mutable std::shared_mutex mTickMutex;
 #pragma endregion
 };
