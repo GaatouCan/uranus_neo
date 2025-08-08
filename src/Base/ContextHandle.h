@@ -36,6 +36,18 @@ struct BASE_API FContextHandle {
     operator int64_t() const {
         return sid;
     }
+
+    struct BASE_API FEqual {
+        bool operator()(const FContextHandle &lhs, const FContextHandle &rhs) const {
+            return lhs.sid == rhs.sid;
+        }
+    };
+
+    struct BASE_API FHash {
+        size_t operator()(const FContextHandle &handle) const {
+            return std::hash<int64_t>()(handle.sid.id);
+        }
+    };
 };
 
 
@@ -66,10 +78,3 @@ inline bool operator>(const FContextHandle &lhs, const int rhs) {
 inline bool operator>(const int lhs, const FContextHandle &rhs) {
     return lhs < rhs.sid;
 }
-
-template<>
-struct std::hash<FContextHandle> {
-    size_t operator()(const FContextHandle &h) const noexcept {
-        return std::hash<int64_t>{}(h.sid.id);
-    }
-};

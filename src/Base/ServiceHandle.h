@@ -3,7 +3,6 @@
 #include "Common.h"
 
 #include <cstdint>
-#include <xhash>
 
 
 struct BASE_API FServiceHandle {
@@ -29,6 +28,18 @@ struct BASE_API FServiceHandle {
     bool operator>(const FServiceHandle &other) const {
         return id > other.id;
     }
+
+    struct BASE_API FEqual {
+        bool operator()(const FServiceHandle &lhs, const FServiceHandle &rhs) const {
+            return lhs.id == rhs.id;
+        }
+    };
+
+    struct BASE_API FHash {
+        size_t operator()(const FServiceHandle &handle) const {
+            return std::hash<int64_t>()(handle.id);
+        }
+    };
 };
 
 
@@ -60,10 +71,3 @@ inline bool operator>(const FServiceHandle &lhs, const int rhs) {
 inline bool operator>(const int lhs, const FServiceHandle &rhs) {
     return lhs < rhs.id;
 }
-
-template<>
-struct std::hash<FServiceHandle> {
-    size_t operator()(const FServiceHandle &h) const noexcept {
-        return std::hash<int64_t>{}(h.id);
-    }
-};
