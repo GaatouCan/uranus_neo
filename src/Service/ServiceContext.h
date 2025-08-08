@@ -8,8 +8,6 @@ class UServiceModule;
 
 class BASE_API UServiceContext final : public UContextBase {
 
-    // int32_t mServiceID;
-
     /** The Dynamic Library Filename Of This Service **/
     std::string mFilename;
 
@@ -19,9 +17,6 @@ class BASE_API UServiceContext final : public UContextBase {
 public:
     UServiceContext();
     ~UServiceContext() override;
-
-    // void SetServiceID(int32_t sid);
-    // [[nodiscard]] int32_t GetServiceID() const override;
 
     void SetFilename(const std::string& filename);
     [[nodiscard]] const std::string& GetFilename() const;

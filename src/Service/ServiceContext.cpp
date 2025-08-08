@@ -11,14 +11,6 @@ UServiceContext::UServiceContext()
 UServiceContext::~UServiceContext() {
 }
 
-// void UServiceContext::SetServiceID(const int32_t sid) {
-//     mServiceID = sid;
-// }
-
-// int32_t UServiceContext::GetServiceID() const {
-//     return mServiceID;
-// }
-
 void UServiceContext::SetFilename(const std::string &filename) {
     mFilename = filename;
 }
@@ -34,7 +26,6 @@ void UServiceContext::SetServiceType(const EServiceType type) {
 EServiceType UServiceContext::GetServiceType() const {
     return mType;
 }
-
 
 UServiceModule *UServiceContext::GetServiceModule() const {
     return dynamic_cast<UServiceModule *>(GetOwnerModule());
