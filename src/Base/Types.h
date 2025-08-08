@@ -40,18 +40,3 @@ using TChannel = DefaultToken::as_default_on_t<asio::experimental::channel<T>>;
 template<typename T>
 using TConcurrentChannel = DefaultToken::as_default_on_t<asio::experimental::concurrent_channel<T>>;
 
-
-template<typename T>
-struct FWeakPointerEqual {
-    bool operator()(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) const {
-        return lhs.lock().get() == rhs.lock().get();
-    }
-};
-
-template<typename T>
-struct FWeakPointerHash {
-    size_t operator()(const std::weak_ptr<T> &wPtr) const {
-        auto sp = wPtr.lock();
-        return std::hash<void*>()(sp ? sp.get() : nullptr);
-    }
-};

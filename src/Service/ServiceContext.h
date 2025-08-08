@@ -6,6 +6,7 @@
 
 class UServiceModule;
 
+
 class BASE_API UServiceContext final : public UContextBase {
 
     /** The Dynamic Library Filename Of This Service **/
@@ -16,19 +17,18 @@ class BASE_API UServiceContext final : public UContextBase {
 
 public:
     UServiceContext();
-    ~UServiceContext() override;
+    ~UServiceContext() override = default;
 
-    void SetFilename(const std::string& filename);
-    [[nodiscard]] const std::string& GetFilename() const;
+    void SetFilename(const std::string &filename);
+    [[nodiscard]] const std::string &GetFilename() const;
 
     void SetServiceType(EServiceType type);
     [[nodiscard]] EServiceType GetServiceType() const;
 
-    [[nodiscard]] UServiceModule* GetServiceModule() const;
+    [[nodiscard]] UServiceModule *GetServiceModule() const;
 
     [[nodiscard]] FServiceHandle GetOtherServiceID(const std::string &name) const;
 
-    [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(FServiceHandle sid) const;
-    [[nodiscard]] std::shared_ptr<UServiceContext> GetOtherService(const std::string &name) const;
+    [[nodiscard]] shared_ptr<UServiceContext> GetOtherService(FServiceHandle sid) const;
+    [[nodiscard]] shared_ptr<UServiceContext> GetOtherService(const std::string &name) const;
 };
-

@@ -4,6 +4,7 @@
 #include "ServiceType.h"
 #include "Base/SharedLibrary.h"
 #include "Base/IdentAllocator.h"
+#include "Base/ContextHandle.h"
 
 #include <unordered_map>
 #include <map>
@@ -36,22 +37,22 @@ public:
         return "Service Module";
     }
 
-    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(int32_t sid) const;
+    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(FServiceHandle sid) const;
     [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
 
-    [[nodiscard]] std::map<std::string, int32_t> GetServiceList() const;
-    [[nodiscard]] int32_t GetServiceID(const std::string &name) const;
+    [[nodiscard]] std::map<std::string, FServiceHandle> GetServiceList() const;
+    [[nodiscard]] FServiceHandle GetServiceID(const std::string &name) const;
 
     [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
 
     void BootExtendService(const std::string &filename, const IDataAsset_Interface *data = nullptr);
-    void ShutdownService(int32_t sid);
+    void ShutdownService(FServiceHandle sid);
 
-    [[nodiscard]] int64_t AcquireServiceID();
-    void RecycleServiceID(int64_t id);
+    [[nodiscard]] FServiceHandle AcquireServiceID();
+    void RecycleServiceID(FServiceHandle id);
 
 private:
-    void OnServiceShutdown(const std::string &filename, int32_t sid, EServiceType type);
+    void OnServiceShutdown(const std::string &filename, FServiceHandle sid, EServiceType type);
 
 private:
     /** Dynamic Library Handles That For Service **/
@@ -62,15 +63,15 @@ private:
 #pragma endregion
 
     /** Running Service Map **/
-    unordered_map<int32_t, std::shared_ptr<UServiceContext>> mServiceMap;
+    unordered_map<int64_t, std::shared_ptr<UServiceContext>> mServiceMap;
     mutable std::shared_mutex mServiceMutex;
 
     /** Service Name To Service ID Mapping **/
-    unordered_map<std::string, int32_t> mNameToServiceID;
+    unordered_map<std::string, int64_t> mNameToServiceID;
     mutable std::shared_mutex mNameMutex;
 
     /** Service ID Set With Same Library Filename **/
-    unordered_map<std::string, unordered_set<int32_t>> mFilenameMapping;
+    unordered_map<std::string, unordered_set<int64_t>> mFilenameMapping;
     mutable std::shared_mutex mFileNameMutex;
 
     /** Service ID Management **/

@@ -8,8 +8,7 @@
 struct BASE_API FServiceHandle {
     int64_t id = INVALID_SERVICE_ID;
 
-    FServiceHandle() {
-    }
+    FServiceHandle() = default;
 
     // NOLINT(google-explicit-constructor)
     FServiceHandle(const int64_t id)

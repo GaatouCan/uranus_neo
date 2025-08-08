@@ -8,9 +8,6 @@ UServiceContext::UServiceContext()
     : mType(EServiceType::CORE) {
 }
 
-UServiceContext::~UServiceContext() {
-}
-
 void UServiceContext::SetFilename(const std::string &filename) {
     mFilename = filename;
 }

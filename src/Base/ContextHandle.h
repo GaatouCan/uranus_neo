@@ -5,23 +5,25 @@
 #include <memory>
 
 
+using std::shared_ptr;
+using std::weak_ptr;
+
 class UContextBase;
 
 
 struct BASE_API FContextHandle {
     FServiceHandle sid;
-    std::weak_ptr<UContextBase> wPtr;
+    weak_ptr<UContextBase> weakPtr;
 
-    FContextHandle() {
-    }
+    FContextHandle() = default;
 
     // NOLINT(google-explicit-constructor)
     FContextHandle(const FServiceHandle sid)
         : sid(sid) {
     }
 
-    FContextHandle(const FServiceHandle sid, const std::weak_ptr<UContextBase> &ptr)
-        : sid(sid), wPtr(ptr) {
+    FContextHandle(const FServiceHandle sid, const weak_ptr<UContextBase> &ptr)
+        : sid(sid), weakPtr(ptr) {
     }
 
     bool operator<(const FContextHandle &rhs) const {
@@ -38,11 +40,11 @@ struct BASE_API FContextHandle {
     }
 
     [[nodiscard]] bool IsValid() const {
-        return sid.IsValid() && !wPtr.expired();
+        return sid.IsValid() && !weakPtr.expired();
     }
 
-    [[nodiscard]] std::shared_ptr<UContextBase> Get() const {
-        return wPtr.lock();
+    [[nodiscard]] shared_ptr<UContextBase> Get() const {
+        return weakPtr.lock();
     }
 
     struct BASE_API FEqual {

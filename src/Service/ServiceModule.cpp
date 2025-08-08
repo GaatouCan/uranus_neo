@@ -1,7 +1,7 @@
 #include "ServiceModule.h"
 #include "ServiceContext.h"
-#include "Server.h"
 #include "Config/Config.h"
+#include "Server.h"
 
 #include <spdlog/spdlog.h>
 #include <filesystem>
@@ -164,7 +164,7 @@ UServiceModule::~UServiceModule() {
     Stop();
 }
 
-std::shared_ptr<UServiceContext> UServiceModule::FindService(const int32_t sid) const {
+std::shared_ptr<UServiceContext> UServiceModule::FindService(const FServiceHandle sid) const {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
@@ -177,26 +177,26 @@ std::shared_ptr<UServiceContext> UServiceModule::FindService(const std::string &
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    const int32_t sid = GetServiceID(name);
+    const FServiceHandle sid = GetServiceID(name);
     if (sid <= 0)
         return nullptr;
 
     return FindService(sid);
 }
 
-std::map<std::string, int32_t> UServiceModule::GetServiceList() const {
+std::map<std::string, FServiceHandle> UServiceModule::GetServiceList() const {
     if (mState != EModuleState::RUNNING)
         return {};
 
     std::shared_lock lock(mServiceMutex);
-    std::map<std::string, int32_t> result;
+    std::map<std::string, FServiceHandle> result;
     for (const auto &[sid, context] : mServiceMap) {
         result.emplace(context->GetServiceName(), sid);
     }
     return result;
 }
 
-int32_t UServiceModule::GetServiceID(const std::string &name) const {
+FServiceHandle UServiceModule::GetServiceID(const std::string &name) const {
     if (mState != EModuleState::RUNNING)
         return INVALID_SERVICE_ID;
 
@@ -279,7 +279,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
                 co_return;
             }
 
-            SPDLOG_ERROR("{:<20} - Failed To Boot Extend Service[{}]", __FUNCTION__, context->GetServiceName());
+            SPDLOG_ERROR("{:<20} - Failed To Boot Extend Service[{}]", func, context->GetServiceName());
         }
 
         // If Not Unique, Service Force To Shut Down And Recycle The Service ID
@@ -288,7 +288,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
     }, detached);
 }
 
-void UServiceModule::ShutdownService(int32_t sid) {
+void UServiceModule::ShutdownService(const FServiceHandle sid) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -303,7 +303,7 @@ void UServiceModule::ShutdownService(int32_t sid) {
     }
 
     if (context == nullptr || context->GetServiceID() == INVALID_SERVICE_ID) {
-        SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, sid);
+        SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, static_cast<int>(sid));
         mAllocator.RecycleTS(sid);
         return;
     }
@@ -333,15 +333,15 @@ void UServiceModule::ShutdownService(int32_t sid) {
     }
 }
 
-int64_t UServiceModule::AcquireServiceID() {
+FServiceHandle UServiceModule::AcquireServiceID() {
     return mAllocator.AllocateTS();
 }
 
-void UServiceModule::RecycleServiceID(const int64_t id) {
+void UServiceModule::RecycleServiceID(const FServiceHandle id) {
     mAllocator.RecycleTS(id);
 }
 
-void UServiceModule::OnServiceShutdown(const std::string &filename, const int32_t sid, const EServiceType type) {
+void UServiceModule::OnServiceShutdown(const std::string &filename, const FServiceHandle sid, const EServiceType type) {
     if (GetState() != EModuleState::RUNNING)
         return;
 
