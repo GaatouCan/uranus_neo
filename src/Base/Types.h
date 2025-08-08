@@ -47,8 +47,8 @@ struct FWeakPointerEqual {
 
 template<typename T>
 struct FWeakPointerHash {
-    size_t operator()(const std::weak_ptr<T>&wptr) const {
-        auto sp = wptr.lock();
+    size_t operator()(const std::weak_ptr<T> &wPtr) const {
+        auto sp = wPtr.lock();
         return std::hash<void*>()(sp ? sp.get() : nullptr);
     }
 };

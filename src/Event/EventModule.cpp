@@ -1,9 +1,10 @@
 #include "EventModule.h"
+#include "Server.h"
+#include "ContextBase.h"
+#include "Utils.h"
 
 #include <ranges>
 
-#include "Server.h"
-#include "ContextBase.h"
 
 UEventModule::UEventModule() {
 }
@@ -39,6 +40,7 @@ void UEventModule::ListenEvent(const std::weak_ptr<IContextBase> &wPtr, const in
         return;
 
     std::unique_lock lock(mListenerMutex);
+    utils::CleanUpWeakPointerSet(mListenerMap[event]);
     mListenerMap[event].emplace(wPtr);
 }
 
@@ -50,6 +52,7 @@ void UEventModule::RemoveListenEvent(const std::weak_ptr<IContextBase> &wPtr, co
         return;
 
     std::unique_lock lock(mListenerMutex);
+    utils::CleanUpWeakPointerSet(mListenerMap[event]);
     mListenerMap[event].erase(wPtr);
 
     if (mListenerMap[event].empty())
@@ -62,16 +65,7 @@ void UEventModule::RemoveListener(const std::weak_ptr<IContextBase> &wPtr) {
 
     std::unique_lock lock(mListenerMutex);
     for (auto &val: mListenerMap | std::views::values) {
-        for (auto iter = val.begin(); iter != val.end();) {
-            if (iter->expired())
-                iter = val.erase(iter);
-            else
-                ++iter;
-        }
-    }
-
-    for (auto &
-        val: mListenerMap | std::views::values) {
+        utils::CleanUpWeakPointerSet(val);
         val.erase(wPtr);
     }
 }

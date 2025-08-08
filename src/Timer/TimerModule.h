@@ -42,6 +42,7 @@ public:
     }
 
     void AddTicker(const std::weak_ptr<IContextBase> &ticker);
+    void RemoveTicker(const std::weak_ptr<IContextBase> &ticker);
 
     int64_t CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const ATimerTask &task, int delay, int rate = -1);
 

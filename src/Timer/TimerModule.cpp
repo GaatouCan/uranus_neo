@@ -1,6 +1,7 @@
 #include "TimerModule.h"
 #include "Server.h"
 #include "ContextBase.h"
+#include "Utils.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>
@@ -62,7 +63,25 @@ void UTimerModule::AddTicker(const std::weak_ptr<IContextBase> &ticker) {
         return;
 
     std::unique_lock lock(mTickMutex);
+    utils::CleanUpWeakPointerSet(mTickers);
     mTickers.insert(ticker);
+}
+
+void UTimerModule::RemoveTicker(const std::weak_ptr<IContextBase> &ticker) {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (ticker.expired())
+        return;
+
+    std::unique_lock lock(mTickMutex);
+    for (auto iter = mTickers.begin(); iter != mTickers.end();) {
+        if (iter->expired() || iter->lock().get() == ticker.lock().get()) {
+            iter = mTickers.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
 }
 
 int64_t UTimerModule::CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const ATimerTask &task, int delay, int rate) {
@@ -141,14 +160,7 @@ void UTimerModule::CancelTimer(const std::weak_ptr<IContextBase> &wPtr) {
 
     std::unique_lock lock(mTimerMutex);
     for (auto iter = mTimerMap.begin(); iter != mTimerMap.end();) {
-        if (iter->second.wPointer.expired()) {
-            iter->second.timer->cancel();
-            iter = mTimerMap.erase(iter);
-            mAllocator.RecycleTS(iter->first);
-            continue;
-        }
-
-        if (iter->second.wPointer.lock().get() == wPtr.lock().get()) {
+        if (iter->second.wPointer.expired() || iter->second.wPointer.lock().get() == wPtr.lock().get()) {
             iter->second.timer->cancel();
             iter = mTimerMap.erase(iter);
             mAllocator.RecycleTS(iter->first);
