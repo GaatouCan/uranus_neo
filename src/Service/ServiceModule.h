@@ -47,6 +47,9 @@ public:
     void BootExtendService(const std::string &filename, const IDataAsset_Interface *data = nullptr);
     void ShutdownService(int32_t sid);
 
+    [[nodiscard]] int64_t AcquireServiceID();
+    void RecycleServiceID(int64_t id);
+
 private:
     void OnServiceShutdown(const std::string &filename, int32_t sid, EServiceType type);
 
@@ -71,6 +74,6 @@ private:
     mutable std::shared_mutex mFileNameMutex;
 
     /** Service ID Management **/
-    TIdentAllocator<int32_t, true> mAllocator;
+    TIdentAllocator<int64_t, true> mAllocator;
 };
 

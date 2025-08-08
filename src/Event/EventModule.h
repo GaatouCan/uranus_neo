@@ -10,14 +10,14 @@
 
 
 
-class IContextBase;
+class UContextBase;
 
 
 class BASE_API UEventModule final : public IModuleBase {
 
     DECLARE_MODULE(UEventModule)
 
-    using AListenerMap = std::unordered_map<int, std::unordered_set<std::weak_ptr<IContextBase>, FWeakPointerHash<IContextBase>, FWeakPointerEqual<IContextBase>>>;
+    using AListenerMap = std::unordered_map<int, std::unordered_set<std::weak_ptr<UContextBase>, FWeakPointerHash<UContextBase>, FWeakPointerEqual<UContextBase>>>;
 
 protected:
     UEventModule();
@@ -37,10 +37,10 @@ public:
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
 
-    void ListenEvent(const std::weak_ptr<IContextBase> &wPtr, int event);
+    void ListenEvent(const std::weak_ptr<UContextBase> &wPtr, int event);
 
-    void RemoveListenEvent(const std::weak_ptr<IContextBase> &wPtr, int event);
-    void RemoveListener(const std::weak_ptr<IContextBase> &wPtr);
+    void RemoveListenEvent(const std::weak_ptr<UContextBase> &wPtr, int event);
+    void RemoveListener(const std::weak_ptr<UContextBase> &wPtr);
 
 private:
     AListenerMap mListenerMap;

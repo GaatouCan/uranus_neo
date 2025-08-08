@@ -32,7 +32,7 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
     }
 }
 
-void UEventModule::ListenEvent(const std::weak_ptr<IContextBase> &wPtr, const int event) {
+void UEventModule::ListenEvent(const std::weak_ptr<UContextBase> &wPtr, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
@@ -44,7 +44,7 @@ void UEventModule::ListenEvent(const std::weak_ptr<IContextBase> &wPtr, const in
     mListenerMap[event].emplace(wPtr);
 }
 
-void UEventModule::RemoveListenEvent(const std::weak_ptr<IContextBase> &wPtr, const int event) {
+void UEventModule::RemoveListenEvent(const std::weak_ptr<UContextBase> &wPtr, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
@@ -59,7 +59,7 @@ void UEventModule::RemoveListenEvent(const std::weak_ptr<IContextBase> &wPtr, co
         mListenerMap.erase(event);
 }
 
-void UEventModule::RemoveListener(const std::weak_ptr<IContextBase> &wPtr) {
+void UEventModule::RemoveListener(const std::weak_ptr<UContextBase> &wPtr) {
     if (wPtr.expired() || mState < EModuleState::INITIALIZED)
         return;
 

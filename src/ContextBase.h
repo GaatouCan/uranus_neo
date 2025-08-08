@@ -2,6 +2,7 @@
 
 #include "Base/Types.h"
 #include "Base/SharedLibrary.h"
+#include "Base/ContextHandle.h"
 
 
 class IServiceBase;
@@ -24,14 +25,10 @@ enum class EContextState {
     STOPPED
 };
 
-/**
- * Context For Interaction Between Service And The Server
- */
-class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> {
 
-    /**
-     * The Base Channel Node For Internal Channel
-     */
+class BASE_API UContextBase : public std::enable_shared_from_this<UContextBase> {
+
+#pragma region Schedule Wrapper
     class BASE_API ISchedule_Interface {
 
     public:
@@ -42,10 +39,6 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         virtual void Execute(IServiceBase *pService) = 0;
     };
 
-    /**
-     * The Wrapper Of Package,
-     * While Service Received Package
-     */
     class BASE_API UPackageNode final : public ISchedule_Interface {
 
         shared_ptr<IPackage_Interface> mPackage;
@@ -55,10 +48,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         void Execute(IServiceBase *pService) override;
     };
 
-    /**
-     * The Wrapper Of Task,
-     * While The Service Received The Task
-     */
+
     class BASE_API UTaskNode final : public ISchedule_Interface {
 
         std::function<void(IServiceBase *)> mTask;
@@ -68,10 +58,7 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
         void Execute(IServiceBase *pService) override;
     };
 
-    /**
-     * The Wrapper Of Event,
-     * While The Service Received Event Parameter
-     */
+
     class BASE_API UEventNode final : public ISchedule_Interface {
 
         shared_ptr<IEventParam_Interface> mEvent;
@@ -94,31 +81,35 @@ class BASE_API IContextBase : public std::enable_shared_from_this<IContextBase> 
 
         void Execute(IServiceBase *pService) override;
     };
+#pragma endregion
 
     using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<ISchedule_Interface>)>;
 
 public:
-    IContextBase();
-    virtual ~IContextBase();
+    UContextBase();
+    virtual ~UContextBase();
 
-    DISABLE_COPY_MOVE(IContextBase)
+    DISABLE_COPY_MOVE(UContextBase)
 
     void SetUpModule(IModuleBase *pModule);
+    void SetUpServiceID(int64_t sid);
     void SetUpLibrary(const FSharedLibrary &library);
+
+    [[nodiscard]] std::string GetServiceName() const;
+    [[nodiscard]] int64_t GetServiceID() const;
+
+    [[nodiscard]] UServer *GetServer() const;
+    [[nodiscard]] IModuleBase *GetOwnerModule() const;
+
+    [[nodiscard]] FContextHandle GenerateHandle();
 
     virtual bool Initial(const IDataAsset_Interface *pData);
     virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
-    virtual int Shutdown(bool bForce, int second, const std::function<void(IContextBase *)> &func);
+    virtual int Shutdown(bool bForce, int second, const std::function<void(UContextBase *)> &func);
     int ForceShutdown();
 
     bool BootService();
-
-    [[nodiscard]] std::string GetServiceName() const;
-    [[nodiscard]] virtual int32_t GetServiceID() const = 0;
-
-    [[nodiscard]] UServer *GetServer() const;
-    [[nodiscard]] IModuleBase *GetOwnerModule() const;
 
     [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
 
@@ -145,26 +136,19 @@ private:
     awaitable<void> ProcessChannel();
 
 private:
-    /** The Owner Module */
     IModuleBase *mModule;
 
-    /** The Owning Service */
+    int64_t mServiceID;
     IServiceBase *mService;
+
+    shared_ptr<IRecyclerBase> mPackagePool;
+    unique_ptr<AContextChannel> mChannel;
 
     /** Loaded Library With Creator And Destroyer Of Service */
     FSharedLibrary mLibrary;
 
-    /** Internal Package Pool */
-    shared_ptr<IRecyclerBase> mPackagePool;
-
-    /** Internal Node Channel */
-    unique_ptr<AContextChannel> mChannel;
-
-    /** When Timeout, Force Shut Down This Context */
     unique_ptr<ASteadyTimer> mShutdownTimer;
-
-    /** Invoked While This Context Stopped */
-    std::function<void(IContextBase *)> mShutdownCallback;
+    std::function<void(UContextBase *)> mShutdownCallback;
 
 protected:
     std::atomic<EContextState> mState;

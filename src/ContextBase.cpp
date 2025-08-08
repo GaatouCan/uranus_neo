@@ -14,60 +14,61 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
-void IContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void UContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
 }
 
-void IContextBase::UPackageNode::Execute(IServiceBase *pService) {
-    if (pService && mPackage ) {
+void UContextBase::UPackageNode::Execute(IServiceBase *pService) {
+    if (pService && mPackage) {
         pService->OnPackage(mPackage);
     }
 }
 
-void IContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
+void UContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
     mTask = task;
 }
 
-void IContextBase::UTaskNode::Execute(IServiceBase *pService) {
+void UContextBase::UTaskNode::Execute(IServiceBase *pService) {
     if (pService && mTask) {
         std::invoke(mTask, pService);
     }
 }
 
-void IContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
+void UContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
     mEvent = event;
 }
 
-void IContextBase::UEventNode::Execute(IServiceBase *pService) {
-    if (pService && mEvent ) {
+void UContextBase::UEventNode::Execute(IServiceBase *pService) {
+    if (pService && mEvent) {
         pService->OnEvent(mEvent);
     }
 }
 
-IContextBase::UTickerNode::UTickerNode()
+UContextBase::UTickerNode::UTickerNode()
     : mDeltaTime(0) {
 }
 
-void IContextBase::UTickerNode::SetCurrentTickTime(const ASteadyTimePoint timepoint) {
+void UContextBase::UTickerNode::SetCurrentTickTime(const ASteadyTimePoint timepoint) {
     mTickTime = timepoint;
 }
 
-void IContextBase::UTickerNode::SetDeltaTime(const ASteadyDuration delta) {
+void UContextBase::UTickerNode::SetDeltaTime(const ASteadyDuration delta) {
     mDeltaTime = delta;
 }
 
-void IContextBase::UTickerNode::Execute(IServiceBase *pService) {
+void UContextBase::UTickerNode::Execute(IServiceBase *pService) {
     if (pService) {
         pService->OnUpdate(mTickTime, mDeltaTime);
     }
 }
 
-IContextBase::IContextBase()
+UContextBase::UContextBase()
     : mModule(nullptr),
+      mServiceID(INVALID_SERVICE_ID),
       mService(nullptr) {
 }
 
-IContextBase::~IContextBase() {
+UContextBase::~UContextBase() {
     if (mShutdownTimer) {
         mShutdownTimer->cancel();
         ForceShutdown();
@@ -78,19 +79,25 @@ IContextBase::~IContextBase() {
     }
 }
 
-void IContextBase::SetUpModule(IModuleBase *pModule) {
+void UContextBase::SetUpModule(IModuleBase *pModule) {
     if (mState != EContextState::CREATED)
         return;
     mModule = pModule;
 }
 
-void IContextBase::SetUpLibrary(const FSharedLibrary &library) {
+void UContextBase::SetUpServiceID(const int64_t sid) {
+    if (mState != EContextState::CREATED)
+        return;
+    mServiceID = sid;
+}
+
+void UContextBase::SetUpLibrary(const FSharedLibrary &library) {
     if (mState != EContextState::CREATED)
         return;
     mLibrary = library;
 }
 
-bool IContextBase::Initial(const IDataAsset_Interface *pData) {
+bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
         return false;
 
@@ -140,7 +147,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *pData) {
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
-        __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
     delete pData;
@@ -148,7 +155,7 @@ bool IContextBase::Initial(const IDataAsset_Interface *pData) {
     return ret;
 }
 
-awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
+awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
         co_return false;
 
@@ -198,7 +205,7 @@ awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
-        __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
     delete pData;
@@ -206,7 +213,7 @@ awaitable<bool> IContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     co_return ret;
 }
 
-int IContextBase::Shutdown(const bool bForce, int second, const std::function<void(IContextBase *)> &func) {
+int UContextBase::Shutdown(const bool bForce, int second, const std::function<void(UContextBase *)> &func) {
     if (GetServer() == nullptr)
         return -10;
 
@@ -274,7 +281,7 @@ int IContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     mState = EContextState::STOPPED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",
-        __FUNCTION__, static_cast<void *>(this), name);
+                 __FUNCTION__, static_cast<void *>(this), name);
 
     if (mShutdownCallback) {
         std::invoke(mShutdownCallback, this);
@@ -283,26 +290,26 @@ int IContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     return 1;
 }
 
-int IContextBase::ForceShutdown() {
+int UContextBase::ForceShutdown() {
     return Shutdown(true, 0, nullptr);
 }
 
-bool IContextBase::BootService() {
-    if (mState != EContextState::INITIALIZED || mService == nullptr)
+bool UContextBase::BootService() {
+    if (mState != EContextState::INITIALIZED || mService == nullptr || GetServer() == nullptr)
         return false;
 
     mState = EContextState::IDLE;
 
     if (const auto res = mService->Start(); !res) {
         SPDLOG_ERROR("{:<20} - Context[{:p}], Service[{} - {}] Failed To Boot.",
-            __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+                     __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
 
         mState = EContextState::INITIALIZED;
         return false;
     }
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
-        __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
 
     co_spawn(GetServer()->GetIOContext(), [self = shared_from_this()] -> awaitable<void> {
         co_await self->ProcessChannel();
@@ -317,19 +324,23 @@ bool IContextBase::BootService() {
     return true;
 }
 
-std::string IContextBase::GetServiceName() const {
+std::string UContextBase::GetServiceName() const {
     if (mState >= EContextState::INITIALIZED) {
         return mService->GetServiceName();
     }
     return "UNKNOWN";
 }
 
+int64_t UContextBase::GetServiceID() const {
+    return mServiceID;
+}
 
-EContextState IContextBase::GetState() const {
+
+EContextState UContextBase::GetState() const {
     return mState;
 }
 
-void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void UContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -337,17 +348,18 @@ void IContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Package From {}",
-        __FUNCTION__, static_cast<const void *>(this), GetServiceName(), pkg->GetSource());
+                 __FUNCTION__, static_cast<const void *>(this), GetServiceName(), pkg->GetSource());
 
     auto node = make_unique<UPackageNode>();
     node->SetPackage(pkg);
 
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
-        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
-    }, detached);
+    co_spawn(GetServer()->GetIOContext(),
+             [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+                 co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+             }, detached);
 }
 
-void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
+void UContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -355,17 +367,18 @@ void IContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
-        __FUNCTION__, static_cast<const void *>(this), GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
     auto node = make_unique<UTaskNode>();
     node->SetTask(task);
 
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
-        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
-    }, detached);
+    co_spawn(GetServer()->GetIOContext(),
+             [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+                 co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+             }, detached);
 }
 
-void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
+void UContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -373,17 +386,18 @@ void IContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Event Type {}",
-        __FUNCTION__, static_cast<const void *>(this), GetServiceName(), event->GetEventType());
+                 __FUNCTION__, static_cast<const void *>(this), GetServiceName(), event->GetEventType());
 
     auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
 
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
-        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
-    }, detached);
+    co_spawn(GetServer()->GetIOContext(),
+             [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+                 co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+             }, detached);
 }
 
-void IContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
+void UContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -391,18 +405,19 @@ void IContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDur
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
-        __FUNCTION__, static_cast<const void *>(this), GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
     auto node = make_unique<UTickerNode>();
     node->SetCurrentTickTime(timepoint);
     node->SetDeltaTime(delta);
 
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
-        co_await self->mChannel->async_send(std::error_code{}, std::move(node));
-    }, detached);
+    co_spawn(GetServer()->GetIOContext(),
+             [self = shared_from_this(), node = std::move(node)]() mutable -> awaitable<void> {
+                 co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+             }, detached);
 }
 
-int64_t IContextBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
+int64_t UContextBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || task == nullptr)
         return 0;
 
@@ -413,7 +428,7 @@ int64_t IContextBase::CreateTimer(const std::function<void(IServiceBase *)> &tas
     return module->CreateTimer(weak_from_this(), task, delay, rate);
 }
 
-void IContextBase::CancelTimer(const int64_t tid) const {
+void UContextBase::CancelTimer(const int64_t tid) const {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || tid <= 0)
         return;
 
@@ -424,7 +439,7 @@ void IContextBase::CancelTimer(const int64_t tid) const {
     module->CancelTimer(tid);
 }
 
-void IContextBase::ListenEvent(const int event) {
+void UContextBase::ListenEvent(const int event) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
         return;
 
@@ -435,7 +450,7 @@ void IContextBase::ListenEvent(const int event) {
     module->ListenEvent(weak_from_this(), event);
 }
 
-void IContextBase::RemoveListener(const int event) {
+void UContextBase::RemoveListener(const int event) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
         return;
 
@@ -446,7 +461,7 @@ void IContextBase::RemoveListener(const int event) {
     module->RemoveListenEvent(weak_from_this(), event);
 }
 
-void IContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const {
+void UContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || param == nullptr)
         return;
 
@@ -457,17 +472,24 @@ void IContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &p
     module->Dispatch(param);
 }
 
-UServer *IContextBase::GetServer() const {
+UServer *UContextBase::GetServer() const {
     if (mModule == nullptr)
         return nullptr;
     return mModule->GetServer();
 }
 
-IModuleBase *IContextBase::GetOwnerModule() const {
+IModuleBase *UContextBase::GetOwnerModule() const {
     return mModule;
 }
 
-shared_ptr<IPackage_Interface> IContextBase::BuildPackage() const {
+FContextHandle UContextBase::GenerateHandle() {
+    if (mServiceID == INVALID_SERVICE_ID)
+        return {};
+
+    return { mServiceID, weak_from_this() };
+}
+
+shared_ptr<IPackage_Interface> UContextBase::BuildPackage() const {
     if (mState != EContextState::IDLE || mState != EContextState::RUNNING)
         return nullptr;
 
@@ -477,14 +499,14 @@ shared_ptr<IPackage_Interface> IContextBase::BuildPackage() const {
     return nullptr;
 }
 
-IServiceBase *IContextBase::GetOwningService() const {
+IServiceBase *UContextBase::GetOwningService() const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 
     return mService;
 }
 
-awaitable<void> IContextBase::ProcessChannel() {
+awaitable<void> UContextBase::ProcessChannel() {
     if (mState <= EContextState::INITIALIZED || mState >= EContextState::WAITING)
         co_return;
 

@@ -55,7 +55,7 @@ UTimerModule::~UTimerModule() {
     Stop();
 }
 
-void UTimerModule::AddTicker(const std::weak_ptr<IContextBase> &ticker) {
+void UTimerModule::AddTicker(const std::weak_ptr<UContextBase> &ticker) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -67,7 +67,7 @@ void UTimerModule::AddTicker(const std::weak_ptr<IContextBase> &ticker) {
     mTickers.insert(ticker);
 }
 
-void UTimerModule::RemoveTicker(const std::weak_ptr<IContextBase> &ticker) {
+void UTimerModule::RemoveTicker(const std::weak_ptr<UContextBase> &ticker) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -84,7 +84,7 @@ void UTimerModule::RemoveTicker(const std::weak_ptr<IContextBase> &ticker) {
     }
 }
 
-int64_t UTimerModule::CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const ATimerTask &task, int delay, int rate) {
+int64_t UTimerModule::CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const ATimerTask &task, int delay, int rate) {
     if (mState != EModuleState::INITIALIZED || mState != EModuleState::RUNNING)
         return -1;
 
@@ -151,7 +151,7 @@ void UTimerModule::CancelTimer(const int64_t tid) {
     mTimerMap.erase(iter);
 }
 
-void UTimerModule::CancelTimer(const std::weak_ptr<IContextBase> &wPtr) {
+void UTimerModule::CancelTimer(const std::weak_ptr<UContextBase> &wPtr) {
     if (mState != EModuleState::RUNNING)
         return;
 

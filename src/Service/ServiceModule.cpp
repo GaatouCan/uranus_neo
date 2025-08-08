@@ -319,7 +319,7 @@ void UServiceModule::ShutdownService(int32_t sid) {
         }
         break;
         case EServiceType::EXTEND: {
-            auto func = [this, sid, filename = context->GetFilename()](IContextBase *) {
+            auto func = [this, sid, filename = context->GetFilename()](UContextBase *) {
                 OnServiceShutdown(filename, sid, EServiceType::EXTEND);
                 mAllocator.RecycleTS(sid);
             };
@@ -331,6 +331,14 @@ void UServiceModule::ShutdownService(int32_t sid) {
         break;
         default: break;
     }
+}
+
+int64_t UServiceModule::AcquireServiceID() {
+    return mAllocator.AllocateTS();
+}
+
+void UServiceModule::RecycleServiceID(const int64_t id) {
+    mAllocator.RecycleTS(id);
 }
 
 void UServiceModule::OnServiceShutdown(const std::string &filename, const int32_t sid, const EServiceType type) {

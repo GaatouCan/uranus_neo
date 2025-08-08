@@ -11,13 +11,13 @@
 #include <spdlog/spdlog.h>
 
 
-void IServiceBase::SetUpContext(IContextBase *pContext) {
+void IServiceBase::SetUpContext(UContextBase *pContext) {
     if (mState != EServiceState::CREATED)
         return;
     mContext = pContext;
 }
 
-IContextBase *IServiceBase::GetContext() const {
+UContextBase *IServiceBase::GetContext() const {
     return mContext;
 }
 

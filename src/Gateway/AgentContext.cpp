@@ -29,9 +29,9 @@ int64_t UAgentContext::GetConnectionID() const {
     return mConnectionID;
 }
 
-int32_t UAgentContext::GetServiceID() const {
-    return PLAYER_AGENT_ID;
-}
+// int32_t UAgentContext::GetServiceID() const {
+//     return PLAYER_AGENT_ID;
+// }
 
 UGateway *UAgentContext::GetGateway() const {
     return dynamic_cast<UGateway *>(GetOwnerModule());

@@ -6,7 +6,7 @@
 class UGateway;
 
 
-class BASE_API UAgentContext final : public IContextBase {
+class BASE_API UAgentContext final : public UContextBase {
 
     int64_t mPlayerID;
     int64_t mConnectionID;
@@ -21,7 +21,7 @@ public:
     [[nodiscard]] int64_t GetPlayerID() const;
     [[nodiscard]] int64_t GetConnectionID() const;
 
-    [[nodiscard]] int32_t GetServiceID() const override;
+    // [[nodiscard]] int32_t GetServiceID() const override;
 
     [[nodiscard]] UGateway* GetGateway() const;
     [[nodiscard]] std::shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;

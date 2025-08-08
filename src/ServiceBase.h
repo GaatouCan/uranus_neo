@@ -6,7 +6,7 @@
 #include <string>
 
 
-class IContextBase;
+class UContextBase;
 class IDataAsset_Interface;
 class IPackage_Interface;
 class IEventParam_Interface;
@@ -21,11 +21,11 @@ enum class EServiceState {
 
 class BASE_API IServiceBase {
 
-    friend class IContextBase;
+    friend class UContextBase;
 
 protected:
-    void SetUpContext(IContextBase *pContext);
-    [[nodiscard]] IContextBase *GetContext() const;
+    void SetUpContext(UContextBase *pContext);
+    [[nodiscard]] UContextBase *GetContext() const;
 
 public:
     IServiceBase();
@@ -102,7 +102,7 @@ public:
     void TryCreateLogger(const std::string &name) const;
 
 protected:
-    IContextBase *mContext;
+    UContextBase *mContext;
     std::atomic<EServiceState> mState;
 
     bool bUpdatePerTick;

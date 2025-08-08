@@ -11,17 +11,17 @@
 #include <shared_mutex>
 
 class IServiceBase;
-class IContextBase;
+class UContextBase;
 
 class BASE_API UTimerModule final : public IModuleBase {
 
     DECLARE_MODULE(UTimerModule)
 
-    using ATickerSet = std::unordered_set<std::weak_ptr<IContextBase>, FWeakPointerHash<IContextBase>, FWeakPointerEqual<IContextBase>>;
+    using ATickerSet = std::unordered_set<std::weak_ptr<UContextBase>, FWeakPointerHash<UContextBase>, FWeakPointerEqual<UContextBase>>;
     using ATimerTask = std::function<void(IServiceBase *)>;
 
     struct FTimerNode {
-        std::weak_ptr<IContextBase> wPointer;
+        std::weak_ptr<UContextBase> wPointer;
         std::shared_ptr<ASteadyTimer> timer;
     };
 
@@ -41,13 +41,13 @@ public:
         return "Timer Module";
     }
 
-    void AddTicker(const std::weak_ptr<IContextBase> &ticker);
-    void RemoveTicker(const std::weak_ptr<IContextBase> &ticker);
+    void AddTicker(const std::weak_ptr<UContextBase> &ticker);
+    void RemoveTicker(const std::weak_ptr<UContextBase> &ticker);
 
-    int64_t CreateTimer(const std::weak_ptr<IContextBase> &wPtr, const ATimerTask &task, int delay, int rate = -1);
+    int64_t CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const ATimerTask &task, int delay, int rate = -1);
 
     void CancelTimer(int64_t tid);
-    void CancelTimer(const std::weak_ptr<IContextBase> &wPtr);
+    void CancelTimer(const std::weak_ptr<UContextBase> &wPtr);
 
 private:
     void RemoveTimer(int64_t tid);
