@@ -12,12 +12,17 @@ struct BASE_API FContextHandle {
     FServiceHandle sid;
     std::weak_ptr<UContextBase> wPtr;
 
-    FContextHandle() {}
+    FContextHandle() {
+    }
 
     // NOLINT(google-explicit-constructor)
-    FContextHandle(const FServiceHandle sid) : sid(sid) {}
+    FContextHandle(const FServiceHandle sid)
+        : sid(sid) {
+    }
 
-    FContextHandle(const FServiceHandle sid, const std::weak_ptr<UContextBase> &ptr) : sid(sid), wPtr(ptr) {}
+    FContextHandle(const FServiceHandle sid, const std::weak_ptr<UContextBase> &ptr)
+        : sid(sid), wPtr(ptr) {
+    }
 
     bool operator<(const FContextHandle &rhs) const {
         return sid < rhs.sid;
@@ -46,25 +51,25 @@ inline bool operator==(const FContextHandle &lhs, const int rhs) {
     return lhs.sid == rhs;
 }
 
-inline bool operator<(const FContextHandle& lhs, const int rhs) {
+inline bool operator<(const FContextHandle &lhs, const int rhs) {
     return lhs.sid < rhs;
 }
 
-inline bool operator<(const int lhs, const FContextHandle& rhs) {
+inline bool operator<(const int lhs, const FContextHandle &rhs) {
     return lhs < rhs.sid;
 }
 
-inline bool operator>(const FContextHandle& lhs, const int rhs) {
+inline bool operator>(const FContextHandle &lhs, const int rhs) {
     return lhs.sid > rhs;
 }
 
-inline bool operator>(const int lhs, const FContextHandle& rhs) {
+inline bool operator>(const int lhs, const FContextHandle &rhs) {
     return lhs < rhs.sid;
 }
 
-template <>
+template<>
 struct std::hash<FContextHandle> {
-    size_t operator()(const FContextHandle& h) const noexcept {
+    size_t operator()(const FContextHandle &h) const noexcept {
         return std::hash<int64_t>{}(h.sid.id);
     }
 };
