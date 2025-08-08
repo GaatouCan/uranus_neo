@@ -1,14 +1,15 @@
 #pragma once
 
 #include "Module.h"
-#include "Utils.h"
 #include "Base/Types.h"
+#include "Base/ContextHandle.h"
 #include "Base/IdentAllocator.h"
 
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include <shared_mutex>
+
 
 class IServiceBase;
 class UContextBase;
@@ -17,11 +18,11 @@ class BASE_API UTimerModule final : public IModuleBase {
 
     DECLARE_MODULE(UTimerModule)
 
-    using ATickerSet = std::unordered_set<std::weak_ptr<UContextBase>, FWeakPointerHash<UContextBase>, FWeakPointerEqual<UContextBase>>;
+    using ATickerSet = std::unordered_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>;
     using ATimerTask = std::function<void(IServiceBase *)>;
 
     struct FTimerNode {
-        std::weak_ptr<UContextBase> wPointer;
+        FContextHandle handle;
         std::shared_ptr<ASteadyTimer> timer;
     };
 
@@ -41,13 +42,13 @@ public:
         return "Timer Module";
     }
 
-    void AddTicker(const std::weak_ptr<UContextBase> &ticker);
-    void RemoveTicker(const std::weak_ptr<UContextBase> &ticker);
+    void AddTicker(const FContextHandle &handle);
+    void RemoveTicker(const FContextHandle &handle);
 
-    int64_t CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const ATimerTask &task, int delay, int rate = -1);
+    int64_t CreateTimer(const FContextHandle &handle, const ATimerTask &task, int delay, int rate = -1);
 
     void CancelTimer(int64_t tid);
-    void CancelTimer(const std::weak_ptr<UContextBase> &wPtr);
+    void CancelTimer(const FContextHandle &handle);
 
 private:
     void RemoveTimer(int64_t tid);

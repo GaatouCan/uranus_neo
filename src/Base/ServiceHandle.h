@@ -29,6 +29,10 @@ struct BASE_API FServiceHandle {
         return id > other.id;
     }
 
+    [[nodiscard]] bool IsValid() const {
+        return id > 0;
+    }
+
     struct BASE_API FEqual {
         bool operator()(const FServiceHandle &lhs, const FServiceHandle &rhs) const {
             return lhs.id == rhs.id;

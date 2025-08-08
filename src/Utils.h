@@ -7,8 +7,6 @@
 #include <functional>
 #include <thread>
 #include <map>
-#include <set>
-#include <unordered_set>
 
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -69,14 +67,14 @@ namespace utils {
 
     BASE_API int RandomDraw(const std::map<int, int> &pool);
 
-    template<class T>
-    void CleanUpWeakPointerSet(std::unordered_set<std::weak_ptr<T>, FWeakPointerHash<T>, FWeakPointerEqual<T>> &set) {
-        for (auto it = set.begin(); it != set.end();) {
-            if (it->expired()) {
-                it = set.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }
+    // template<class T>
+    // void CleanUpWeakPointerSet(std::unordered_set<std::weak_ptr<T>, FWeakPointerHash<T>, FWeakPointerEqual<T>> &set) {
+    //     for (auto it = set.begin(); it != set.end();) {
+    //         if (it->expired()) {
+    //             it = set.erase(it);
+    //         } else {
+    //             ++it;
+    //         }
+    //     }
+    // }
 }

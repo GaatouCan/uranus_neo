@@ -38,11 +38,11 @@ void UTimerModule::Start() {
 
             std::unique_lock lock(mTickMutex);
             for (auto iter = mTickers.begin(); iter != mTickers.end();) {
-                if (iter->expired()) {
-                    iter = mTickers.erase(iter);
-                } else {
-                    iter->lock()->PushTicker(tickPoint, delta);
+                if (const auto ctx = iter->Get()) {
+                    ctx->PushTicker(tickPoint, delta);
                     ++iter;
+                } else {
+                    iter = mTickers.erase(iter);
                 }
             }
         }
@@ -55,40 +55,33 @@ UTimerModule::~UTimerModule() {
     Stop();
 }
 
-void UTimerModule::AddTicker(const std::weak_ptr<UContextBase> &ticker) {
+void UTimerModule::AddTicker(const FContextHandle &handle) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    if (ticker.expired())
+    if (!handle.IsValid())
         return;
 
     std::unique_lock lock(mTickMutex);
-    utils::CleanUpWeakPointerSet(mTickers);
-    mTickers.insert(ticker);
+    mTickers.insert(handle);
 }
 
-void UTimerModule::RemoveTicker(const std::weak_ptr<UContextBase> &ticker) {
+void UTimerModule::RemoveTicker(const FContextHandle &handle) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    if (ticker.expired())
+    if (handle < 0)
         return;
 
     std::unique_lock lock(mTickMutex);
-    for (auto iter = mTickers.begin(); iter != mTickers.end();) {
-        if (iter->expired() || iter->lock().get() == ticker.lock().get()) {
-            iter = mTickers.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
+    mTickers.erase(handle);
 }
 
-int64_t UTimerModule::CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const ATimerTask &task, int delay, int rate) {
+int64_t UTimerModule::CreateTimer(const FContextHandle &handle, const ATimerTask &task, int delay, int rate) {
     if (mState != EModuleState::INITIALIZED || mState != EModuleState::RUNNING)
         return -1;
 
-    if (wPtr.expired() || task == nullptr)
+    if (!handle.IsValid() || task == nullptr)
         return -2;
 
     const auto tid = mAllocator.AllocateTS();
@@ -104,10 +97,10 @@ int64_t UTimerModule::CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const
             return {};
 
         timer = std::make_shared<ASteadyTimer>(GetServer()->GetIOContext());
-        mTimerMap[tid] = { wPtr, timer };
+        mTimerMap[tid] = { handle, timer };
     }
 
-    co_spawn(GetServer()->GetIOContext(), [this, tid, timer, wPtr, task, delay, rate]() -> awaitable<void> {
+    co_spawn(GetServer()->GetIOContext(), [this, tid, timer, handle, task, delay, rate]() -> awaitable<void> {
         try {
             auto point = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay * 100);
 
@@ -122,10 +115,12 @@ int64_t UTimerModule::CreateTimer(const std::weak_ptr<UContextBase> &wPtr, const
                     break;
                 }
 
-                if (const auto ctx = wPtr.lock()) {
+                if (const auto ctx = handle.Get()) {
                     ctx->PushTask(task);
                     continue;
                 }
+
+                // If The Inner Pointer Of Handle Expired, Break The Loop And End The Timer
                 break;
             } while (rate > 0 && mState == EModuleState::RUNNING);
         } catch (const std::exception &e) {
@@ -142,46 +137,49 @@ void UTimerModule::CancelTimer(const int64_t tid) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    std::unique_lock lock(mTimerMutex);
-    const auto iter = mTimerMap.find(tid);
-    if (iter == mTimerMap.end())
-        return;
+    std::shared_ptr<ASteadyTimer> timer;
 
-    iter->second.timer->cancel();
-    mTimerMap.erase(iter);
+    {
+        std::unique_lock lock(mTimerMutex);
+        const auto iter = mTimerMap.find(tid);
+        if (iter == mTimerMap.end())
+            return;
+
+        timer = iter->second.timer;
+        mTimerMap.erase(iter);
+    }
+
+    timer->cancel();
 }
 
-void UTimerModule::CancelTimer(const std::weak_ptr<UContextBase> &wPtr) {
+void UTimerModule::CancelTimer(const FContextHandle &handle) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    if (wPtr.expired())
+    if (handle < 0)
         return;
 
-    std::unique_lock lock(mTimerMutex);
-    for (auto iter = mTimerMap.begin(); iter != mTimerMap.end();) {
-        if (iter->second.wPointer.expired() || iter->second.wPointer.lock().get() == wPtr.lock().get()) {
-            iter->second.timer->cancel();
-            iter = mTimerMap.erase(iter);
-            mAllocator.RecycleTS(iter->first);
-            continue;
-        }
+    std::vector<std::shared_ptr<ASteadyTimer>> del;
 
-        ++iter;
+    {
+        std::unique_lock lock(mTimerMutex);
+        for (auto iter = mTimerMap.begin(); iter != mTimerMap.end();) {
+            if (iter->second.handle == handle) {
+                del.emplace_back(iter->second.timer);
+                iter = mTimerMap.erase(iter);
+            } else {
+                ++iter;
+            }
+        }
+    }
+
+    for (const auto &timer : del) {
+        timer->cancel();
     }
 }
 
 void UTimerModule::RemoveTimer(const int64_t tid) {
     std::unique_lock lock(mTimerMutex);
-    for (auto iter = mTimerMap.begin(); iter != mTimerMap.end();) {
-        if (iter->second.wPointer.expired()) {
-            iter->second.timer->cancel();
-            iter = mTimerMap.erase(iter);
-            mAllocator.RecycleTS(iter->first);
-            continue;
-        }
-        ++iter;
-    }
     mTimerMap.erase(tid);
     mAllocator.RecycleTS(tid);
 }
@@ -193,7 +191,7 @@ void UTimerModule::Stop() {
     mState = EModuleState::STOPPED;
     mTickTimer->cancel();
 
-    for (const auto &[wPointer, timer]: mTimerMap | std::views::values) {
+    for (const auto &[handle, timer]: mTimerMap | std::views::values) {
         timer->cancel();
     }
 }

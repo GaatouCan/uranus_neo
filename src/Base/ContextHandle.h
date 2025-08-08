@@ -37,6 +37,14 @@ struct BASE_API FContextHandle {
         return sid;
     }
 
+    [[nodiscard]] bool IsValid() const {
+        return sid.IsValid() && !wPtr.expired();
+    }
+
+    [[nodiscard]] shared_ptr<UContextBase> Get() const {
+        return wPtr.lock();
+    }
+
     struct BASE_API FEqual {
         bool operator()(const FContextHandle &lhs, const FContextHandle &rhs) const {
             return lhs.sid == rhs.sid;
