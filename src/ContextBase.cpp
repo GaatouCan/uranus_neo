@@ -85,7 +85,7 @@ void UContextBase::SetUpModule(IModuleBase *pModule) {
     mModule = pModule;
 }
 
-void UContextBase::SetUpServiceID(const int64_t sid) {
+void UContextBase::SetUpServiceID(const FServiceHandle sid) {
     if (mState != EContextState::CREATED)
         return;
     mServiceID = sid;
@@ -302,14 +302,14 @@ bool UContextBase::BootService() {
 
     if (const auto res = mService->Start(); !res) {
         SPDLOG_ERROR("{:<20} - Context[{:p}], Service[{} - {}] Failed To Boot.",
-                     __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+                     __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
         mState = EContextState::INITIALIZED;
         return false;
     }
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
-                 __FUNCTION__, static_cast<const void *>(this), GetServiceID(), GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
     co_spawn(GetServer()->GetIOContext(), [self = shared_from_this()] -> awaitable<void> {
         co_await self->ProcessChannel();
@@ -331,7 +331,7 @@ std::string UContextBase::GetServiceName() const {
     return "UNKNOWN";
 }
 
-int64_t UContextBase::GetServiceID() const {
+FServiceHandle UContextBase::GetServiceID() const {
     return mServiceID;
 }
 
@@ -483,7 +483,7 @@ IModuleBase *UContextBase::GetOwnerModule() const {
 }
 
 FContextHandle UContextBase::GenerateHandle() {
-    if (mServiceID == INVALID_SERVICE_ID)
+    if (static_cast<int64_t>(mServiceID) == INVALID_SERVICE_ID)
         return {};
 
     return { mServiceID, weak_from_this() };

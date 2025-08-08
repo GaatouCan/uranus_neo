@@ -92,11 +92,11 @@ public:
     DISABLE_COPY_MOVE(UContextBase)
 
     void SetUpModule(IModuleBase *pModule);
-    void SetUpServiceID(int64_t sid);
+    void SetUpServiceID(FServiceHandle sid);
     void SetUpLibrary(const FSharedLibrary &library);
 
     [[nodiscard]] std::string GetServiceName() const;
-    [[nodiscard]] int64_t GetServiceID() const;
+    [[nodiscard]] FServiceHandle GetServiceID() const;
 
     [[nodiscard]] UServer *GetServer() const;
     [[nodiscard]] IModuleBase *GetOwnerModule() const;
@@ -138,7 +138,7 @@ private:
 private:
     IModuleBase *mModule;
 
-    int64_t mServiceID;
+    FServiceHandle mServiceID;
     IServiceBase *mService;
 
     shared_ptr<IRecyclerBase> mPackagePool;

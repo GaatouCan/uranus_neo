@@ -31,7 +31,7 @@ UServiceModule *UServiceContext::GetServiceModule() const {
     return dynamic_cast<UServiceModule *>(GetOwnerModule());
 }
 
-int32_t UServiceContext::GetOtherServiceID(const std::string &name) const {
+FServiceHandle UServiceContext::GetOtherServiceID(const std::string &name) const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return -10;
 
@@ -48,11 +48,11 @@ int32_t UServiceContext::GetOtherServiceID(const std::string &name) const {
     return -13;
 }
 
-std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const int32_t sid) const {
+std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const FServiceHandle sid) const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 
-    if (sid < 0 || sid == mServiceID)
+    if (sid < 0 || sid == GetServiceID())
         return nullptr;
 
     if (const auto *module = GetServiceModule()) {
