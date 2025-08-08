@@ -224,10 +224,6 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     // Do Something While Shutdown
     {
-        if (auto *module = GetServer()->GetModule<UServiceModule>()) {
-            module->RecycleServiceID(mServiceID);
-        }
-
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
             module->CancelTimer(GenerateHandle());
             module->RemoveTicker(GenerateHandle());
@@ -298,6 +294,12 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     if (mShutdownCallback) {
         std::invoke(mShutdownCallback, this);
     }
+
+    // Recycle The ServiceID And Make It Invalid
+    if (auto *module = GetServer()->GetModule<UServiceModule>()) {
+        module->RecycleServiceID(mServiceID);
+    }
+    mServiceID = INVALID_SERVICE_ID;
 
     return 1;
 }

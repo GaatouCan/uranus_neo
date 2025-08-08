@@ -65,15 +65,14 @@ void UGateway::OnPlayerLogout(const int64_t pid) {
     if (mState != EModuleState::RUNNING || GetServer() == nullptr)
         return;
 
-    shared_ptr<UAgentContext> agent; {
+    shared_ptr<UAgentContext> agent;
+
+    {
         std::unique_lock lock(mMutex);
 
-        const auto iter = mPlayerMap.find(pid);
-        if (iter == mPlayerMap.end())
-            return;
-
-        agent = iter->second;
-        mPlayerMap.erase(iter);
+        if (const auto node = mPlayerMap.extract(pid); !node.empty()) {
+            agent = node.mapped();
+        }
 
         if (agent == nullptr)
             return;
