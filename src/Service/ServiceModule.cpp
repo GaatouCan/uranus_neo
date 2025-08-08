@@ -99,12 +99,12 @@ void UServiceModule::Initial() {
     // Begin Initial Core Service
 
     for (const auto &[filename, node]: mCoreLibraryMap) {
-        const int32_t sid = mAllocator.Allocate();
+        const auto sid = mAllocator.Allocate();
         const auto context = std::make_shared<UServiceContext>();
 
         context->SetUpModule(this);
         context->SetUpLibrary(node);
-        context->SetServiceID(sid);
+        context->SetUpServiceID(sid);
         context->SetFilename(filename);
         context->SetServiceType(EServiceType::CORE);
 
@@ -229,7 +229,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
         return;
     }
 
-    const int32_t sid = mAllocator.AllocateTS();
+    const auto sid = mAllocator.AllocateTS();
     if (sid < 0)
         return;
 
@@ -237,7 +237,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
 
     context->SetUpModule(this);
     context->SetUpLibrary(handle);
-    context->SetServiceID(sid);
+    context->SetUpServiceID(sid);
     context->SetFilename(filename);
     context->SetServiceType(EServiceType::EXTEND);
 

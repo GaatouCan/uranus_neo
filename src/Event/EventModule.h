@@ -2,22 +2,18 @@
 
 #include "Module.h"
 #include "Base/EventParam.h"
-#include "Base/Types.h"
+#include "Base/ContextHandle.h"
 
 #include <unordered_map>
 #include <unordered_set>
 #include <shared_mutex>
 
 
-
-class UContextBase;
-
-
 class BASE_API UEventModule final : public IModuleBase {
 
     DECLARE_MODULE(UEventModule)
 
-    using AListenerMap = std::unordered_map<int, std::unordered_set<std::weak_ptr<UContextBase>, FWeakPointerHash<UContextBase>, FWeakPointerEqual<UContextBase>>>;
+    using AListenerMap = std::unordered_map<int, std::unordered_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
 
 protected:
     UEventModule();
@@ -37,10 +33,10 @@ public:
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
 
-    void ListenEvent(const std::weak_ptr<UContextBase> &wPtr, int event);
+    void ListenEvent(const FContextHandle &handle, int event);
 
-    void RemoveListenEvent(const std::weak_ptr<UContextBase> &wPtr, int event);
-    void RemoveListener(const std::weak_ptr<UContextBase> &wPtr);
+    void RemoveListenEvent(const FContextHandle &handle, int event);
+    void RemoveListener(const FContextHandle &handle);
 
 private:
     AListenerMap mListenerMap;

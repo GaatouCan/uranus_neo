@@ -104,7 +104,7 @@ void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<IP
 
     if (const auto target = module->FindService(name)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-            __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
+            __FUNCTION__, GetServiceID(), GetServiceName(), static_cast<int>(target->GetServiceID()), target->GetServiceName());
 
         pkg->SetSource(GetServiceID());
         pkg->SetTarget(target->GetServiceID());
@@ -147,7 +147,7 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
 
     if (const auto target = module->FindService(name)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
-            __FUNCTION__, GetServiceID(), GetServiceName(), target->GetServiceID(), target->GetServiceName());
+            __FUNCTION__, GetServiceID(), GetServiceName(), static_cast<int>(target->GetServiceID()), target->GetServiceName());
 
         target->PushTask(task);
     }

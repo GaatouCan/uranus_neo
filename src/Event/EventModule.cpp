@@ -1,7 +1,6 @@
 #include "EventModule.h"
-#include "Server.h"
 #include "ContextBase.h"
-#include "Utils.h"
+#include "Server.h"
 
 #include <ranges>
 
@@ -22,50 +21,55 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
         return;
 
     for (auto it = iter->second.begin(); it != iter->second.end();) {
-        if (const auto ctx = it->lock()) {
-            ctx->PushEvent(event);
+        if (it->IsValid()) {
+            it->Get()->PushEvent(event);
             ++it;
             continue;
         }
 
+        // If The Handle Expired, Erase It
         it = iter->second.erase(it);
     }
 }
 
-void UEventModule::ListenEvent(const std::weak_ptr<UContextBase> &wPtr, const int event) {
+void UEventModule::ListenEvent(const FContextHandle &handle, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
-    if (wPtr.expired() || event < 0)
+    if (!handle.IsValid() || event < 0)
         return;
 
     std::unique_lock lock(mListenerMutex);
-    utils::CleanUpWeakPointerSet(mListenerMap[event]);
-    mListenerMap[event].emplace(wPtr);
+    mListenerMap[event].emplace(handle);
 }
 
-void UEventModule::RemoveListenEvent(const std::weak_ptr<UContextBase> &wPtr, const int event) {
+void UEventModule::RemoveListenEvent(const FContextHandle &handle, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
-    if (wPtr.expired() || event < 0)
+    if (handle < 0 || event < 0)
         return;
 
     std::unique_lock lock(mListenerMutex);
-    utils::CleanUpWeakPointerSet(mListenerMap[event]);
-    mListenerMap[event].erase(wPtr);
+    const auto iter = mListenerMap.find(event);
+    if (iter == mListenerMap.end())
+        return;
 
-    if (mListenerMap[event].empty())
-        mListenerMap.erase(event);
+    iter->second.erase(handle);
+
+    if (iter->second.empty())
+        mListenerMap.erase(iter);
 }
 
-void UEventModule::RemoveListener(const std::weak_ptr<UContextBase> &wPtr) {
-    if (wPtr.expired() || mState < EModuleState::INITIALIZED)
+void UEventModule::RemoveListener(const FContextHandle &handle) {
+    if (mState < EModuleState::INITIALIZED)
+        return;
+
+    if (handle < 0)
         return;
 
     std::unique_lock lock(mListenerMutex);
     for (auto &val: mListenerMap | std::views::values) {
-        utils::CleanUpWeakPointerSet(val);
-        val.erase(wPtr);
+        val.erase(handle);
     }
 }

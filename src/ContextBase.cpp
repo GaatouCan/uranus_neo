@@ -224,7 +224,7 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     // Do Something While Shutdown
     {
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-            module->CancelTimer(weak_from_this());
+            module->CancelTimer(GenerateHandle());
         }
     }
 
@@ -317,7 +317,7 @@ bool UContextBase::BootService() {
 
     if (mService->bUpdatePerTick) {
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-            module->AddTicker(weak_from_this());
+            module->AddTicker(GenerateHandle());
         }
     }
 
@@ -425,7 +425,7 @@ int64_t UContextBase::CreateTimer(const std::function<void(IServiceBase *)> &tas
     if (module == nullptr)
         return 0;
 
-    return module->CreateTimer(weak_from_this(), task, delay, rate);
+    return module->CreateTimer(GenerateHandle(), task, delay, rate);
 }
 
 void UContextBase::CancelTimer(const int64_t tid) const {
@@ -447,7 +447,7 @@ void UContextBase::ListenEvent(const int event) {
     if (module == nullptr)
         return;
 
-    module->ListenEvent(weak_from_this(), event);
+    module->ListenEvent(GenerateHandle(), event);
 }
 
 void UContextBase::RemoveListener(const int event) {
@@ -458,7 +458,7 @@ void UContextBase::RemoveListener(const int event) {
     if (module == nullptr)
         return;
 
-    module->RemoveListenEvent(weak_from_this(), event);
+    module->RemoveListenEvent(GenerateHandle(), event);
 }
 
 void UContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const {

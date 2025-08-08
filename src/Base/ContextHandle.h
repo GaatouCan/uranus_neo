@@ -41,7 +41,7 @@ struct BASE_API FContextHandle {
         return sid.IsValid() && !wPtr.expired();
     }
 
-    [[nodiscard]] shared_ptr<UContextBase> Get() const {
+    [[nodiscard]] std::shared_ptr<UContextBase> Get() const {
         return wPtr.lock();
     }
 
