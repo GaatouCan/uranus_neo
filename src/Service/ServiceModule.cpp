@@ -244,10 +244,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
     co_spawn(GetServer()->GetIOContext(), [this, context, sid, data, filename, func = __FUNCTION__]() mutable -> awaitable<void> {
         if (const auto ret = co_await context->AsyncInitial(data); !ret) {
             SPDLOG_ERROR("{:<20} - Failed To Initial Service[{}]", func, filename);
-
             context->ForceShutdown();
-            mAllocator.RecycleTS(sid);
-
             co_return;
         }
 
@@ -284,7 +281,7 @@ void UServiceModule::BootExtendService(const std::string &filename, const IDataA
 
         // If Not Unique, Service Force To Shut Down And Recycle The Service ID
         context->ForceShutdown();
-        mAllocator.RecycleTS(sid);
+        // mAllocator.RecycleTS(sid);
     }, detached);
 }
 
@@ -304,7 +301,6 @@ void UServiceModule::ShutdownService(const FServiceHandle sid) {
 
     if (context == nullptr || context->GetServiceID() == INVALID_SERVICE_ID) {
         SPDLOG_ERROR("{:<20} - Can't Find Service[{}]", __FUNCTION__, static_cast<int>(sid));
-        mAllocator.RecycleTS(sid);
         return;
     }
 
@@ -321,7 +317,7 @@ void UServiceModule::ShutdownService(const FServiceHandle sid) {
         case EServiceType::EXTEND: {
             auto func = [this, sid, filename = context->GetFilename()](UContextBase *) {
                 OnServiceShutdown(filename, sid, EServiceType::EXTEND);
-                mAllocator.RecycleTS(sid);
+                // mAllocator.RecycleTS(sid);
             };
 
             // Try To Shut Down Service In 5 Seconds, If Timeout, Force Shut Down It

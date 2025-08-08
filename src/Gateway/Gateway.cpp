@@ -20,13 +20,22 @@ UGateway::~UGateway() {
 }
 
 void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
-    if (mState != EModuleState::RUNNING)
+    if (mState != EModuleState::RUNNING || GetServer() == nullptr)
+        return;
+
+    auto *module = GetServer()->GetModule<UServiceModule>();
+    if (module == nullptr)
+        return;
+
+    const auto sid = module->AcquireServiceID();
+    if (sid < 0)
         return;
 
     const auto agent = make_shared<UAgentContext>();
 
     agent->SetUpModule(this);
     agent->SetUpLibrary(mLibrary);
+    agent->SetUpServiceID(sid);
     agent->SetPlayerID(pid);
     agent->SetConnectionID(cid);
 
@@ -53,12 +62,10 @@ void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
 }
 
 void UGateway::OnPlayerLogout(const int64_t pid) {
-    if (mState != EModuleState::RUNNING)
+    if (mState != EModuleState::RUNNING || GetServer() == nullptr)
         return;
 
-    shared_ptr<UAgentContext> agent;
-
-    {
+    shared_ptr<UAgentContext> agent; {
         std::unique_lock lock(mMutex);
 
         const auto iter = mPlayerMap.find(pid);

@@ -1,7 +1,8 @@
 #include "ContextBase.h"
 #include "ServiceBase.h"
 #include "Server.h"
-#include "DataAsset.h"
+#include "Base/DataAsset.h"
+#include "Service/ServiceModule.h"
 #include "Network/Network.h"
 #include "Base/Package.h"
 #include "Event/EventModule.h"
@@ -223,8 +224,17 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     // Do Something While Shutdown
     {
+        if (auto *module = GetServer()->GetModule<UServiceModule>()) {
+            module->RecycleServiceID(mServiceID);
+        }
+
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
             module->CancelTimer(GenerateHandle());
+            module->RemoveTicker(GenerateHandle());
+        }
+
+        if (auto *module = GetServer()->GetModule<UEventModule>()) {
+            module->RemoveListener(GenerateHandle());
         }
     }
 
@@ -235,6 +245,8 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
         mShutdownTimer = make_unique<ASteadyTimer>(GetServer()->GetIOContext());
         if (func != nullptr)
             mShutdownCallback = func;
+
+        second = second <= 0 ? 5 : second;
 
         // Spawn Coroutine For Waiting To Force Shut Down
         co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), second]() -> awaitable<void> {
@@ -281,7 +293,7 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     mState = EContextState::STOPPED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",
-                 __FUNCTION__, static_cast<void *>(this), name);
+        __FUNCTION__, static_cast<void *>(this), name);
 
     if (mShutdownCallback) {
         std::invoke(mShutdownCallback, this);

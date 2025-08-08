@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DataAsset.h"
+#include "../Base/DataAsset.h"
 
 struct BASE_API IDBContext_Interface : IDataAsset_Interface {
 

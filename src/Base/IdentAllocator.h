@@ -1,6 +1,6 @@
 #pragma once
 
-#include <queue>
+#include <unordered_set>
 #include <atomic>
 #include <mutex>
 
@@ -23,7 +23,7 @@ public:
     Type GetUsage() const;
 
 private:
-    std::queue<Type> mQueue;
+    std::unordered_set<Type> mHashSet;
     AAllocatorMutex mMutex;
     AIntegralType mNext;
     AIntegralType mUsage;
@@ -33,17 +33,17 @@ template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
 inline Type TIdentAllocator<Type, bConcurrent>::AllocateTS() {
     if constexpr (bConcurrent) {
         std::unique_lock lock(mMutex);
-        if (!mQueue.empty()) {
-            const auto res = mQueue.front();
-            mQueue.pop();
+        if (const auto iter = mHashSet.begin(); iter != mHashSet.end()) {
+            const auto res = *iter;
+            mHashSet.erase(iter);
 
             ++mUsage;
             return res;
         }
     } else {
-        if (!mQueue.empty()) {
-            const auto res = mQueue.front();
-            mQueue.pop();
+        if (const auto iter = mHashSet.begin(); iter != mHashSet.end()) {
+            const auto res = *iter;
+            mHashSet.erase(iter);
 
             ++mUsage;
             return res;
@@ -56,9 +56,9 @@ inline Type TIdentAllocator<Type, bConcurrent>::AllocateTS() {
 
 template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
 Type TIdentAllocator<Type, bConcurrent>::Allocate() {
-    if (!mQueue.empty()) {
-        const auto res = mQueue.front();
-        mQueue.pop();
+    if (const auto iter = mHashSet.begin(); iter != mHashSet.end()) {
+        const auto res = *iter;
+        mHashSet.erase(iter);
 
         ++mUsage;
         return res;
@@ -72,9 +72,9 @@ template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
 inline void TIdentAllocator<Type, bConcurrent>::RecycleTS(Type id) {
     if constexpr (bConcurrent) {
         std::unique_lock lock(mMutex);
-        mQueue.push(id);
+        mHashSet.emplace(id);
     } else {
-        mQueue.push(id);
+        mHashSet.emplace(id);
     }
 
     --mUsage;
@@ -87,7 +87,7 @@ inline void TIdentAllocator<Type, bConcurrent>::RecycleTS(Type id) {
 
 template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
 inline void TIdentAllocator<Type, bConcurrent>::Recycle(Type id) {
-    mQueue.push(id);
+    mHashSet.emplace(id);
 
     --mUsage;
     if constexpr (bConcurrent) {

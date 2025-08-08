@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Module.h"
-#include "ConcurrentDeque.h"
+#include "../Base/ConcurrentDeque.h"
 #include "DBAdapterBase.h"
 
 #include <thread>

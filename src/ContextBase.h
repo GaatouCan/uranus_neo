@@ -36,6 +36,7 @@ class BASE_API UContextBase : public std::enable_shared_from_this<UContextBase> 
         virtual ~ISchedule_Interface() = default;
 
         DISABLE_COPY_MOVE(ISchedule_Interface)
+
         virtual void Execute(IServiceBase *pService) = 0;
     };
 
@@ -83,7 +84,7 @@ class BASE_API UContextBase : public std::enable_shared_from_this<UContextBase> 
     };
 #pragma endregion
 
-    using AContextChannel = TConcurrentChannel<void(std::error_code, std::unique_ptr<ISchedule_Interface>)>;
+    using AContextChannel = TConcurrentChannel<void(std::error_code, unique_ptr<ISchedule_Interface>)>;
 
 public:
     UContextBase();
