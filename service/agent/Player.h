@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Gateway/PlayerBase.h>
+#include "ComponentModule.h"
+
+#include <Gateway/PlayerAgent.h>
 #include <Base/ProtocolRoute.h>
 #include <Config/ConfigManager.h>
 #include <Internal/Packet.h>
@@ -8,7 +10,7 @@
 #include <functional>
 
 
-class UPlayer final : public UPlayerBase {
+class UPlayer final : public IPlayerAgent {
 
     using AProtocolFunctor = std::function<void(uint32_t, const std::shared_ptr<FPacket>&, UPlayer *)>;
 
@@ -20,6 +22,14 @@ public:
 
     void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) override;
 
+    UComponentModule &GetComponentModule();
+
+    template<CComponentType Type>
+    Type *CreateComponent();
+
+    template<CComponentType Type>
+    Type *GetComponent() const;
+
     template<class T>
     requires std::derived_from<T, ILogicConfig_Interface>
     T *GetLogicConfig() const;
@@ -28,10 +38,20 @@ private:
     void LoadProtocol();
 
 private:
+    UComponentModule mComponentModule;
     TProtocolRoute<FPacket, AProtocolFunctor> mRoute;
-
     UConfigManager mConfig;
 };
+
+template<CComponentType Type>
+inline Type *UPlayer::CreateComponent() {
+    return mComponentModule.CreateComponent<Type>();
+}
+
+template<CComponentType Type>
+inline Type *UPlayer::GetComponent() const {
+    return mComponentModule.GetComponent<Type>();
+}
 
 template<class T> requires std::derived_from<T, ILogicConfig_Interface>
 inline T *UPlayer::GetLogicConfig() const {

@@ -3,9 +3,9 @@
 #include <Config/Config.h>
 
 UPlayer::UPlayer() {
-    LoadProtocol();
-
+    mComponentModule.SetUpPlayer(this);
     mConfig.LoadConfig(GetModule<UConfig>());
+    LoadProtocol();
 }
 
 UPlayer::~UPlayer() {
@@ -24,6 +24,10 @@ void UPlayer::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
         return;
 
     mRoute.OnReceivePackage(pkt, this);
+}
+
+UComponentModule &UPlayer::GetComponentModule() {
+    return mComponentModule;
 }
 
 extern "C" {

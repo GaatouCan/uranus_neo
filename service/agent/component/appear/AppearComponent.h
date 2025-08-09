@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gateway/PlayerComponent.h"
+#include "../../PlayerComponent.h"
 
 #include <vector>
 
@@ -11,13 +11,19 @@ struct FAvatarInfo {
 
 class UAppearComponent final : public IPlayerComponent {
 
-    DECLARE_COMPONENT("appear", 1)
+    DECLARE_COMPONENT(UAppearComponent)
 
 public:
     UAppearComponent();
     ~UAppearComponent() override;
 
-    COMPONENT_SERIALIZATION
+    [[nodiscard]] constexpr const char *GetComponentName() const override {
+        return "Appear";
+    }
+
+    [[nodiscard]] constexpr int GetComponentVersion() const override {
+        return 1;
+    }
 
 private:
     int mCurrentIndex;
