@@ -11,6 +11,19 @@ UPlayer::UPlayer() {
 UPlayer::~UPlayer() {
 }
 
+bool UPlayer::Start() {
+    if (!IPlayerAgent::Start())
+        return false;
+
+    mComponentModule.OnLogin();
+    return true;
+}
+
+void UPlayer::Stop() {
+    IPlayerAgent::Stop();
+    mComponentModule.OnLogout();
+}
+
 void UPlayer::RegisterProtocol(const uint32_t id, const AProtocolFunctor &func) {
     mRoute.Register(id, func);
 }

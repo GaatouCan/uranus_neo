@@ -18,6 +18,9 @@ public:
     UPlayer();
     ~UPlayer() override;
 
+    bool Start() override;
+    void Stop() override;
+
     void RegisterProtocol(uint32_t id, const AProtocolFunctor &func);
 
     void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) override;
