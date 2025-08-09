@@ -117,14 +117,17 @@ public:
     [[nodiscard]] IServiceBase *GetOwningService() const;
     [[nodiscard]] EContextState GetState() const;
 
+#pragma region Push
     void PushPackage(const shared_ptr<IPackage_Interface> &pkg);
     void PushTask(const std::function<void(IServiceBase *)> &task);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
+#pragma endregion
 
 #pragma region Timer
     int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
     void CancelTimer(int64_t tid) const;
+    void CancelAllTimers();
 #pragma endregion
 
 #pragma region Event

@@ -55,9 +55,11 @@ private:
     void RemoveTimer(int64_t tid);
 
 private:
+#pragma region Timer
     TIdentAllocator<int64_t, true> mAllocator;
     ATimerMap mTimerMap;
     mutable std::shared_mutex mTimerMutex;
+#pragma endregion
 
 #pragma region Update
     std::unique_ptr<ASteadyTimer> mTickTimer;

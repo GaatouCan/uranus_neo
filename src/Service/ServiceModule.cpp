@@ -334,6 +334,8 @@ FServiceHandle UServiceModule::AcquireServiceID() {
 }
 
 void UServiceModule::RecycleServiceID(const FServiceHandle id) {
+    if (id <= 0)
+        return;
     mAllocator.RecycleTS(id);
 }
 

@@ -4,8 +4,6 @@
 #include "Service/ServiceModule.h"
 #include "Service/ServiceContext.h"
 #include "Gateway/Gateway.h"
-#include "Event/EventModule.h"
-#include "Timer/TimerModule.h"
 #include "Logger/LoggerModule.h"
 
 #include <spdlog/spdlog.h>
@@ -204,49 +202,56 @@ void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<IPackage_Inte
     }
 }
 
-// void IServiceBase::ListenEvent(const int event) const {
-//     if (auto *module = GetModule<UEventModule>()) {
-//         module->ListenEvent(event, GetServiceID());
-//     }
-// }
-//
-// void IServiceBase::RemoveListener(const int event) const {
-//     if (auto *module = GetModule<UEventModule>()) {
-//         module->RemoveListener(event, GetServiceID());
-//     }
-// }
-//
-// void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
-//     if (auto *module = GetModule<UEventModule>()) {
-//         module->Dispatch(event);
-//     }
-// }
+void IServiceBase::ListenEvent(const int event) const {
+    if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
+        return;
 
-// FTimerHandle IServiceBase::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-//     if (auto *timer = GetModule<UTimerModule>()) {
-//         return timer->SetSteadyTimer(GetServiceID(), -1, task, delay, rate);
-//     }
-//
-//     return { -1, true };
-// }
-//
-// FTimerHandle IServiceBase::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-//     if (auto *timer = GetModule<UTimerModule>()) {
-//         return timer->SetSystemTimer(GetServiceID(), -1, task, delay, rate);
-//     }
-//
-//     return { -1, false };
-// }
+    if (mContext == nullptr)
+        return;
 
-// void IServiceBase::CancelTimer(const FTimerHandle &handle) {
-//     if (auto *timer = GetModule<UTimerModule>()) {
-//         if (handle.id > 0) {
-//             timer->CancelTimer(handle);
-//         } else {
-//             timer->CancelServiceTimer(GetServiceID());
-//         }
-//     }
-// }
+    mContext->ListenEvent(event);
+}
+
+void IServiceBase::RemoveListener(const int event) const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->RemoveListener(event);
+}
+
+void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
+    if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
+        return;
+
+    if (mContext == nullptr)
+        return;
+
+    mContext->DispatchEvent(event);
+}
+
+int64_t IServiceBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
+    if (mState == EServiceState::INITIALIZED || mState == EServiceState::TERMINATED)
+        return -1;
+
+    if (mContext == nullptr)
+        return -1;
+
+    return mContext->CreateTimer(task, delay, rate);
+}
+
+void IServiceBase::CancelTimer(const int64_t tid) const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->CancelTimer(tid);
+}
+
+void IServiceBase::CancelAllTimers() const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->CancelAllTimers();
+}
 
 void IServiceBase::TryCreateLogger(const std::string &name) const {
     if (mState <= EServiceState::CREATED || mState >= EServiceState::TERMINATED)

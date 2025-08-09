@@ -2,6 +2,7 @@
 
 #include "Server.h"
 #include "Base/Types.h"
+#include "Base/EventParam.h"
 
 #include <string>
 
@@ -9,7 +10,6 @@
 class UContextBase;
 class IDataAsset_Interface;
 class IPackage_Interface;
-class IEventParam_Interface;
 
 
 enum class EServiceState {
@@ -88,16 +88,21 @@ public:
 
     virtual void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
-// #pragma region Event
-//     virtual void ListenEvent(int event) const;
-//     virtual void RemoveListener(int event) const;
-//
-//     void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
-//
-//     template<CEventType Type, class ... Args>
-//     void DispatchEventT(Args && ... args) const;
-// #pragma endregion
+#pragma region Event
+    virtual void ListenEvent(int event) const;
+    virtual void RemoveListener(int event) const;
 
+    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
+
+    template<CEventType Type, class ... Args>
+    void DispatchEventT(Args && ... args) const;
+#pragma endregion
+
+#pragma region Timer
+    [[nodiscard]] int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1) const;
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers() const;
+#pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
 
@@ -152,8 +157,8 @@ inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...
     this->PostToPlayer(pid, task);
 }
 
-// template<CEventType Type, class ... Args>
-// inline void IServiceBase::DispatchEventT(Args &&...args) const {
-//     auto event = std::make_shared<Type>(std::forward<Args>(args)...);
-//     this->DispatchEvent(event);
-// }
+template<CEventType Type, class ... Args>
+inline void IServiceBase::DispatchEventT(Args &&...args) const {
+    auto event = std::make_shared<Type>(std::forward<Args>(args)...);
+    this->DispatchEvent(event);
+}

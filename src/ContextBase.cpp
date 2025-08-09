@@ -453,6 +453,15 @@ void UContextBase::CancelTimer(const int64_t tid) const {
     module->CancelTimer(tid);
 }
 
+void UContextBase::CancelAllTimers() {
+    if (mState < EContextState::INITIALIZED || GetServer() == nullptr)
+        return;
+
+    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+        module->CancelTimer(GenerateHandle());
+    }
+}
+
 void UContextBase::ListenEvent(const int event) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
         return;
