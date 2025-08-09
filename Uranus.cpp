@@ -10,7 +10,6 @@
 #include <Gateway/Gateway.h>
 #include <Network/Network.h>
 #include <Internal/CodecFactory.h>
-#include <Database/Mongo/MongoAdapter.h>
 #include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
@@ -38,9 +37,9 @@ int main() {
     server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
 
-    if (auto *dataAccess = server->CreateModule<UDataAccess>(); dataAccess != nullptr) {
-        dataAccess->SetDatabaseAdapter<UMongoAdapter>();
-    }
+    // if (auto *dataAccess = server->CreateModule<UDataAccess>(); dataAccess != nullptr) {
+    //     dataAccess->SetDatabaseAdapter<UMongoAdapter>();
+    // }
 
     server->CreateModule<UServiceModule>();
     server->CreateModule<UGateway>();

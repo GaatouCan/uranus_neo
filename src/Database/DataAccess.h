@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Module.h"
-#include "../Base/ConcurrentDeque.h"
+#include "Base/ConcurrentDeque.h"
 #include "DBAdapterBase.h"
 
 #include <thread>
 #include <vector>
+#include <functional>
+#include <yaml-cpp/yaml.h>
 
 
 class IDBTaskBase;
@@ -33,6 +35,8 @@ public:
     requires std::derived_from<Type, IDBAdapterBase>
     void SetDatabaseAdapter();
 
+    void SetStartUpConfig(const std::function<IDataAsset_Interface *(const YAML::Node &)> &func);
+
     [[nodiscard]] IDBAdapterBase *GetAdapter() const;
 
 private:
@@ -48,6 +52,8 @@ private:
 
     std::vector<FWorkerNode> mWorkerList;
     std::atomic_size_t mNextIndex;
+
+    std::function<IDataAsset_Interface *(const YAML::Node &)> mInitConfig;
 };
 
 

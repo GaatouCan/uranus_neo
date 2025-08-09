@@ -1,7 +1,8 @@
 #include "DataAccess.h"
 #include "DBTaskBase.h"
 #include "DBContext.h"
-#include "Database/Mongo/MongoStartUpData.h"
+#include "Server.h"
+#include "Config/Config.h"
 
 #include <spdlog/spdlog.h>
 
@@ -14,13 +15,13 @@ void UDataAccess::Initial() {
         return;
 
     assert(mAdapter != nullptr);
+    assert(mInitConfig != nullptr);
 
-    // FIXME: Create Other StartUp Data
-    FMongoStartUpData stratUp;
-    stratUp.mUri = "mongodb://username:12345678@localhost:27017/demo?maxPoolSize=10";
-    stratUp.mDatabaseName = "demo";
+    const auto *module = GetServer()->GetModule<UConfig>();
+    assert(module != nullptr);
 
-    mAdapter->Initial(&stratUp);
+    const auto *startUp = std::invoke(mInitConfig, module->GetServerConfig());
+    mAdapter->Initial(startUp);
 
     mWorkerList = std::vector<FWorkerNode>(2);
     for (auto &worker: mWorkerList) {
@@ -46,6 +47,7 @@ void UDataAccess::Initial() {
         });
     }
 
+    delete startUp;
     mState = EModuleState::INITIALIZED;
 }
 
@@ -68,6 +70,10 @@ UDataAccess::~UDataAccess() {
             thread.join();
         }
     }
+}
+
+void UDataAccess::SetStartUpConfig(const std::function<IDataAsset_Interface *(const YAML::Node &)> &func) {
+    mInitConfig = func;
 }
 
 IDBAdapterBase *UDataAccess::GetAdapter() const {
