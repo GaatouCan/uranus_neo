@@ -15,6 +15,7 @@ typedef IServiceBase *(*AServiceCreator)();
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
+#pragma region Schedule
 void UContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
     mPackage = pkg;
 }
@@ -62,6 +63,7 @@ void UContextBase::UTickerNode::Execute(IServiceBase *pService) {
         pService->OnUpdate(mTickTime, mDeltaTime);
     }
 }
+#pragma endregion
 
 UContextBase::UContextBase()
     : mModule(nullptr),
