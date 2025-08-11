@@ -17,11 +17,13 @@ public:
         return "Game World";
     }
 
-    bool Initial(const IDataAsset_Interface *data) override;
+    awaitable<bool> AsyncInitial(const IDataAsset_Interface *data) override;
     bool Start() override;
     void Stop() override;
 
     void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) override;
+    void OnEvent(const std::shared_ptr<IEventParam_Interface> &event) override;
+    void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) override;
 
 private:
 

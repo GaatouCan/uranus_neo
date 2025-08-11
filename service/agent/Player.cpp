@@ -3,6 +3,8 @@
 #include <Config/Config.h>
 
 UPlayer::UPlayer() {
+    bUpdatePerTick = false;
+
     mComponentModule.SetUpPlayer(this);
     mConfig.LoadConfig(GetModule<UConfig>());
     LoadProtocol();

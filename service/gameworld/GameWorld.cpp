@@ -3,15 +3,27 @@
 
 
 UGameWorld::UGameWorld() {
+    bUpdatePerTick = true;
 
 }
 
 UGameWorld::~UGameWorld() {
 }
 
-bool UGameWorld::Initial(const IDataAsset_Interface *data) {
-    IServiceBase::Initial(data);
-    return true;
+
+awaitable<bool> UGameWorld::AsyncInitial(const IDataAsset_Interface *data) {
+    if (const auto ret = co_await IServiceBase::AsyncInitial(data); !ret)
+        co_return false;
+
+    co_return true;
+}
+
+void UGameWorld::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {
+    IServiceBase::OnEvent(event);
+}
+
+void UGameWorld::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
+    IServiceBase::OnUpdate(now, delta);
 }
 
 bool UGameWorld::Start() {
@@ -27,10 +39,12 @@ void UGameWorld::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
 
 }
 
-extern "C" SERVICE_API IServiceBase *CreateInstance() {
-    return new UGameWorld();
-}
+extern "C" {
+    SERVICE_API IServiceBase *CreateInstance() {
+        return new UGameWorld();
+    }
 
-extern "C" SERVICE_API void DestroyInstance(IServiceBase *service) {
-    delete dynamic_cast<UGameWorld *>(service);
+    SERVICE_API void DestroyInstance(IServiceBase *service) {
+        delete dynamic_cast<UGameWorld *>(service);
+    }
 }
