@@ -50,6 +50,7 @@ public:
     [[nodiscard]] size_t GetIdle() const;
     [[nodiscard]] size_t GetCapacity() const;
 
+private:
     void Recycle(IRecycle_Interface *pElem);
 };
 
