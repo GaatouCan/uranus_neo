@@ -420,8 +420,8 @@ void UContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDur
     if (GetServer() == nullptr)
         return;
 
-    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
-                 __FUNCTION__, static_cast<const void *>(this), GetServiceName());
+    // SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
+    //              __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
     auto node = make_unique<UTickerNode>();
     node->SetCurrentTickTime(timepoint);
