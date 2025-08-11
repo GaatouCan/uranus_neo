@@ -262,7 +262,9 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     mState = EContextState::SHUTTING_DOWN;
 
-    mShutdownTimer->cancel();
+    if (mShutdownTimer)
+        mShutdownTimer->cancel();
+
     mChannel->close();
 
     const std::string name = GetServiceName();
@@ -279,7 +281,7 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
     if (destroyer == nullptr) {
-        // SPDLOG_ERROR("{:<20} - Can't Load Destroyer, Path[{}]", __FUNCTION__, mHandle->GetPath());
+        SPDLOG_ERROR("{:<20} - Can't Load Destroyer", __FUNCTION__);
         mState = EContextState::STOPPED;
         return -3;
     }
