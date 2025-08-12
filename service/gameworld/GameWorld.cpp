@@ -1,5 +1,5 @@
 #include "GameWorld.h"
-#include <Config/Config.h>
+#include <config/Config.h>
 
 
 UGameWorld::UGameWorld() {

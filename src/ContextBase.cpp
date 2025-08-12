@@ -1,12 +1,12 @@
 #include "ContextBase.h"
 #include "ServiceBase.h"
 #include "Server.h"
-#include "Base/DataAsset.h"
-#include "Service/ServiceModule.h"
-#include "Network/Network.h"
-#include "Base/Package.h"
-#include "Event/EventModule.h"
-#include "Timer/TimerModule.h"
+#include "base/DataAsset.h"
+#include "service/ServiceModule.h"
+#include "network/Network.h"
+#include "base/Package.h"
+#include "event/EventModule.h"
+#include "timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
 

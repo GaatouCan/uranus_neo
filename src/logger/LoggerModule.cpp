@@ -1,6 +1,6 @@
 #include "LoggerModule.h"
 #include "Server.h"
-#include "Config/Config.h"
+#include "config/Config.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/daily_file_sink.h>

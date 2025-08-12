@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Module.h"
-#include "Base/Types.h"
-#include "Base/ContextHandle.h"
-#include "Base/IdentAllocator.h"
+#include "base/Types.h"
+#include "base/ContextHandle.h"
+#include "base/IdentAllocator.h"
 
 #include <functional>
 #include <unordered_map>

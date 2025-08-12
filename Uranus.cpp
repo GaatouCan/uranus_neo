@@ -1,15 +1,15 @@
 #include <Server.h>
-#include <Config/Config.h>
-#include <Login/LoginAuth.h>
-#include <Event/EventModule.h>
-#include <Timer/TimerModule.h>
-#include <Logger/LoggerModule.h>
-#include <Monitor/Monitor.h>
-#include <Database/DataAccess.h>
-#include <Service/ServiceModule.h>
-#include <Gateway/Gateway.h>
-#include <Network/Network.h>
-#include <Internal/CodecFactory.h>
+#include <config/Config.h>
+#include <login/LoginAuth.h>
+#include <event/EventModule.h>
+#include <timer/TimerModule.h>
+#include <logger/LoggerModule.h>
+#include <monitor/Monitor.h>
+#include <database/DataAccess.h>
+#include <service/ServiceModule.h>
+#include <gateway/Gateway.h>
+#include <network/Network.h>
+#include <internal/CodecFactory.h>
 #include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>

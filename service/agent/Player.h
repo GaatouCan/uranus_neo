@@ -2,10 +2,10 @@
 
 #include "ComponentModule.h"
 
-#include <Gateway/PlayerAgent.h>
-#include <Base/ProtocolRoute.h>
-#include <Config/ConfigManager.h>
-#include <Internal/Packet.h>
+#include <gateway/PlayerAgent.h>
+#include <base/ProtocolRoute.h>
+#include <config/ConfigManager.h>
+#include <internal/Packet.h>
 
 #include <functional>
 

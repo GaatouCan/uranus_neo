@@ -1,11 +1,11 @@
 #include "Network.h"
-#include "Base/CodecFactory.h"
-#include "Base/Package.h"
+#include "base/CodecFactory.h"
+#include "base/Package.h"
 #include "Connection.h"
 #include "Server.h"
-#include "Config/Config.h"
-#include "Login/LoginAuth.h"
-#include "Monitor/Monitor.h"
+#include "config/Config.h"
+#include "login/LoginAuth.h"
+#include "monitor/Monitor.h"
 #include "Utils.h"
 
 #include <spdlog/spdlog.h>

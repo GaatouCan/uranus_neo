@@ -2,11 +2,11 @@
 #include "AgentContext.h"
 #include "PlayerAgent.h"
 #include "Server.h"
-#include "Base/Package.h"
-#include "Network/Network.h"
-#include "Service/ServiceModule.h"
-#include "Service/ServiceContext.h"
-#include "Login/LoginAuth.h"
+#include "base/Package.h"
+#include "network/Network.h"
+#include "service/ServiceModule.h"
+#include "service/ServiceContext.h"
+#include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>

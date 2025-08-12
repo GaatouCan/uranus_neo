@@ -2,10 +2,10 @@
 #include "AgentContext.h"
 #include "Gateway.h"
 #include "Server.h"
-#include "Base/Package.h"
-#include "Timer/TimerModule.h"
-#include "Network/Network.h"
-#include "Event/EventModule.h"
+#include "base/Package.h"
+#include "timer/TimerModule.h"
+#include "network/Network.h"
+#include "event/EventModule.h"
 
 #include <spdlog/spdlog.h>
 

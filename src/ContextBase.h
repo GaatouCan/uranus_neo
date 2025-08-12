@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Base/Types.h"
-#include "Base/SharedLibrary.h"
-#include "Base/ContextHandle.h"
+#include "base/Types.h"
+#include "base/SharedLibrary.h"
+#include "base/ContextHandle.h"
 
 
 class IServiceBase;

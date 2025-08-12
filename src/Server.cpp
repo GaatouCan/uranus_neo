@@ -1,6 +1,6 @@
 #include "Server.h"
 #include "Utils.h"
-#include "Config/Config.h"
+#include "config/Config.h"
 
 #include <filesystem>
 #include <spdlog/spdlog.h>

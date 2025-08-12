@@ -1,6 +1,6 @@
 #include "Player.h"
 
-#include <Config/Config.h>
+#include <config/Config.h>
 
 UPlayer::UPlayer() {
     bUpdatePerTick = false;

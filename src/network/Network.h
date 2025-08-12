@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Module.h"
-#include "Base/CodecFactory.h"
-#include "Base/Recycler.h"
+#include "base/CodecFactory.h"
+#include "base/Recycler.h"
 
 #include <memory>
 #include <thread>

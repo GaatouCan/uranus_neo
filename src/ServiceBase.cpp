@@ -1,10 +1,10 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
-#include "Base/Package.h"
-#include "Service/ServiceModule.h"
-#include "Service/ServiceContext.h"
-#include "Gateway/Gateway.h"
-#include "Logger/LoggerModule.h"
+#include "base/Package.h"
+#include "service/ServiceModule.h"
+#include "service/ServiceContext.h"
+#include "gateway/Gateway.h"
+#include "logger/LoggerModule.h"
 
 #include <spdlog/spdlog.h>
 

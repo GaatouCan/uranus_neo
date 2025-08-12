@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Server.h"
-#include "Base/Types.h"
-#include "Base/EventParam.h"
+#include "base/Types.h"
+#include "base/EventParam.h"
 
 #include <string>
 

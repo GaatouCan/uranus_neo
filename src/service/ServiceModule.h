@@ -2,9 +2,9 @@
 
 #include "Module.h"
 #include "ServiceType.h"
-#include "Base/SharedLibrary.h"
-#include "Base/IdentAllocator.h"
-#include "Base/ContextHandle.h"
+#include "base/SharedLibrary.h"
+#include "base/IdentAllocator.h"
+#include "base/ContextHandle.h"
 
 #include <unordered_map>
 #include <map>

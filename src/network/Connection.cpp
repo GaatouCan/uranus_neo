@@ -1,10 +1,10 @@
 #include "Connection.h"
-#include "Base/Package.h"
-#include "Base/PackageCodec.h"
+#include "base/Package.h"
+#include "base/PackageCodec.h"
 #include "Network.h"
 #include "Server.h"
-#include "Login/LoginAuth.h"
-#include "Gateway/Gateway.h"
+#include "login/LoginAuth.h"
+#include "gateway/Gateway.h"
 #include "Utils.h"
 
 #include <asio/experimental/awaitable_operators.hpp>
