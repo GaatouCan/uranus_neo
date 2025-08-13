@@ -19,11 +19,11 @@ class BASE_API UServer final {
     std::vector<std::type_index> mModuleOrder;
 #pragma endregion
 
-// #pragma region Worker
-     // asio::io_context mIOContext;
-//     asio::executor_work_guard<asio::io_context::executor_type> mWorkGuard;
-//     std::vector<std::thread> mWorkerList;
-// #pragma endregion
+#pragma region Worker
+    asio::io_context mIOContext;
+    asio::executor_work_guard<asio::io_context::executor_type> mWorkGuard;
+    std::vector<std::thread> mWorkerList;
+#pragma endregion
 
     std::atomic_bool bInitialized;
     std::atomic_bool bRunning;
@@ -35,7 +35,7 @@ public:
 
     DISABLE_COPY_MOVE(UServer)
 
-    // [[nodiscard]] asio::io_context &GetIOContext();
+    [[nodiscard]] asio::io_context &GetIOContext();
 
     template<CModuleType ModuleType, typename... Args>
     ModuleType *CreateModule(Args &&... args);
