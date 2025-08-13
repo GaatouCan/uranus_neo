@@ -128,9 +128,11 @@ void UConnection::SendPackage(const shared_ptr<IPackage_Interface> &pkg) {
     if (pkg == nullptr)
         return;
 
-    co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
-        co_await self->mChannel.async_send(std::error_code{}, pkg);
-    }, detached);
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, pkg); !ret) {
+        co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
+            co_await self->mChannel.async_send(std::error_code{}, pkg);
+        }, detached);
+    }
 }
 
 
