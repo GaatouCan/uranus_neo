@@ -45,7 +45,7 @@ FServiceHandle UServiceContext::GetOtherServiceID(const std::string &name) const
     return -13;
 }
 
-std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const FServiceHandle sid) const {
+shared_ptr<UServiceContext> UServiceContext::GetOtherService(const FServiceHandle sid) const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 
@@ -58,7 +58,7 @@ std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const FService
     return nullptr;
 }
 
-std::shared_ptr<UServiceContext> UServiceContext::GetOtherService(const std::string &name) const {
+shared_ptr<UServiceContext> UServiceContext::GetOtherService(const std::string &name) const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 

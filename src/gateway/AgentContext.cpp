@@ -36,7 +36,7 @@ UGateway *UAgentContext::GetGateway() const {
     return dynamic_cast<UGateway *>(GetOwnerModule());
 }
 
-std::shared_ptr<UAgentContext> UAgentContext::GetOtherAgent(const int64_t pid) const {
+shared_ptr<UAgentContext> UAgentContext::GetOtherAgent(const int64_t pid) const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 
@@ -50,7 +50,7 @@ std::shared_ptr<UAgentContext> UAgentContext::GetOtherAgent(const int64_t pid) c
     return nullptr;
 }
 
-void UAgentContext::OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) const {
+void UAgentContext::OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EContextState::IDLE && mState != EContextState::RUNNING)
         return;
 

@@ -24,7 +24,7 @@ public:
     // [[nodiscard]] int32_t GetServiceID() const override;
 
     [[nodiscard]] UGateway* GetGateway() const;
-    [[nodiscard]] std::shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
+    [[nodiscard]] shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
 
-    void OnHeartBeat(const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const;
 };

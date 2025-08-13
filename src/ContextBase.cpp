@@ -513,7 +513,7 @@ void UContextBase::RemoveListener(const int event) {
     module->RemoveListenEvent(GenerateHandle(), event);
 }
 
-void UContextBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const {
+void UContextBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || param == nullptr)
         return;
 

@@ -133,7 +133,7 @@ public:
 #pragma region Event
     void ListenEvent(int event);
     void RemoveListener(int event);
-    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &param) const;
+    void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
 #pragma endregion
 
 private:

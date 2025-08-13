@@ -48,7 +48,7 @@ UServer *IServiceBase::GetServer() const {
     return mContext->GetServer();
 }
 
-std::shared_ptr<IPackage_Interface> IServiceBase::BuildPackage() const {
+shared_ptr<IPackage_Interface> IServiceBase::BuildPackage() const {
     if (mState != EServiceState::RUNNING)
         return nullptr;
 
@@ -63,7 +63,7 @@ std::shared_ptr<IPackage_Interface> IServiceBase::BuildPackage() const {
     return nullptr;
 }
 
-void IServiceBase::PostPackage(const std::shared_ptr<IPackage_Interface> &pkg) const {
+void IServiceBase::PostPackage(const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -88,7 +88,7 @@ void IServiceBase::PostPackage(const std::shared_ptr<IPackage_Interface> &pkg) c
     }
 }
 
-void IServiceBase::PostPackage(const std::string &name, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void IServiceBase::PostPackage(const std::string &name, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -151,7 +151,7 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
     }
 }
 
-void IServiceBase::SendToPlayer(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void IServiceBase::SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -184,7 +184,7 @@ void IServiceBase::PostToPlayer(int64_t pid, const std::function<void(IServiceBa
     }
 }
 
-void IServiceBase::SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void IServiceBase::SendToClient(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -219,7 +219,7 @@ void IServiceBase::RemoveListener(const int event) const {
     mContext->RemoveListener(event);
 }
 
-void IServiceBase::DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const {
+void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const {
     if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
         return;
 
@@ -306,10 +306,10 @@ void IServiceBase::Stop() {
     mState = EServiceState::TERMINATED;
 }
 
-void IServiceBase::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
+void IServiceBase::OnPackage(const shared_ptr<IPackage_Interface> &pkg) {
 }
 
-void IServiceBase::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {
+void IServiceBase::OnEvent(const shared_ptr<IEventParam_Interface> &event) {
 }
 
 void IServiceBase::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
