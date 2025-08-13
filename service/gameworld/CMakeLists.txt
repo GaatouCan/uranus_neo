@@ -18,6 +18,7 @@ target_compile_definitions(gameworld PRIVATE URANUS_SERVICE)
 
 target_link_libraries(gameworld PUBLIC core)
 target_link_libraries(gameworld PUBLIC proto_static)
+target_link_libraries(gameworld PUBLIC EnTT::EnTT)
 
 target_include_directories(gameworld PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../protobuf/gen)
 target_include_directories(gameworld PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../generated)

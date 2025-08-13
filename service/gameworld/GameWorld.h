@@ -2,6 +2,7 @@
 
 #include <ServiceBase.h>
 
+#include <entt/entt.hpp>
 #include <memory>
 #include <absl/container/flat_hash_map.h>
 
@@ -26,6 +27,6 @@ public:
     void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) override;
 
 private:
-
+    entt::registry mRegistry;
 };
 
