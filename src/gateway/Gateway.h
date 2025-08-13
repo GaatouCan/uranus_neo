@@ -33,10 +33,10 @@ public:
         return "Gateway Module";
     }
 
-    void OnPlayerLogin(int64_t pid, int64_t cid);
+    void OnPlayerLogin(int64_t pid, const std::string &key);
     void OnPlayerLogout(int64_t pid);
 
-    int64_t GetConnectionID(int64_t pid) const;
+    std::string GetConnectionKey(int64_t pid) const;
     std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
 
     void SendToPlayer(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
@@ -50,7 +50,7 @@ public:
 private:
     FSharedLibrary mLibrary;
 
-    unordered_map<int64_t, int64_t> mConnToPlayer;
+    unordered_map<std::string, int64_t> mConnToPlayer;
     unordered_map<int64_t, std::shared_ptr<UAgentContext>> mPlayerMap;
 
     mutable std::shared_mutex mMutex;

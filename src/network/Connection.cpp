@@ -9,6 +9,7 @@
 
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
 
 
 using namespace asio::experimental::awaitable_operators;
@@ -22,9 +23,11 @@ UConnection::UConnection(IPackageCodec_Interface *codec)
       mWatchdog(mCodec->GetSocket().get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    mID = static_cast<int64_t>(GetSocket().native_handle());
+    // mKey = static_cast<int64_t>(GetSocket().native_handle());
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
+
+    mKey = fmt::format("{}-{}",mCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
 }
 
 void UConnection::SetUpModule(UNetwork *owner) {
@@ -81,7 +84,7 @@ void UConnection::Disconnect() {
     mWatchdog.cancel();
     GetSocket().close();
 
-    mNetwork->RemoveConnection(mID, mPlayerID);
+    mNetwork->RemoveConnection(mKey, mPlayerID);
 
     if (mPlayerID > 0) {
         if (GetServer() != nullptr) {
@@ -116,8 +119,8 @@ asio::ip::address UConnection::RemoteAddress() const {
     return {};
 }
 
-int64_t UConnection::GetConnectionID() const {
-    return mID;
+const std::string &UConnection::GetKey() const {
+    return mKey;
 }
 
 int64_t UConnection::GetPlayerID() const {
@@ -195,7 +198,7 @@ awaitable<void> UConnection::ReadPackage() {
 
                     // Handle Login Logic
                     if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-                        login->OnPlayerLogin(mID, pkg);
+                        login->OnPlayerLogin(mKey, pkg);
                     }
                 }
 
@@ -236,7 +239,7 @@ awaitable<void> UConnection::Watchdog() {
             }
 
             now = std::chrono::steady_clock::now();
-        } while ((mReceiveTime + mExpiration) > now);
+        } while (mReceiveTime + mExpiration > now);
 
         if (IsSocketOpen()) {
             SPDLOG_WARN("{:<20} - Watchdog Timeout", __FUNCTION__);

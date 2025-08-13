@@ -76,7 +76,7 @@ void IPlayerAgent::SendToClient(const std::shared_ptr<IPackage_Interface> &pkg) 
         pkg->SetSource(PLAYER_AGENT_ID);
         pkg->SetTarget(CLIENT_TARGET_ID);
 
-        network->SendToClient(dynamic_cast<UAgentContext *>(mContext)->GetConnectionID(), pkg);
+        network->SendToClient(dynamic_cast<UAgentContext *>(mContext)->GetConnectionKey(), pkg);
     }
 }
 

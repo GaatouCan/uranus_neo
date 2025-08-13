@@ -111,9 +111,14 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                 const auto conn = make_shared<UConnection>(mCodecFactory->CreatePackageCodec(std::move(socket)));
                 conn->SetUpModule(this);
 
-                if (const auto id = conn->GetConnectionID(); id > 0) {
+                if (const auto key = conn->GetKey(); !key.empty()) {
                     std::unique_lock lock(mMutex);
-                    mConnectionMap[id] = conn;
+                    if (mConnectionMap.contains(key)) {
+                        SPDLOG_WARN("{:<20} - Connection[{}] Has Already Exist.", __FUNCTION__, key);
+                        conn->Disconnect();
+                        continue;
+                    }
+                    mConnectionMap[key] = conn;
                 } else {
                     SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
                         __FUNCTION__, conn->RemoteAddress().to_string());
@@ -121,8 +126,8 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     continue;
                 }
 
-                SPDLOG_INFO("{:<20} - New Connection From {} - fd[{}]",
-                    __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetConnectionID());
+                SPDLOG_INFO("{:<20} - New Connection From {} - key[{}]",
+                    __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetKey());
 
                 conn->ConnectToClient();
 
@@ -143,22 +148,22 @@ std::shared_ptr<IPackage_Interface> UNetwork::BuildPackage() const {
     return std::dynamic_pointer_cast<IPackage_Interface>(mPackagePool->Acquire());
 }
 
-shared_ptr<UConnection> UNetwork::FindConnection(const int64_t cid) const {
+shared_ptr<UConnection> UNetwork::FindConnection(const std::string &key) const {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
     std::shared_lock lock(mMutex);
-    const auto it = mConnectionMap.find(cid);
+    const auto it = mConnectionMap.find(key);
     return it != mConnectionMap.end() ? it->second : nullptr;
 }
 
-void UNetwork::RemoveConnection(const int64_t cid, const int64_t pid) {
+void UNetwork::RemoveConnection(const std::string &key, const int64_t pid) {
     if (mState != EModuleState::RUNNING)
         return;
 
     {
         std::unique_lock lock(mMutex);
-        mConnectionMap.erase(cid);
+        mConnectionMap.erase(key);
     }
 
     if (pid > 0) {
@@ -168,34 +173,34 @@ void UNetwork::RemoveConnection(const int64_t cid, const int64_t pid) {
     }
 }
 
-void UNetwork::SendToClient(const int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::SendToClient(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
     std::shared_lock lock(mMutex);
-    if (const auto iter = mConnectionMap.find(cid); iter != mConnectionMap.end()) {
+    if (const auto iter = mConnectionMap.find(key); iter != mConnectionMap.end()) {
         if (const auto conn = iter->second) {
             conn->SendPackage(pkg);
         }
     }
 }
 
-void UNetwork::OnLoginSuccess(const int64_t cid, const int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::OnLoginSuccess(const std::string &key, const int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
-    const shared_ptr<UConnection> conn = FindConnection(cid);
+    const shared_ptr<UConnection> conn = FindConnection(key);
     if (conn == nullptr) return;
 
     conn->SetPlayerID(pid);
     conn->SendPackage(pkg);
 }
 
-void UNetwork::OnLoginFailure(const int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::OnLoginFailure(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
-    const shared_ptr<UConnection> conn = FindConnection(cid);
+    const shared_ptr<UConnection> conn = FindConnection(key);
     if (conn == nullptr) return;
 
     conn->SendPackage(pkg);

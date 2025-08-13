@@ -42,23 +42,23 @@ bool ULoginAuth::VerifyAddress(const asio::ip::tcp::endpoint &endpoint) {
     return true;
 }
 
-void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<IPackage_Interface> &pkg) {
+void ULoginAuth::OnPlayerLogin(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg) {
     if (mState != EModuleState::RUNNING)
         return;
 
     {
         std::unique_lock lock(mMutex);
-        if (const auto iter = mRecentLoginMap.find(cid); iter != mRecentLoginMap.end()) {
+        if (const auto iter = mRecentLoginMap.find(key); iter != mRecentLoginMap.end()) {
             if (std::chrono::steady_clock::now() - iter->second < std::chrono::seconds(1))
                 return;
         }
 
-        mRecentLoginMap[cid] = std::chrono::steady_clock::now();
+        mRecentLoginMap[key] = std::chrono::steady_clock::now();
     }
 
     const auto [token, pid] = mLoginHandler->ParseLoginRequest(pkg);
     if (token.empty() || pid == 0) {
-        SPDLOG_WARN("{:<20} - fd[{}] Parse Login Request Failed.", __FUNCTION__, cid);
+        SPDLOG_WARN("{:<20} - fd[{}] Parse Login Request Failed.", __FUNCTION__, key);
         return;
     }
 
@@ -69,7 +69,7 @@ void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<IPackage
         return;
     }
 
-    if (const auto exist = gateway->GetConnectionID(pid); exist != 0 && gateway->GetState() == EModuleState::RUNNING) {
+    if (const auto exist = gateway->GetConnectionKey(pid); !exist.empty() && gateway->GetState() == EModuleState::RUNNING) {
         std::string addr = "UNKNOWN";
         if (const auto conn = network->FindConnection(exist)) {
             addr = conn->RemoteAddress().to_string();
@@ -82,26 +82,26 @@ void ULoginAuth::OnPlayerLogin(const int64_t cid, const std::shared_ptr<IPackage
         response->SetSource(SERVER_SOURCE_ID);
         response->SetTarget(CLIENT_TARGET_ID);
 
-        network->OnLoginFailure(cid, response);
+        network->OnLoginFailure(key, response);
     }
 
     // TODO: Real Login Verify Logic
 
     // FIXME: Delete This When Finish Real Login Logic
-    OnLoginSuccess(cid, pid);
+    OnLoginSuccess(key, pid);
 }
 
-void ULoginAuth::OnAgentError(const int64_t cid, int64_t pid, const std::string &error) const {
+void ULoginAuth::OnAgentError(const std::string &key, int64_t pid, const std::string &error) const {
     if (const auto *network = GetServer()->GetModule<UNetwork>()) {
         // FIXME: Send A Message
-        network->OnLoginFailure(cid, nullptr);
+        network->OnLoginFailure(key, nullptr);
     }
 }
 
-void ULoginAuth::OnLoginSuccess(const int64_t cid, const int64_t pid) {
+void ULoginAuth::OnLoginSuccess(const std::string &key, const int64_t pid) {
     {
         std::unique_lock lock(mMutex);
-        mRecentLoginMap.erase(cid);
+        mRecentLoginMap.erase(key);
     }
 
     const auto *network = GetServer()->GetModule<UNetwork>();
@@ -119,8 +119,8 @@ void ULoginAuth::OnLoginSuccess(const int64_t cid, const int64_t pid) {
     response->SetSource(SERVER_SOURCE_ID);
     response->SetTarget(CLIENT_TARGET_ID);
 
-    network->OnLoginSuccess(cid, pid, response);
+    network->OnLoginSuccess(key, pid, response);
 
     // Create Player Agent In Gateway
-    gateway->OnPlayerLogin(pid, cid);
+    gateway->OnPlayerLogin(pid, key);
 }

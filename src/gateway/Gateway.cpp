@@ -19,7 +19,7 @@ UGateway::~UGateway() {
     Stop();
 }
 
-void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
+void UGateway::OnPlayerLogin(const int64_t pid, const std::string &key) {
     if (mState != EModuleState::RUNNING || GetServer() == nullptr)
         return;
 
@@ -37,9 +37,9 @@ void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
     agent->SetUpLibrary(mLibrary);
     agent->SetUpServiceID(sid);
     agent->SetPlayerID(pid);
-    agent->SetConnectionID(cid);
+    agent->SetConnectionKey(key);
 
-    co_spawn(GetServer()->GetIOContext(), [this, agent, cid, pid, func = __FUNCTION__]() -> awaitable<void> {
+    co_spawn(GetServer()->GetIOContext(), [this, agent, key, pid, func = __FUNCTION__]() -> awaitable<void> {
         if (const auto ret = co_await agent->AsyncInitial(nullptr); ret) {
             agent->BootService();
             SPDLOG_INFO("{:<20} - Player[{}] Login", func, pid);
@@ -48,13 +48,13 @@ void UGateway::OnPlayerLogin(const int64_t pid, const int64_t cid) {
             {
                 std::unique_lock lock(mMutex);
                 mPlayerMap[pid] = agent;
-                mConnToPlayer[cid] = pid;
+                mConnToPlayer[key] = pid;
             }
             co_return;
         }
 
         if (const auto *auth = GetServer()->GetModule<ULoginAuth>()) {
-            auth->OnAgentError(cid, pid, "Could Not Create Agent Service.");
+            auth->OnAgentError(key, pid, "Could Not Create Agent Service.");
         }
 
         agent->ForceShutdown();
@@ -77,28 +77,28 @@ void UGateway::OnPlayerLogout(const int64_t pid) {
         if (agent == nullptr)
             return;
 
-        mConnToPlayer.erase(agent->GetConnectionID());
+        mConnToPlayer.erase(agent->GetConnectionKey());
     }
 
     SPDLOG_INFO("{:<20} - Player[{}] Logout", __FUNCTION__, agent->GetPlayerID());
     agent->Shutdown(false, 0, nullptr);
 }
 
-int64_t UGateway::GetConnectionID(const int64_t pid) const {
+std::string UGateway::GetConnectionKey(const int64_t pid) const {
     if (mState != EModuleState::RUNNING)
-        return -1;
+        return {};
 
     std::shared_lock lock(mMutex);
 
     const auto iter = mPlayerMap.find(pid);
     if (iter == mPlayerMap.end())
-        return 0;
+        return {};
 
     if (const auto agent = iter->second) {
-        return agent->GetConnectionID();
+        return agent->GetConnectionKey();
     }
 
-    return -2;
+    return {};
 }
 
 std::shared_ptr<UAgentContext> UGateway::FindPlayerAgent(const int64_t pid) const {
@@ -200,7 +200,7 @@ void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<IPackage_In
         return;
 
     if (const auto *network = GetServer()->GetModule<UNetwork>())
-        network->SendToClient(agent->GetConnectionID(), pkg);
+        network->SendToClient(agent->GetConnectionKey(), pkg);
 }
 
 void UGateway::OnHeartBeat(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {

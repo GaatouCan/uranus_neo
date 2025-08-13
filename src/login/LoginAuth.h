@@ -36,17 +36,17 @@ public:
     void SetLoginHandler(Args && ... args);
 
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
-    void OnPlayerLogin(int64_t cid, const std::shared_ptr<IPackage_Interface> &pkg);
+    void OnPlayerLogin(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg);
 
-    void OnAgentError(int64_t cid, int64_t pid, const std::string &error) const;
+    void OnAgentError(const std::string &key, int64_t pid, const std::string &error) const;
 
 private:
-    void OnLoginSuccess(int64_t cid, int64_t pid);
+    void OnLoginSuccess(const std::string &key, int64_t pid);
 
 private:
     std::unique_ptr<ILoginHandler> mLoginHandler;
 
-    std::unordered_map<int64_t, ASteadyTimePoint> mRecentLoginMap;
+    std::unordered_map<std::string, ASteadyTimePoint> mRecentLoginMap;
     mutable std::mutex mMutex;
 };
 

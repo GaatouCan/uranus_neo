@@ -6,8 +6,7 @@
 
 
 UAgentContext::UAgentContext()
-    : mPlayerID(0),
-      mConnectionID(0) {
+    : mPlayerID(0) {
 }
 
 UAgentContext::~UAgentContext() {
@@ -17,16 +16,16 @@ void UAgentContext::SetPlayerID(const int64_t pid) {
     mPlayerID = pid;
 }
 
-void UAgentContext::SetConnectionID(const int64_t cid) {
-    mConnectionID = cid;
+void UAgentContext::SetConnectionKey(const std::string &key) {
+    mConnKey = key;
 }
 
 int64_t UAgentContext::GetPlayerID() const {
     return mPlayerID;
 }
 
-int64_t UAgentContext::GetConnectionID() const {
-    return mConnectionID;
+const std::string &UAgentContext::GetConnectionKey() const {
+    return mConnKey;
 }
 
 // int32_t UAgentContext::GetServiceID() const {

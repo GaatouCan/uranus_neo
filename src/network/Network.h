@@ -31,7 +31,7 @@ class BASE_API UNetwork final : public IModuleBase {
     /** Used To Generate Codec For Every Connection **/
     unique_ptr<ICodecFactory_Interface> mCodecFactory;
 
-    std::unordered_map<int64_t, shared_ptr<UConnection>> mConnectionMap;
+    std::unordered_map<std::string, shared_ptr<UConnection>> mConnectionMap;
     mutable std::shared_mutex mMutex;
 
 protected:
@@ -57,13 +57,13 @@ public:
     [[nodiscard]] shared_ptr<IRecyclerBase> CreatePackagePool() const;
     std::shared_ptr<IPackage_Interface> BuildPackage() const;
 
-    shared_ptr<UConnection> FindConnection(int64_t cid) const;
-    void RemoveConnection(int64_t cid, int64_t pid);
+    shared_ptr<UConnection> FindConnection(const std::string &key) const;
+    void RemoveConnection(const std::string &key, int64_t pid);
 
-    void SendToClient(int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const;
+    void SendToClient(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const;
 
-    void OnLoginSuccess(int64_t cid, int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
-    void OnLoginFailure(int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const;
+    void OnLoginSuccess(const std::string &key, int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
+    void OnLoginFailure(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const;
 
 private:
     awaitable<void> WaitForClient(uint16_t port);

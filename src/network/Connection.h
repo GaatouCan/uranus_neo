@@ -24,7 +24,7 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
     ASteadyTimePoint mReceiveTime;
     ASteadyDuration mExpiration;
 
-    int64_t mID;
+    std::string mKey;
     std::atomic_int64_t mPlayerID;
 
 protected:
@@ -52,7 +52,7 @@ public:
     shared_ptr<IPackage_Interface> BuildPackage() const;
 
     asio::ip::address RemoteAddress() const;
-    [[nodiscard]] int64_t GetConnectionID() const;
+    [[nodiscard]] const std::string &GetKey() const;
     [[nodiscard]] int64_t GetPlayerID() const;
 
     void SendPackage(const shared_ptr<IPackage_Interface> &pkg);
