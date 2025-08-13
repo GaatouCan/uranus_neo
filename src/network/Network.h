@@ -3,9 +3,11 @@
 #include "Module.h"
 #include "base/CodecFactory.h"
 #include "base/Recycler.h"
+#include "base/IdentAllocator.h"
 
 #include <memory>
 #include <thread>
+#include <atomic>
 
 
 class IPackage_Interface;
@@ -16,23 +18,22 @@ class BASE_API UNetwork final : public IModuleBase {
 
     DECLARE_MODULE(UNetwork)
 
-    /** The Separate IO Context For Handling Network IO **/
-    io_context mIOContext;
+    struct BASE_API FNetworkNode {
+        std::thread th;
+        io_context ctx;
+    };
 
-    /** Client Acceptor **/
+    io_context mIOContext;
     ATcpAcceptor mAcceptor;
 
-    /** The Separate Thread For Handling Network Event **/
-    std::thread mThread;
+    std::vector<FNetworkNode> mWorkerList;
+    std::atomic_size_t mNextIndex;
 
-    /** The Package Pool For Network Module **/
-    shared_ptr<IRecyclerBase> mPackagePool;
-
-    /** Used To Generate Codec For Every Connection **/
     unique_ptr<ICodecFactory_Interface> mCodecFactory;
+    TIdentAllocator<int64_t, true> mIDAllocator;
 
     std::unordered_map<int64_t, shared_ptr<UConnection>> mConnectionMap;
-    mutable std::shared_mutex mMutex;
+    mutable std::shared_mutex mConnectionMutex;
 
 protected:
     UNetwork();
@@ -55,7 +56,7 @@ public:
     [[nodiscard]] io_context &GetIOContext();
 
     [[nodiscard]] shared_ptr<IRecyclerBase> CreatePackagePool() const;
-    std::shared_ptr<IPackage_Interface> BuildPackage() const;
+    // std::shared_ptr<IPackage_Interface> BuildPackage() const;
 
     shared_ptr<UConnection> FindConnection(int64_t cid) const;
     void RemoveConnection(int64_t cid, int64_t pid);
@@ -65,7 +66,9 @@ public:
     void OnLoginSuccess(int64_t cid, int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
     void OnLoginFailure(int64_t cid, const shared_ptr<IPackage_Interface> &pkg) const;
 
+    void RecycleID(int64_t cid);
 private:
+    io_context &GetNextIOContext();
     awaitable<void> WaitForClient(uint16_t port);
 };
 

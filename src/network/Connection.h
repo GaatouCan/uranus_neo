@@ -6,6 +6,7 @@
 
 class UNetwork;
 class UServer;
+class IRecyclerBase;
 class IPackage_Interface;
 class IPackageCodec_Interface;
 
@@ -17,6 +18,7 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
 
     UNetwork *mNetwork;
 
+    shared_ptr<IRecyclerBase> mPackagePool;
     unique_ptr<IPackageCodec_Interface> mCodec;
     APackageChannel mChannel;
 
@@ -29,6 +31,7 @@ class BASE_API UConnection final : public std::enable_shared_from_this<UConnecti
 
 protected:
     void SetUpModule(UNetwork *owner);
+    void SetConnectionID(int64_t id);
 
 public:
     UConnection() = delete;

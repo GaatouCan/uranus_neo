@@ -21,14 +21,20 @@ UConnection::UConnection(IPackageCodec_Interface *codec)
       mChannel(mCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mCodec->GetSocket().get_executor()),
       mExpiration(std::chrono::seconds(30)),
+      mID(-1),
       mPlayerID(-1) {
-    mID = static_cast<int64_t>(GetSocket().native_handle());
+
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 }
 
 void UConnection::SetUpModule(UNetwork *owner) {
     mNetwork = owner;
+    mPackagePool = mNetwork->CreatePackagePool();
+}
+
+void UConnection::SetConnectionID(const int64_t id) {
+    mID = id;
 }
 
 UConnection::~UConnection() {
@@ -104,8 +110,8 @@ UServer *UConnection::GetServer() const {
 }
 
 shared_ptr<IPackage_Interface> UConnection::BuildPackage() const {
-    if (mNetwork)
-        return mNetwork->BuildPackage();
+    if (mPackagePool)
+        return std::dynamic_pointer_cast<IPackage_Interface>(mPackagePool->Acquire());
     return nullptr;
 }
 

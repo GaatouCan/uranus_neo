@@ -1,29 +1,29 @@
 #include "Server.h"
 #include "Utils.h"
-#include "config/Config.h"
+// #include "config/Config.h"
 
 #include <filesystem>
 #include <spdlog/spdlog.h>
 
 
 UServer::UServer()
-    : mWorkGuard(asio::make_work_guard(mIOContext)),
+    : // mWorkGuard(asio::make_work_guard(mIOContext)),
       bInitialized(false),
       bRunning(false),
       bShutdown(false) {
 }
 
 UServer::~UServer() {
-    for (auto &th: mWorkerList) {
-        if (th.joinable()) {
-            th.join();
-        }
-    }
+    // for (auto &th: mWorkerList) {
+    //     if (th.joinable()) {
+    //         th.join();
+    //     }
+    // }
 }
 
-asio::io_context &UServer::GetIOContext() {
-    return mIOContext;
-}
+// io_context &UServer::GetIOContext() {
+//     return mIOContext;
+// }
 
 IModuleBase *UServer::GetModule(const std::string &name) const {
     const auto iter = mNameToModule.find(name);
@@ -80,24 +80,24 @@ void UServer::Initial() {
     }
     SPDLOG_INFO("Modules Initialization Completed!");
 
-    const auto *config = GetModule<UConfig>();
-    if (config == nullptr) {
-        SPDLOG_CRITICAL("Fail To Found Config Module!");
-        Shutdown();
-        exit(-4);
-    }
+    // const auto *config = GetModule<UConfig>();
+    // if (config == nullptr) {
+    //     SPDLOG_CRITICAL("Fail To Found Config Module!");
+    //     Shutdown();
+    //     exit(-4);
+    // }
 
     //const int count = config->GetServerConfig()["server"]["worker"].as<int>();
-    const int count = 4;
-    for (int idx = 1; idx < count; ++idx) {
-        mWorkerList.emplace_back([this, idx] {
-            const int64_t tid = utils::ThreadIDToInt(std::this_thread::get_id());
-
-            SPDLOG_INFO("Worker[{}] Is Running In Thread: {}", idx, tid);
-            mIOContext.run();
-        });
-    }
-    SPDLOG_INFO("Server Run With {} Worker(s)", count);
+    // const int count = 4;
+    // for (int idx = 1; idx < count; ++idx) {
+    //     mWorkerList.emplace_back([this, idx] {
+    //         const int64_t tid = utils::ThreadIDToInt(std::this_thread::get_id());
+    //
+    //         SPDLOG_INFO("Worker[{}] Is Running In Thread: {}", idx, tid);
+    //         mIOContext.run();
+    //     });
+    // }
+    // SPDLOG_INFO("Server Run With {} Worker(s)", count);
     SPDLOG_INFO("Server Initialization Completed!");
 
     bInitialized = true;
@@ -114,15 +114,15 @@ void UServer::Run() {
         }
     }
 
-    asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
-    signals.async_wait([this](auto, auto) {
-        Shutdown();
-    });
+    // asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
+    // signals.async_wait([this](auto, auto) {
+    //     Shutdown();
+    // });
 
     bRunning = true;
     SPDLOG_INFO("Server Is Running...");
 
-    mIOContext.run();
+    // mIOContext.run();
 }
 
 void UServer::Shutdown() {
@@ -139,8 +139,8 @@ void UServer::Shutdown() {
         }
     }
 
-    mWorkGuard.reset();
-    mIOContext.stop();
+    // mWorkGuard.reset();
+    // mIOContext.stop();
 
     SPDLOG_INFO("Server Shutdown Completed!");
 }
