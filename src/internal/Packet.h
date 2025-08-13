@@ -52,7 +52,7 @@ public:
     [[nodiscard]] uint32_t GetPackageID() const override;
 
     bool CopyFrom(IRecycle_Interface *other) override;
-    bool CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) override;
+    // bool CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) override;
 
     void Reset();
 

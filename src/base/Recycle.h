@@ -41,7 +41,7 @@ public:
     virtual bool CopyFrom(IRecycle_Interface *other);
 
     /** Depth Copy Object Data */
-    virtual bool CopyFrom(const shared_ptr<IRecycle_Interface> &other);
+    bool CopyFrom(const shared_ptr<IRecycle_Interface> &other);
 
     /** After Acquiring And Before Assigning Return True */
     [[nodiscard]] virtual bool IsUnused() const = 0;

@@ -48,19 +48,19 @@ bool FPacket::CopyFrom(IRecycle_Interface *other) {
     return false;
 }
 
-bool FPacket::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
-    if (IRecycle_Interface::CopyFrom(other)) {
-        if (const auto temp = std::dynamic_pointer_cast<FPacket>(other); temp != nullptr) {
-            memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
-
-            mPayload = temp->mPayload;
-            mHeader.length = temp->mHeader.length;
-
-            return true;
-        }
-    }
-    return false;
-}
+// bool FPacket::CopyFrom(const std::shared_ptr<IRecycle_Interface> &other) {
+//     if (IRecycle_Interface::CopyFrom(other)) {
+//         if (const auto temp = std::dynamic_pointer_cast<FPacket>(other); temp != nullptr) {
+//             memcpy(&mHeader, &temp->mHeader, sizeof(mHeader));
+//
+//             mPayload = temp->mPayload;
+//             mHeader.length = temp->mHeader.length;
+//
+//             return true;
+//         }
+//     }
+//     return false;
+// }
 
 void FPacket::Reset() {
     memset(&mHeader, 0, sizeof(mHeader));
