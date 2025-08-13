@@ -36,7 +36,7 @@ public:
     [[nodiscard]] virtual std::string GetServiceName() const;
     [[nodiscard]] int32_t GetServiceID() const;
 
-    [[nodiscard]] asio::io_context &GetIOContext() const;
+    [[nodiscard]] io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
     template<CModuleType Module>
@@ -45,23 +45,23 @@ public:
     [[nodiscard]] EServiceState GetState() const;
 
     virtual bool Initial(const IDataAsset_Interface *pData);
-    virtual asio::awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
+    virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
     virtual bool Start();
     virtual void Stop();
 
-    [[nodiscard]] std::shared_ptr<IPackage_Interface> BuildPackage() const;
+    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
 
-    virtual void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg);
-    virtual void OnEvent(const std::shared_ptr<IEventParam_Interface> &event);
+    virtual void OnPackage(const shared_ptr<IPackage_Interface> &pkg);
+    virtual void OnEvent(const shared_ptr<IEventParam_Interface> &event);
     virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
 
 #pragma region Package
     /// Send To Other Service Use Target In Package
-    void PostPackage(const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void PostPackage(const shared_ptr<IPackage_Interface> &pkg) const;
 
     /// Send To Other Service Use Service Name
-    void PostPackage(const std::string &name, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void PostPackage(const std::string &name, const shared_ptr<IPackage_Interface> &pkg) const;
 #pragma endregion
 
 #pragma region Task
@@ -78,7 +78,7 @@ public:
 #pragma endregion
 
 #pragma region To Player
-    virtual void SendToPlayer(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    virtual void SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
     virtual void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
     template<class Type, class Callback, class... Args>
@@ -86,13 +86,13 @@ public:
     void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
 #pragma endregion
 
-    virtual void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    virtual void SendToClient(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
 
 #pragma region Event
     virtual void ListenEvent(int event) const;
     virtual void RemoveListener(int event) const;
 
-    void DispatchEvent(const std::shared_ptr<IEventParam_Interface> &event) const;
+    void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
 
     template<CEventType Type, class ... Args>
     void DispatchEventT(Args && ... args) const;
