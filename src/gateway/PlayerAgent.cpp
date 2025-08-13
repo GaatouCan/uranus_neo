@@ -5,7 +5,6 @@
 #include "base/Package.h"
 #include "timer/TimerModule.h"
 #include "network/Network.h"
-#include "event/EventModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -80,45 +79,8 @@ void IPlayerAgent::SendToClient(const shared_ptr<IPackage_Interface> &pkg) const
     }
 }
 
-//
-// FTimerHandle IPlayerAgent::SetSteadyTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
-//     if (auto *module = GetModule<UTimerModule>()) {
-//         return module->SetSteadyTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
-//     }
-//     return { -1, true };
-// }
-//
-// FTimerHandle IPlayerAgent::SetSystemTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate) const {
-//     if (auto *module = GetModule<UTimerModule>()) {
-//         return module->SetSystemTimer(PLAYER_AGENT_ID, GetPlayerID(), task, delay, rate);
-//     }
-//     return { -1, false };
-// }
-//
-// void IPlayerAgent::CancelTimer(const FTimerHandle &handle) {
-//     if (auto *module = GetModule<UTimerModule>()) {
-//         if (handle.id > 0) {
-//             module->CancelTimer(handle);
-//         } else {
-//             module->CancelPlayerTimer(GetPlayerID());
-//         }
-//     }
-// }
-
 void IPlayerAgent::OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) {
 }
-
-// void IPlayerAgent::ListenEvent(const int event) const {
-//     if (auto *module = GetModule<UEventModule>()) {
-//         module->ListenEvent(event, PLAYER_AGENT_ID, GetPlayerID());
-//     }
-// }
-//
-// void IPlayerAgent::RemoveListener(const int event) const {
-//      if (auto *module = GetModule<UEventModule>()) {
-//         module->RemoveListener(event, PLAYER_AGENT_ID, GetPlayerID());
-//     }
-// }
 
 void IPlayerAgent::SendToClient(const int64_t, const shared_ptr<IPackage_Interface> &) const {
     // Hide This Function In Player Agent, Do Nothing

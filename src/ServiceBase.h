@@ -36,25 +36,24 @@ public:
     [[nodiscard]] virtual std::string GetServiceName() const;
     [[nodiscard]] int32_t GetServiceID() const;
 
+    [[nodiscard]] EServiceState GetState() const;
+
     [[nodiscard]] io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
     template<CModuleType Module>
     Module *GetModule() const;
 
-    [[nodiscard]] EServiceState GetState() const;
+    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
 
+protected:
+#pragma region Control By Context
     virtual bool Initial(const IDataAsset_Interface *pData);
     virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
     virtual bool Start();
     virtual void Stop();
-
-    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
-
-    virtual void OnPackage(const shared_ptr<IPackage_Interface> &pkg);
-    virtual void OnEvent(const shared_ptr<IEventParam_Interface> &event);
-    virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
+#pragma endregion
 
 #pragma region Package
     /// Send To Other Service Use Target In Package
@@ -105,6 +104,12 @@ public:
 #pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
+
+#pragma region Implenment In Derived Class
+    virtual void OnPackage(const shared_ptr<IPackage_Interface> &pkg);
+    virtual void OnEvent(const shared_ptr<IEventParam_Interface> &event);
+    virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
+#pragma endregion
 
 protected:
     UContextBase *mContext;

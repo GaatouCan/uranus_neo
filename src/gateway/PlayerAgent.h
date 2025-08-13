@@ -4,10 +4,12 @@
 
 
 class UGateway;
+class UAgentContext;
 
 
 class BASE_API IPlayerAgent : public IServiceBase {
 
+    friend class UAgentContext;
     using Super = IServiceBase;
 
 public:
@@ -23,6 +25,7 @@ public:
 
     void SendToClient(const shared_ptr<IPackage_Interface> &pkg) const;
 
+protected:
     virtual void OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg);
 
 private:
