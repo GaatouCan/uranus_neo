@@ -47,15 +47,19 @@ DISABLE_MOVE(clazz)
 
 #define ARGS_WRAPPER(...) __VA_ARGS__
 
-inline constexpr auto NoOperateCallback = [](auto && ...){};
+inline constexpr auto EmptyCallback = [](auto && ...){};
 
-inline constexpr int PLAYER_AGENT_ID = -1;
-inline constexpr int CLIENT_TARGET_ID = -2;
-inline constexpr int SERVER_SOURCE_ID = -3;
-inline constexpr int INVALID_SERVICE_ID = -10;
-inline constexpr int MAX_CONTEXT_QUEUE_LENGTH = 10'000;
+inline constexpr int PLAYER_AGENT_ID        = -1;
+inline constexpr int CLIENT_TARGET_ID       = -2;
+inline constexpr int SERVER_SOURCE_ID       = -3;
+inline constexpr int INVALID_SERVICE_ID     = -10;
 
-inline constexpr auto LOGIN_HANDLER_PATH = "login";
-inline constexpr auto CORE_SERVICE_DIRECTORY = "service";
-inline constexpr auto EXTEND_SERVICE_DIRECTORY = "extend";
-inline constexpr auto PLAYER_AGENT_DIRECTORY = "agent";
+inline constexpr auto CORE_SERVICE_DIRECTORY    = "service";
+inline constexpr auto EXTEND_SERVICE_DIRECTORY  = "extend";
+inline constexpr auto PLAYER_AGENT_DIRECTORY    = "agent";
+
+inline constexpr int HEARTBEAT_PACKAGE_ID       = 1001;
+inline constexpr int LOGIN_REQUEST_PACKAGE_ID   = 1002;
+inline constexpr int LOGIN_RESPONSE_PACKAGE_ID  = 1003;
+inline constexpr int LOGIN_FAILED_PACKAGE_ID    = 1004;
+inline constexpr int PLATFORM_PACKAGE_ID        = 1005;

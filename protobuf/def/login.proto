@@ -4,16 +4,19 @@ option optimize_for = LITE_RUNTIME;
 
 package Login;
 
+// 1001
 message Heartbeat {
   int64 player_id = 1;
   string message = 2;
 }
 
+// 1002
 message LoginRequest {
   int64 player_id = 1;
   string token = 2;
 }
 
+// 1003
 message LoginResponse {
   int64 player_id = 1;
 
@@ -25,7 +28,25 @@ message LoginResponse {
   repeated ServiceInfo services = 2;
 }
 
-message RepeatLoginResponse {
+// 1004
+message LoginFailedResponse {
   int64 player_id = 1;
   string address = 2;
+
+  enum Reason {
+    REPEATED = 0;
+    BANNED = 1;
+    AGENT_ERROR = 2;
+  }
+
+  Reason reason = 3;
+  string extend = 4;
+}
+
+// 1005
+message PlatformInfo {
+  int32 player_id = 1;
+  string os_name = 2;
+  string os_version = 3;
+  string client_version = 4;
 }

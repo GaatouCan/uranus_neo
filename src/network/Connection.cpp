@@ -198,7 +198,7 @@ awaitable<void> UConnection::ReadPackage() {
 
                     // Handle Login Logic
                     if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-                        login->OnPlayerLogin(mKey, pkg);
+                        login->OnLoginRequest(mKey, pkg);
                     }
                 }
 
@@ -209,11 +209,22 @@ awaitable<void> UConnection::ReadPackage() {
             // Update Receive Time Point For Watchdog
             mReceiveTime = now;
 
-            if (const auto *gateway = GetServer()->GetModule<UGateway>(); gateway != nullptr) {
-                if (pkg->GetPackageID() == 1001) {
-                    gateway->OnHeartBeat(mPlayerID, pkg);
-                } else {
-                    gateway->OnClientPackage(mPlayerID, pkg);
+            const auto *gateway = GetServer()->GetModule<UGateway>();
+            const auto *auth = GetServer()->GetModule<ULoginAuth>();
+
+            if (gateway != nullptr && auth != nullptr) {
+                switch (pkg->GetPackageID()) {
+                    case HEARTBEAT_PACKAGE_ID: {
+                        gateway->OnHeartBeat(mPlayerID, pkg);
+                    }
+                        break;
+                    case LOGIN_REQUEST_PACKAGE_ID: break;
+                    case PLATFORM_PACKAGE_ID: {
+                        auth->OnPlatformInfo(mPlayerID, pkg);
+                    }
+                        break;
+                    default:
+                        gateway->OnClientPackage(mPlayerID, pkg);
                 }
             }
         }

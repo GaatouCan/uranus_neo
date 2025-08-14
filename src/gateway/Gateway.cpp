@@ -213,3 +213,11 @@ void UGateway::OnHeartBeat(const int64_t pid, const std::shared_ptr<IPackage_Int
     if (const auto agent = FindPlayerAgent(pid))
         agent->OnHeartBeat(pkg);
 }
+
+void UGateway::OnPlatformInfo(const FPlatformInfo &info) const {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    if (const auto agent = FindPlayerAgent(info.playerID); agent != nullptr)
+        agent->OnPlatformInfo(info);
+}

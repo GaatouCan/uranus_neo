@@ -35,7 +35,7 @@ public:
 };
 
 
-template<class Callback = decltype(NoOperateCallback)>
+template<class Callback = decltype(EmptyCallback)>
 class TDBTaskBase : public IDBTaskBase {
 protected:
     Callback mCallback;
@@ -46,7 +46,7 @@ public:
 
     DISABLE_COPY_MOVE(TDBTaskBase)
 
-    TDBTaskBase(std::string db, std::string col, Callback &&callback = NoOperateCallback)
+    TDBTaskBase(std::string db, std::string col, Callback &&callback = EmptyCallback)
         : IDBTaskBase(std::move(db), std::move(col)),
           mCallback(std::forward<Callback>(callback)) {
     }

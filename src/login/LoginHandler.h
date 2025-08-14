@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Common.h"
+#include "base/PlatformInfo.h"
 
-#include <string>
-#include <cstdint>
 #include <memory>
 
 
@@ -34,10 +32,24 @@ public:
     virtual void UpdateAddressList() = 0;
 
     virtual FLoginToken ParseLoginRequest(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
+    virtual FPlatformInfo ParsePlatformInfo(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
 
-    virtual void OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg) = 0;
-    virtual void OnLoginSuccess(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const = 0;
+    virtual void OnLoginSuccess(
+        int64_t pid,
+        const std::shared_ptr<IPackage_Interface> &pkg) const = 0;
 
+    virtual void OnRepeatLogin(
+        int64_t pid,
+        const std::string &addr,
+        const std::shared_ptr<IPackage_Interface> &pkg) = 0;
+
+    virtual void OnAgentError(
+        int64_t pid,
+        const std::string &addr,
+        const std::shared_ptr<IPackage_Interface> &pkg,
+        const std::string &desc) = 0;
+
+protected:
     [[nodiscard]] UServer *GetServer() const;
 
 private:

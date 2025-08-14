@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include "base/SharedLibrary.h"
+#include "base/PlatformInfo.h"
 
 #include <functional>
 #include <shared_mutex>
@@ -46,6 +47,7 @@ public:
     void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
     void OnHeartBeat(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void OnPlatformInfo(const FPlatformInfo &info) const;
 
 private:
     FSharedLibrary mLibrary;

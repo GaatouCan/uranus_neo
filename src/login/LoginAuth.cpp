@@ -42,7 +42,7 @@ bool ULoginAuth::VerifyAddress(const asio::ip::tcp::endpoint &endpoint) {
     return true;
 }
 
-void ULoginAuth::OnPlayerLogin(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg) {
+void ULoginAuth::OnLoginRequest(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -91,11 +91,37 @@ void ULoginAuth::OnPlayerLogin(const std::string &key, const std::shared_ptr<IPa
     OnLoginSuccess(key, pid);
 }
 
-void ULoginAuth::OnAgentError(const std::string &key, int64_t pid, const std::string &error) const {
-    if (const auto *network = GetServer()->GetModule<UNetwork>()) {
-        // FIXME: Send A Message
-        network->OnLoginFailure(key, nullptr);
+void ULoginAuth::OnPlatformInfo(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    auto info = mLoginHandler->ParsePlatformInfo(pkg);
+    if (info.operateSystemName.empty())
+        return;
+
+    info.playerID = pid;
+    if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+        gateway->OnPlatformInfo(info);
     }
+}
+
+void ULoginAuth::OnAgentError(const std::string &key, const int64_t pid, const std::string &error) const {
+    const auto *network = GetServer()->GetModule<UNetwork>();
+    if (network == nullptr)
+        return;
+
+    const auto conn = network->FindConnection(key);
+    if (conn == nullptr)
+        return;
+
+    const auto response = network->BuildPackage();
+
+    mLoginHandler->OnAgentError(pid, conn->RemoteAddress().to_string(), response, error);
+
+    response->SetSource(SERVER_SOURCE_ID);
+    response->SetTarget(CLIENT_TARGET_ID);
+
+    network->OnLoginFailure(key, nullptr);
 }
 
 void ULoginAuth::OnLoginSuccess(const std::string &key, const int64_t pid) {

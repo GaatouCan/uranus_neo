@@ -21,7 +21,7 @@ ILoginHandler::FLoginToken ULoginHandlerImpl::ParseLoginRequest(const std::share
     if (pkt == nullptr)
         return {};
 
-    if (pkt->GetPackageID() != 1002)
+    if (pkt->GetPackageID() != LOGIN_REQUEST_PACKAGE_ID)
         return {};
 
     Login::LoginRequest request;
@@ -33,7 +33,43 @@ ILoginHandler::FLoginToken ULoginHandlerImpl::ParseLoginRequest(const std::share
     };
 }
 
-void ULoginHandlerImpl::OnLoginSuccess(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+FPlatformInfo ULoginHandlerImpl::ParsePlatformInfo(const std::shared_ptr<IPackage_Interface> &pkg) {
+    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+    if (pkt == nullptr)
+        return {};
+
+    if (pkt->GetPackageID() != PLATFORM_PACKAGE_ID)
+        return {};
+
+    Login::PlatformInfo request;
+    request.ParseFromString(pkt->ToString());
+
+    FPlatformInfo info;
+
+    info.operateSystemName = request.os_name();
+    info.operateSystemVersion = request.os_version();
+    info.clientVersion = request.client_version();
+
+    return info;
+}
+
+void ULoginHandlerImpl::OnAgentError(const int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg, const std::string &desc) {
+    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+    if (pkt == nullptr)
+        return;
+
+    Login::LoginFailedResponse response;
+
+    response.set_player_id(pid);
+    response.set_address(addr);
+    response.set_reason(Login::LoginFailedResponse::AGENT_ERROR);
+    response.set_extend(desc);
+
+    pkt->SetPackageID(LOGIN_FAILED_PACKAGE_ID);
+    pkt->SetData(response.SerializeAsString());
+}
+
+void ULoginHandlerImpl::OnLoginSuccess(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
     const auto *service = GetServer()->GetModule<UServiceModule>();
     if (service == nullptr)
         return;
@@ -52,9 +88,20 @@ void ULoginHandlerImpl::OnLoginSuccess(int64_t pid, const std::shared_ptr<IPacka
         val->set_sid(id);
     }
 
-    pkt->SetPackageID(1003);
+    pkt->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
     pkt->SetData(res.SerializeAsString());
 }
 
-void ULoginHandlerImpl::OnRepeatLogin(int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg) {
+void ULoginHandlerImpl::OnRepeatLogin(const int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg) {
+    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+    if (pkt == nullptr)
+        return;
+
+    Login::LoginFailedResponse response;
+    response.set_player_id(pid);
+    response.set_address(addr);
+    response.set_reason(Login::LoginFailedResponse::REPEATED);
+
+    pkt->SetPackageID(LOGIN_FAILED_PACKAGE_ID);
+    pkt->SetData(response.SerializeAsString());
 }

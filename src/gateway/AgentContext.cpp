@@ -60,3 +60,6 @@ void UAgentContext::OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const
     SPDLOG_TRACE("{:<20} - Heartbeat From Player[{}]", __FUNCTION__, mPlayerID);
     dynamic_cast<IPlayerAgent *>(GetOwningService())->OnHeartBeat(pkg);
 }
+
+void UAgentContext::OnPlatformInfo(const FPlatformInfo &info) const {
+}

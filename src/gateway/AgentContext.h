@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ContextBase.h"
+#include "base/PlatformInfo.h"
 
 
 class UGateway;
@@ -27,4 +28,5 @@ public:
     [[nodiscard]] shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
 
     void OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const;
+    void OnPlatformInfo(const FPlatformInfo &info) const;
 };

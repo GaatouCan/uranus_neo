@@ -36,7 +36,9 @@ public:
     void SetLoginHandler(Args && ... args);
 
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
-    void OnPlayerLogin(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg);
+
+    void OnLoginRequest(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg);
+    void OnPlatformInfo(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
 
     void OnAgentError(const std::string &key, int64_t pid, const std::string &error) const;
 
