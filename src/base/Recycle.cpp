@@ -7,6 +7,6 @@ bool IRecycle_Interface::CopyFrom(IRecycle_Interface *other) {
     return false;
 }
 
-bool IRecycle_Interface::CopyFrom(const shared_ptr<IRecycle_Interface> &other) {
-    return CopyFrom(other.get());
-}
+// bool IRecycle_Interface::CopyFrom(const shared_ptr<IRecycle_Interface> &other) {
+//     return CopyFrom(other.get());
+// }

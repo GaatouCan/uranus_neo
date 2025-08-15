@@ -1,191 +1,386 @@
-﻿#include "Recycler.h"
+#include "Recycler.h"
 
 #include <spdlog/spdlog.h>
-#ifdef __linux__
-#include <mutex>
-#endif
 
-
-IRecyclerBase::IRecyclerBase()
-    : mUsage(-1) {
-    static_assert(RECYCLER_SHRINK_RATE > RECYCLER_SHRINK_THRESHOLD);
-    mDeleter = [weak = weak_from_this()](IRecycle_Interface *pElem) {
-        if (const auto self = weak.lock()) {
-            self->Recycle(pElem);
-            return;
-        }
-        delete pElem;
-    };
-}
-
-IRecyclerBase::IRecyclerBase(const size_t capacity)
-    : IRecyclerBase() {
-    Initial(capacity);
-}
-
-std::shared_ptr<IRecycle_Interface> IRecyclerBase::Acquire() {
-    // Not Initialized
-    if (mUsage < 0)
-        return nullptr;
-
-    // Pop The Front From The Queue If It Is Not Empty
-    {
-        std::unique_lock lock(mMutex);
-        if (!mQueue.empty()) {
-            auto pElem = mQueue.front().release();
-            mQueue.pop();
-
-            SPDLOG_TRACE("{:<20} - Recycler[{:p}] - Acquire Recyclable[{:p}] From Queue",
-                __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem));
-
-            pElem->Initial();
-            ++mUsage;
-
-            return { pElem, mDeleter };
-        }
-    }
-
-    // Calculate How Many New Elements Need To Be Created
-    auto num = static_cast<size_t>(static_cast<float>(mUsage.load()) * RECYCLER_EXPAND_RATE);
-
-    if (num <= 0) {
-        SPDLOG_ERROR("{:<20} - Recycler[{:p}] - Inner Queue Is Empty But Usage Equals Zero!");
-        return nullptr;
-    }
-
-    // The Last One Directly Return
-    std::vector<IRecycle_Interface *> elems(num - 1);
-    IRecycle_Interface *pResult = nullptr;
-
-    while (num-- > 0) {
-        auto pElem = Create();
-
-        if (pElem == nullptr)
-            continue;
-
-        pElem->OnCreate();
-
-        // If The Last One, As The Result
-        if (num == 1) {
-            pResult = pElem;
-            continue;
+namespace recycle {
+    namespace detail {
+        FControlBlock::FControlBlock(IRecyclerBase *pRecycler)
+            : mRefCount(1),
+              mRecycler(pRecycler) {
+            SPDLOG_DEBUG("Create Control Block");
         }
 
-        elems.emplace_back(pElem);
-    }
+        FControlBlock::~FControlBlock() {
+            SPDLOG_DEBUG("Destroy Control Block");
+        }
 
-    if (pResult == nullptr) {
-        SPDLOG_ERROR("{:<20} - Recycler[{:p}] - Expand Failed!");
-        return nullptr;
-    }
+        void FControlBlock::Release() {
+            mRecycler.store(nullptr, std::memory_order_release);
+        }
 
-    // Emplace To The Internal Queue
-    if (!elems.empty()) {
-        std::unique_lock lock(mMutex);
-        for (const auto &pElem: elems) {
-            mQueue.emplace(pElem);
+        bool FControlBlock::IsValid() const {
+            return mRecycler.load(std::memory_order_acquire) != nullptr;
+        }
+
+        IRecyclerBase *FControlBlock::Get() const {
+            return mRecycler.load(std::memory_order_acquire);
+        }
+
+        void FControlBlock::IncRefCount() {
+            mRefCount.fetch_add(1, std::memory_order_relaxed);
+            SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
+        }
+
+        void FControlBlock::DecRefCount() {
+            if (mRefCount.fetch_sub(1, std::memory_order_relaxed) == 1) {
+                if (mRecycler.load(std::memory_order_acquire) == nullptr) {
+                    delete this;
+                    return;
+                }
+            }
+
+            SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
+        }
+
+        int64_t FControlBlock::GetRefCount() const {
+            return mRefCount.load(std::memory_order_acquire);
+        }
+
+        IElementNodeBase::IElementNodeBase(FControlBlock *pCtrl)
+            : mRefCount(RECYCLED_REFERENCE_COUNT),
+              mControl(pCtrl) {
+            assert(mControl);
+            mControl->IncRefCount();
+
+            SPDLOG_DEBUG("Create Element Node");
+        }
+
+        IElementNodeBase::~IElementNodeBase() {
+            assert(mControl);
+            mControl->DecRefCount();
+
+            SPDLOG_DEBUG("Destroy Element Node");
+        }
+
+        void IElementNodeBase::OnAcquire() {
+            if (int64_t expected = RECYCLED_REFERENCE_COUNT;
+                !mRefCount.compare_exchange_strong(expected, 1, std::memory_order_acq_rel, std::memory_order_acquire)) {
+                throw std::runtime_error("Acquire on non-recycled node");
+            }
+            SPDLOG_TRACE("{}", __FUNCTION__);
+        }
+
+        void IElementNodeBase::OnRecycle() {
+            mRefCount.store(RECYCLED_REFERENCE_COUNT, std::memory_order_relaxed);
+            SPDLOG_TRACE("{}", __FUNCTION__);
+        }
+
+        void IElementNodeBase::IncRefCount() {
+            int64_t cur = mRefCount.load(std::memory_order_acquire);
+            for (;;) {
+                if (cur < 0)
+                    throw std::runtime_error("Increase while recycled");
+
+                if (mRefCount.
+                    compare_exchange_weak(cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire)) {
+                    break;
+                }
+            }
+            SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
+        }
+
+        bool IElementNodeBase::DecRefCount() {
+            SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load() - 1);
+            return mRefCount.fetch_sub(1, std::memory_order_relaxed) == 1;
+        }
+
+        IRecyclerBase *IElementNodeBase::GetRecycler() const noexcept {
+            assert(mControl);
+            return mControl->Get();
         }
     }
 
-    pResult->Initial();
-    ++mUsage;
+    FRecycleHandle::FRecycleHandle(detail::IElementNodeBase *pNode)
+        : mNode(pNode),
+          mElement(mNode->Get()) {
+        SPDLOG_TRACE("{} - New Handle", __FUNCTION__);
+    }
 
-    return { pResult, mDeleter };
-}
+    FRecycleHandle::~FRecycleHandle() {
+        Release();
+    }
 
-size_t IRecyclerBase::GetUsage() const {
-    if (mUsage < 0)
-        return 0;
-    return mUsage;
-}
+    FRecycleHandle::FRecycleHandle(const FRecycleHandle &rhs) {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        if (mNode) {
+            mNode->IncRefCount();
+        }
+        SPDLOG_TRACE("FRecycleHandle Copy From Other");
+    }
 
-size_t IRecyclerBase::GetIdle() const {
-    if (mUsage < 0)
-        return 0;
+    FRecycleHandle &FRecycleHandle::operator=(const FRecycleHandle &rhs) {
+        if (this != &rhs) {
+            Release();
+            mNode = rhs.mNode;
+            mElement = rhs.mElement;
+            if (mNode) {
+                mNode->IncRefCount();
+            }
+            SPDLOG_TRACE("FRecycleHandle Copy Assign");
+        }
+        return *this;
+    }
 
-    std::shared_lock lock(mMutex);
-    return mQueue.size();
-}
+    FRecycleHandle::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        rhs.mNode = nullptr;
+        rhs.mElement = nullptr;
+        SPDLOG_TRACE("FRecycleHandle Move From Other");
+    }
 
-size_t IRecyclerBase::GetCapacity() const {
-    if (mUsage < 0)
-        return 0;
+    FRecycleHandle &FRecycleHandle::operator=(FRecycleHandle &&rhs) noexcept {
+        if (this != &rhs) {
+            Release();
+            mNode = rhs.mNode;
+            mElement = rhs.mElement;
+            rhs.mNode = nullptr;
+            rhs.mElement = nullptr;
+            SPDLOG_TRACE("FRecycleHandle Move Assign");
+        }
+        return *this;
+    }
 
-    std::shared_lock lock(mMutex);
-    return mQueue.size() + mUsage.load();
-}
+    IRecycle_Interface *FRecycleHandle::operator->() const noexcept {
+        return mElement;
+    }
 
-void IRecyclerBase::Shrink() {
-    size_t num = 0;
+    IRecycle_Interface &FRecycleHandle::operator*() const noexcept {
+        return *mElement;
+    }
 
-    // Check If It Needs To Shrink
-    {
-        std::shared_lock lock(mMutex);
+    IRecycle_Interface *FRecycleHandle::Get() const noexcept {
+        return mElement;
+    }
 
-        // Recycler Total Capacity
-        const size_t usage = mUsage.load();
-        const size_t total = mQueue.size() + usage;
-
-        // Usage Less Than Shrink Threshold
-        if (static_cast<float>(usage) < std::ceil(static_cast<float>(total) * RECYCLER_SHRINK_THRESHOLD)) {
-            num = static_cast<size_t>(std::floor(static_cast<float>(total) * RECYCLER_SHRINK_RATE));
-
-            const auto rest = total - num;
-            if (rest <= 0) {
+    void FRecycleHandle::Release() noexcept {
+        SPDLOG_TRACE("{} - Release Handle", __FUNCTION__);
+        if (mNode && mNode->DecRefCount()) {
+            if (auto *recycler = mNode->GetRecycler()) {
+                SPDLOG_TRACE("{} - Do Recycle", __FUNCTION__);
+                recycler->Recycle(mNode);
+                mNode = nullptr;
                 return;
             }
 
-            if (rest < RECYCLER_MINIMUM_CAPACITY) {
-                num = total - RECYCLER_MINIMUM_CAPACITY;
+            SPDLOG_TRACE("{} - Destroy Element", __FUNCTION__);
+            mNode->DestroyElement();
+            mNode->Destroy();
+        }
+
+        mNode = nullptr;
+    }
+
+    IRecyclerBase::IRecyclerBase()
+        : mUsage(-1) {
+        mControl = new detail::FControlBlock(this);
+        SPDLOG_DEBUG("Create Recycler");
+    }
+
+    IRecyclerBase::~IRecyclerBase() {
+        {
+            std::unique_lock lock(mMutex);
+            while (!mQueue.empty()) {
+                auto *pNode = mQueue.front();
+                mQueue.pop();
+
+                pNode->DestroyElement();
+                pNode->Destroy();
             }
         }
+
+        if (mControl) {
+            mControl->Release();
+            mControl->DecRefCount();
+        }
+
+        SPDLOG_DEBUG("Destroy Recycler");
     }
 
-    if (num <= 0)
-        return;
+    void IRecyclerBase::Initial(const size_t capacity) {
+        if (mUsage >= 0)
+            return;
 
+        for (size_t count = 0; count < capacity; count++) {
+            auto pElem = Create();
+            pElem->Get()->OnCreate();
 
-    SPDLOG_TRACE("{:<20} - Recycler[{:p}] Need To Release {} Elements",
-        __FUNCTION__, static_cast<void *>(this), num);
+            mQueue.emplace(pElem);
+        }
 
-    std::unique_lock lock(mMutex);
-
-    while (num --> 0 && !mQueue.empty()) {
-        // const auto elem = std::move(mQueue.front());
-        mQueue.pop();
+        mUsage = 0;
+        SPDLOG_TRACE("{} - Recycler Initial", __FUNCTION__);
     }
 
-    SPDLOG_TRACE("{:<20} - Recycler[{:p}] Shrink Finished",
-        __FUNCTION__, static_cast<void *>(this));
-}
+    FRecycleHandle IRecyclerBase::Acquire() {
+        if (mUsage < 0)
+            throw std::runtime_error("Recycler not initialized");
 
-void IRecyclerBase::Recycle(IRecycle_Interface *pElem) {
-    if (mUsage < 0) {
-        delete pElem;
-        return;
+        {
+            std::unique_lock lock(mMutex);
+            if (!mQueue.empty()) {
+                auto *pResult = mQueue.front();
+
+                mQueue.pop();
+                mUsage.fetch_add(1, std::memory_order_relaxed);
+
+                pResult->OnAcquire();
+                pResult->Get()->Initial();
+
+                SPDLOG_TRACE("{} - Recycler Acquire From Queue, Usage[{}], Idle[{}]",
+                    __FUNCTION__, mUsage.load(), mQueue.size());
+
+                return FRecycleHandle{ pResult };
+            }
+        }
+
+        auto num = static_cast<size_t>(static_cast<float>(mUsage.load()) * RECYCLER_EXPAND_RATE);
+
+        if (num <= 0) {
+            throw std::runtime_error("Recycler expand num equal zero");
+        }
+
+        // The Last One Directly Return
+        std::vector<detail::IElementNodeBase *> nodes(num - 1);
+        detail::IElementNodeBase *pResult = nullptr;
+
+        while (num-- > 0) {
+            auto pElem = Create();
+
+            if (pElem == nullptr)
+                continue;
+
+            pElem->Get()->OnCreate();
+
+            // If The Last One, As The Result
+            if (num == 1) {
+                pResult = pElem;
+                continue;
+            }
+
+            nodes.emplace_back(pElem);
+        }
+
+        if (pResult == nullptr) {
+            throw std::runtime_error("Create new element failed");
+        }
+
+        // size_t queueSize;
+
+        // Emplace To The Internal Queue
+        if (!nodes.empty()) {
+            std::unique_lock lock(mMutex);
+            for (const auto &pElem: nodes) {
+                mQueue.emplace(pElem);
+            }
+            // queueSize = nodes.size();
+        }
+
+        mUsage.fetch_add(1, std::memory_order_relaxed);
+
+        pResult->OnAcquire();
+        pResult->Get()->Initial();
+
+        // SPDLOG_TRACE("{} - Acquire From New, Usage[{}], Idle[{}]",
+        //     __FUNCTION__, mUsage.load(), queueSize);
+
+        return FRecycleHandle{ pResult };
     }
 
-    pElem->Clear();
-    --mUsage;
+    void IRecyclerBase::Shrink() {
+        size_t num = 0;
 
-    std::unique_lock lock(mMutex);
-    mQueue.emplace(pElem);
+        // Check If It Needs To Shrink
+        {
+            std::shared_lock lock(mMutex);
 
-    SPDLOG_TRACE("{:<20} - Recycler[{:p}] - Recycle Recyclable[{:p}] To Queue",
-        __FUNCTION__, static_cast<void *>(this), static_cast<void *>(pElem));
-}
+            // Recycler Total Capacity
+            const size_t usage = mUsage.load();
+            const size_t total = mQueue.size() + usage;
 
-void IRecyclerBase::Initial(const size_t capacity) {
-    if (mUsage >= 0)
-        return;
+            // Usage Less Than Shrink Threshold
+            if (static_cast<float>(usage) < std::ceil(static_cast<float>(total) * RECYCLER_SHRINK_THRESHOLD)) {
+                num = static_cast<size_t>(std::floor(static_cast<float>(total) * RECYCLER_SHRINK_RATE));
 
-    for (size_t count = 0; count < capacity; count++) {
-        auto pElem = Create();
-        pElem->OnCreate();
+                const auto rest = total - num;
+                if (rest <= 0) {
+                    return;
+                }
 
-        mQueue.emplace(pElem);
+                if (rest < RECYCLER_MINIMUM_CAPACITY) {
+                    num = total - RECYCLER_MINIMUM_CAPACITY;
+                }
+            }
+        }
+
+        if (num <= 0)
+            return;
+
+        SPDLOG_TRACE("{:<20} - Recycler[{:p}] Need To Release {} Elements",
+            __FUNCTION__, static_cast<void *>(this), num);
+
+        std::unique_lock lock(mMutex);
+
+        while (num --> 0 && !mQueue.empty()) {
+            auto *pNode = mQueue.front();
+            mQueue.pop();
+
+            pNode->DestroyElement();
+            pNode->Destroy();
+        }
+
+        SPDLOG_TRACE("{:<20} - Recycler[{:p}] Shrink Finished",
+            __FUNCTION__, static_cast<void *>(this));
     }
 
-    mUsage = 0;
-    SPDLOG_TRACE("{:<20} - Recycler[{:p}] - Capacity[{}]", __FUNCTION__, static_cast<void *>(this), capacity);
+    size_t IRecyclerBase::GetUsage() const {
+        const auto usage = mUsage.load(std::memory_order_acquire);
+        if (usage < 0)
+            return 0;
+        return usage;
+    }
+
+    size_t IRecyclerBase::GetIdle() const {
+        if (mUsage.load(std::memory_order_acquire) < 0)
+            return 0;
+
+        std::shared_lock lock(mMutex);
+        return mQueue.size();
+    }
+
+    size_t IRecyclerBase::GetCapacity() const {
+        const auto usage = mUsage.load(std::memory_order_acquire);
+        if (usage < 0)
+            return 0;
+
+        std::shared_lock lock(mMutex);
+        return mQueue.size() + usage;
+    }
+
+    void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
+        if (mUsage < 0)
+            throw std::runtime_error("Recycler not initialized");
+
+        if (pNode == nullptr)
+            throw std::runtime_error("Recycle a null pointer");
+
+        pNode->OnRecycle();
+        mUsage.fetch_sub(1, std::memory_order_relaxed);
+
+        std::unique_lock lock(mMutex);
+        mQueue.emplace(pNode);
+
+        SPDLOG_TRACE("{} - Recycle Node, Usage[{}], Idle[{}]", __FUNCTION__, mUsage.load(), mQueue.size());
+    }
 }

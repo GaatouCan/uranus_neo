@@ -1,17 +1,17 @@
 ﻿#pragma once
 
-#include "../Common.h"
+#include "Common.h"
 
-#include <memory>
+#include <concepts>
+
+
 #ifdef __linux__
 #include <cstdint>
 #endif
 
-using std::shared_ptr;
-using std::unique_ptr;
-using std::make_shared;
-using std::make_unique;
-
+namespace recycle {
+    class IRecyclerBase;
+}
 
 /**
  * The Interface Of Recyclable Object,
@@ -19,7 +19,7 @@ using std::make_unique;
  */
 class BASE_API IRecycle_Interface {
 
-    friend class IRecyclerBase;
+    friend class recycle::IRecyclerBase;
 
 protected:
     /** Called When It Created By Recycler */
@@ -40,12 +40,12 @@ public:
     /** Depth Copy Object Data */
     virtual bool CopyFrom(IRecycle_Interface *other);
 
-    /** Depth Copy Object Data */
-    bool CopyFrom(const shared_ptr<IRecycle_Interface> &other);
-
     /** After Acquiring And Before Assigning Return True */
     [[nodiscard]] virtual bool IsUnused() const = 0;
 
     /** After Recycling It Was False */
     [[nodiscard]] virtual bool IsAvailable() const = 0;
 };
+
+template<class Type>
+concept CRecycleType = std::derived_from<Type, IRecycle_Interface>;
