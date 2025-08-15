@@ -213,7 +213,7 @@ namespace recycle {
             return;
 
         for (size_t count = 0; count < capacity; count++) {
-            auto pElem = Create();
+            auto pElem = CreateNode();
             pElem->Get()->OnCreate();
 
             mQueue.emplace(pElem);
@@ -256,7 +256,7 @@ namespace recycle {
         detail::IElementNodeBase *pResult = nullptr;
 
         while (num-- > 0) {
-            auto pElem = Create();
+            auto pElem = CreateNode();
 
             if (pElem == nullptr)
                 continue;

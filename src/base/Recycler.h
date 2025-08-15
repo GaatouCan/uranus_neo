@@ -112,7 +112,7 @@ namespace recycle {
     protected:
         IRecyclerBase();
 
-        virtual detail::IElementNodeBase *Create() const = 0;
+        virtual detail::IElementNodeBase *CreateNode() const = 0;
 
     public:
         virtual ~IRecyclerBase();
@@ -127,6 +127,12 @@ namespace recycle {
         [[nodiscard]] size_t GetUsage()     const;
         [[nodiscard]] size_t GetIdle()      const;
         [[nodiscard]] size_t GetCapacity()  const;
+
+        template<
+            CRecycleType Type,
+            class Allocator             = std::allocator<Type>,
+            class Deleter               = std::default_delete<Type>>
+        static IRecyclerBase *Create();
 
     private:
         void Recycle(detail::IElementNodeBase *pNode);
@@ -290,7 +296,7 @@ namespace recycle {
         class Deleter       = std::default_delete<Type>>
     class TRecycler final : public IRecyclerBase {
     protected:
-        detail::IElementNodeBase *Create() const override {
+        detail::IElementNodeBase *CreateNode() const override {
             return detail::CreateElementNode<Type, Allocator, Deleter>(mControl, mAllocator, mDeleter);
         }
 
@@ -298,15 +304,12 @@ namespace recycle {
         Allocator   mAllocator{};
         Deleter     mDeleter{};
     };
+
+    template<CRecycleType Type, class Allocator, class Deleter>
+    inline IRecyclerBase *IRecyclerBase::Create() {
+        return new TRecycler<Type, Allocator, Deleter>();
+    }
 }
 
 using recycle::IRecyclerBase;
 using recycle::FRecycleHandle;
-
-template<
-    CRecycleType Type,
-    class Allocator             = std::allocator<Type>,
-    class Deleter               = std::default_delete<Type>>
-inline IRecyclerBase *CreateRecycler() {
-    return new recycle::TRecycler<Type, Allocator, Deleter>();
-}
