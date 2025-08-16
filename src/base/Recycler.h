@@ -303,15 +303,15 @@ namespace recycle {
                 : IElementNodeBase(pControl),
                   mAllocator(alloc),
                   mElement{} {
-                ::new (static_cast<void*>(&mElement)) Type();
+                ::new (static_cast<void*>(std::addressof(mElement))) Type();
             }
 
             ElementType *GetT() noexcept {
-                return std::launder(reinterpret_cast<ElementType *>(&mElement));
+                return std::launder(reinterpret_cast<ElementType *>(std::addressof(mElement)));
             }
 
             const ElementType *GetT() const noexcept {
-                return std::launder(reinterpret_cast<const ElementType *>(&mElement));
+                return std::launder(reinterpret_cast<const ElementType *>(std::addressof(mElement)));
             }
 
             [[nodiscard]] IRecycle_Interface *Get() noexcept override {
