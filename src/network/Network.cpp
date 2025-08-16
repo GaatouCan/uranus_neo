@@ -145,11 +145,12 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
     }
 }
 
-FRecycleHandle<IPackage_Interface> UNetwork::BuildPackage() const {
-    assert(mPackagePool != nullptr);
+FPackageHandle UNetwork::BuildPackage() const {
+    if (mPackagePool == nullptr)
+        throw std::runtime_error("PackagePool Is Null In Network Module");
 
     if (mState != EModuleState::RUNNING)
-        return {};
+        return nullptr;
 
     return mPackagePool->Acquire<IPackage_Interface>();
 }

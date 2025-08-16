@@ -3,14 +3,14 @@
 #include "Module.h"
 #include "LoginHandler.h"
 #include "base/Types.h"
+#include "base/Package.h"
+#include "base/Recycler.h"
 
 #include <unordered_map>
-#include <memory>
-#include <mutex>
 #include <asio.hpp>
 
 
-class IPackage_Interface;
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 
 class BASE_API ULoginAuth final : public IModuleBase {
@@ -37,8 +37,8 @@ public:
 
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
 
-    void OnLoginRequest(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg);
-    void OnPlatformInfo(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void OnLoginRequest(const std::string &key, const FPackageHandle &pkg);
+    void OnPlatformInfo(int64_t pid, const FPackageHandle &pkg) const;
 
     void OnAgentError(const std::string &key, int64_t pid, const std::string &error) const;
 

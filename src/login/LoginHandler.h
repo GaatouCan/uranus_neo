@@ -1,13 +1,14 @@
 #pragma once
 
 #include "base/PlatformInfo.h"
+#include "base/Package.h"
+#include "base/Recycler.h"
 
-#include <memory>
 
-
-class IPackage_Interface;
 class UServer;
 class ULoginAuth;
+
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 
 class BASE_API ILoginHandler {
@@ -31,22 +32,22 @@ public:
 
     virtual void UpdateAddressList() = 0;
 
-    virtual FLoginToken ParseLoginRequest(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
-    virtual FPlatformInfo ParsePlatformInfo(const std::shared_ptr<IPackage_Interface> &pkg) = 0;
+    virtual FLoginToken ParseLoginRequest(const FPackageHandle &pkg) = 0;
+    virtual FPlatformInfo ParsePlatformInfo(const FPackageHandle &pkg) = 0;
 
     virtual void OnLoginSuccess(
         int64_t pid,
-        const std::shared_ptr<IPackage_Interface> &pkg) const = 0;
+        const FPackageHandle &pkg) const = 0;
 
     virtual void OnRepeatLogin(
         int64_t pid,
         const std::string &addr,
-        const std::shared_ptr<IPackage_Interface> &pkg) = 0;
+        const FPackageHandle &pkg) = 0;
 
     virtual void OnAgentError(
         int64_t pid,
         const std::string &addr,
-        const std::shared_ptr<IPackage_Interface> &pkg,
+        const FPackageHandle &pkg,
         const std::string &desc) = 0;
 
 protected:

@@ -30,7 +30,7 @@ int64_t IPlayerAgent::GetPlayerID() const {
     return dynamic_cast<UAgentContext *>(mContext)->GetPlayerID();
 }
 
-void IPlayerAgent::SendToPlayer(const int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
+void IPlayerAgent::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -62,7 +62,7 @@ void IPlayerAgent::PostToPlayer(const int64_t pid, const std::function<void(ISer
     }
 }
 
-void IPlayerAgent::SendToClient(const shared_ptr<IPackage_Interface> &pkg) const {
+void IPlayerAgent::SendToClient(const FPackageHandle &pkg) const {
     if (mState != EServiceState::RUNNING)
         return;
 
@@ -79,9 +79,9 @@ void IPlayerAgent::SendToClient(const shared_ptr<IPackage_Interface> &pkg) const
     }
 }
 
-void IPlayerAgent::OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) {
+void IPlayerAgent::OnHeartBeat(const FPackageHandle &pkg) {
 }
 
-void IPlayerAgent::SendToClient(const int64_t, const shared_ptr<IPackage_Interface> &) const {
+void IPlayerAgent::SendToClient(const int64_t, const FPackageHandle &) const {
     // Hide This Function In Player Agent, Do Nothing
 }

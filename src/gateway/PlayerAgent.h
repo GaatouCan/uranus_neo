@@ -20,14 +20,14 @@ public:
 
     [[nodiscard]] int64_t GetPlayerID() const;
 
-    void SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const final;
+    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const final;
     void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const final;
 
-    void SendToClient(const shared_ptr<IPackage_Interface> &pkg) const;
+    void SendToClient(const FPackageHandle &pkg) const;
 
 protected:
-    virtual void OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg);
+    virtual void OnHeartBeat(const FPackageHandle &pkg);
 
 private:
-    void SendToClient(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const final;
+    void SendToClient(int64_t pid, const FPackageHandle &pkg) const final;
 };

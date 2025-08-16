@@ -27,6 +27,6 @@ public:
     [[nodiscard]] UGateway* GetGateway() const;
     [[nodiscard]] shared_ptr<UAgentContext> GetOtherAgent(int64_t pid) const;
 
-    void OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const;
+    void OnHeartBeat(const FPackageHandle &pkg) const;
     void OnPlatformInfo(const FPlatformInfo &info) const;
 };

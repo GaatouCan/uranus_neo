@@ -50,7 +50,7 @@ shared_ptr<UAgentContext> UAgentContext::GetOtherAgent(const int64_t pid) const 
     return nullptr;
 }
 
-void UAgentContext::OnHeartBeat(const shared_ptr<IPackage_Interface> &pkg) const {
+void UAgentContext::OnHeartBeat(const FPackageHandle &pkg) const {
     if (mState != EContextState::IDLE && mState != EContextState::RUNNING)
         return;
 

@@ -99,7 +99,12 @@ namespace recycle {
             : mNode(nullptr),
               mElement(nullptr) {
 
-        };
+        }
+
+        FRecycleHandle(nullptr_t)
+            : FRecycleHandle() {
+
+        }
 
         ~FRecycleHandle() {
             Release();

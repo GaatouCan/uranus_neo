@@ -1,6 +1,5 @@
 #include "LoginAuth.h"
 #include "Server.h"
-#include "base/Package.h"
 #include "gateway/Gateway.h"
 #include "network/Network.h"
 #include "network/Connection.h"
@@ -42,7 +41,7 @@ bool ULoginAuth::VerifyAddress(const asio::ip::tcp::endpoint &endpoint) {
     return true;
 }
 
-void ULoginAuth::OnLoginRequest(const std::string &key, const std::shared_ptr<IPackage_Interface> &pkg) {
+void ULoginAuth::OnLoginRequest(const std::string &key, const FPackageHandle &pkg) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -91,7 +90,7 @@ void ULoginAuth::OnLoginRequest(const std::string &key, const std::shared_ptr<IP
     OnLoginSuccess(key, pid);
 }
 
-void ULoginAuth::OnPlatformInfo(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void ULoginAuth::OnPlatformInfo(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

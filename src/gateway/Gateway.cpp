@@ -2,7 +2,6 @@
 #include "AgentContext.h"
 #include "PlayerAgent.h"
 #include "Server.h"
-#include "base/Package.h"
 #include "network/Network.h"
 #include "service/ServiceModule.h"
 #include "service/ServiceContext.h"
@@ -146,7 +145,7 @@ void UGateway::Stop() {
     mLibrary.Reset();
 }
 
-void UGateway::SendToPlayer(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void UGateway::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -168,7 +167,7 @@ void UGateway::PostToPlayer(const int64_t pid, const std::function<void(IService
         agent->PushTask(task);
 }
 
-void UGateway::OnClientPackage(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void UGateway::OnClientPackage(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -188,7 +187,7 @@ void UGateway::OnClientPackage(const int64_t pid, const std::shared_ptr<IPackage
         context->PushPackage(pkg);
 }
 
-void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void UGateway::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -203,7 +202,7 @@ void UGateway::SendToClient(const int64_t pid, const std::shared_ptr<IPackage_In
         network->SendToClient(agent->GetConnectionKey(), pkg);
 }
 
-void UGateway::OnHeartBeat(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void UGateway::OnHeartBeat(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

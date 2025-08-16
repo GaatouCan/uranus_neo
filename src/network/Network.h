@@ -56,7 +56,7 @@ public:
     [[nodiscard]] io_context &GetIOContext();
 
     [[nodiscard]] IRecyclerBase *CreatePackagePool() const;
-    FRecycleHandle<IPackage_Interface> BuildPackage() const;
+    FPackageHandle BuildPackage() const;
 
     shared_ptr<UConnection> FindConnection(const std::string &key) const;
     void RemoveConnection(const std::string &key, int64_t pid);

@@ -3,19 +3,20 @@
 #include "Module.h"
 #include "base/SharedLibrary.h"
 #include "base/PlatformInfo.h"
+#include "base/Package.h"
+#include "base/Recycler.h"
 
 #include <functional>
 #include <shared_mutex>
 #include <unordered_map>
 
 
-class IPackage_Interface;
 class IServiceBase;
 class IPlayerAgent;
 class UAgentContext;
 
 using std::unordered_map;
-
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 class BASE_API UGateway final : public IModuleBase {
 
@@ -40,13 +41,13 @@ public:
     std::string GetConnectionKey(int64_t pid) const;
     std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
 
-    void SendToPlayer(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
     void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
-    void OnClientPackage(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
-    void SendToClient(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void OnClientPackage(int64_t pid, const FPackageHandle &pkg) const;
+    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
 
-    void OnHeartBeat(int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const;
+    void OnHeartBeat(int64_t pid, const FPackageHandle &pkg) const;
     void OnPlatformInfo(const FPlatformInfo &info) const;
 
 private:
