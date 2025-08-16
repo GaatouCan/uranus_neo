@@ -28,9 +28,7 @@ UNetwork::~UNetwork() {
 }
 
 void UNetwork::Initial() {
-    if (mState != EModuleState::CREATED)
-        return;
-
+    assert(mState == EModuleState::CREATED);
     assert(mCodecFactory != nullptr);
 
     mPackagePool = mCodecFactory->CreatePackagePool();

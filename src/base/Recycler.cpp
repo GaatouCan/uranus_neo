@@ -49,6 +49,7 @@ namespace recycle {
         IElementNodeBase::IElementNodeBase(FControlBlock *pCtrl)
             : mRefCount(RECYCLED_REFERENCE_COUNT),
               mControl(pCtrl) {
+
             assert(mControl);
             mControl->IncRefCount();
 
@@ -56,7 +57,8 @@ namespace recycle {
         }
 
         IElementNodeBase::~IElementNodeBase() {
-            assert(mControl);
+            // Control Block Should Never Be Null
+            assert(mControl != nullptr);
             mControl->DecRefCount();
 
             SPDLOG_DEBUG("Destroy Element Node");
@@ -64,7 +66,10 @@ namespace recycle {
 
         void IElementNodeBase::OnAcquire() {
             if (int64_t expected = RECYCLED_REFERENCE_COUNT;
-                !mRefCount.compare_exchange_strong(expected, 1, std::memory_order_acq_rel, std::memory_order_acquire)) {
+                !mRefCount.compare_exchange_strong(
+                    expected, 1,
+                    std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
                 throw std::runtime_error("Acquire on non-recycled node");
             }
             SPDLOG_TRACE("{}", __FUNCTION__);
@@ -78,11 +83,14 @@ namespace recycle {
         void IElementNodeBase::IncRefCount() {
             int64_t cur = mRefCount.load(std::memory_order_acquire);
             for (;;) {
+                // Don't Increase The Node In Recycler's Queue
                 if (cur < 0)
-                    throw std::runtime_error("Increase while recycled");
+                    throw std::runtime_error("Increase While Recycled");
 
-                if (mRefCount.
-                    compare_exchange_weak(cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire)) {
+                if (mRefCount.compare_exchange_weak(
+                    cur, cur + 1,
+                    std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
                     break;
                 }
             }
@@ -95,7 +103,7 @@ namespace recycle {
         }
 
         IRecyclerBase *IElementNodeBase::GetRecycler() const noexcept {
-            assert(mControl);
+            assert(mControl != nullptr);
             return mControl->Get();
         }
     }
@@ -118,17 +126,16 @@ namespace recycle {
             }
         }
 
-        if (mControl) {
-            mControl->Release();
-            mControl->DecRefCount();
-        }
+        assert(mControl != nullptr);
+        mControl->Release();
+        mControl->DecRefCount();
 
         SPDLOG_DEBUG("Destroy Recycler");
     }
 
     void IRecyclerBase::Initial(const size_t capacity) {
         if (mUsage >= 0)
-            return;
+            throw std::runtime_error("Recycler Is Already Initialized");
 
         for (size_t count = 0; count < capacity; count++) {
             auto pElem = CreateNode();
@@ -143,7 +150,7 @@ namespace recycle {
 
     detail::IElementNodeBase *IRecyclerBase::AcquireNode() {
         if (mUsage < 0)
-            throw std::runtime_error("Recycler not initialized");
+            throw std::runtime_error("Recycler Not Initialized");
 
         {
             std::unique_lock lock(mMutex);
@@ -173,7 +180,7 @@ namespace recycle {
         std::vector<detail::IElementNodeBase *> nodes(num - 1);
         detail::IElementNodeBase *pResult = nullptr;
 
-        while (num-- > 0) {
+        while (num --> 0) {
             auto pElem = CreateNode();
 
             if (pElem == nullptr)
@@ -190,9 +197,8 @@ namespace recycle {
             nodes.emplace_back(pElem);
         }
 
-        if (pResult == nullptr) {
-            throw std::runtime_error("Create new element failed");
-        }
+        if (pResult == nullptr)
+            throw std::runtime_error("Create New Element Failed");
 
         // size_t queueSize;
 
@@ -217,6 +223,9 @@ namespace recycle {
     }
 
     void IRecyclerBase::Shrink() {
+        if (mUsage < 0)
+            throw std::runtime_error("Recycler Not Initialized");
+
         size_t num = 0;
 
         // Check If It Needs To Shrink
@@ -288,10 +297,10 @@ namespace recycle {
 
     void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
         if (mUsage < 0)
-            throw std::runtime_error("Recycler not initialized");
+            throw std::runtime_error("Recycler Not Initialized");
 
         if (pNode == nullptr)
-            throw std::runtime_error("Recycle a null pointer");
+            throw std::runtime_error("Recycle A Null Pointer");
 
         pNode->OnRecycle();
         mUsage.fetch_sub(1, std::memory_order_relaxed);
