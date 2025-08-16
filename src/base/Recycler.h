@@ -156,11 +156,6 @@ namespace recycle {
             return static_cast<T *>(Get());
         }
 
-        void Swap(FRecycleHandle &rhs) {
-            std::swap(mNode, rhs.mNode);
-            std::swap(mElement, rhs.mElement);
-        }
-
     private:
         void Release() noexcept;
 
