@@ -16,13 +16,13 @@ typedef void (*AServiceDestroyer)(IServiceBase *);
 
 
 #pragma region Schedule
-void UContextBase::UPackageNode::SetPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void UContextBase::UPackageNode::SetPackage(const FPackageHandle &pkg) {
     mPackage = pkg;
 }
 
 void UContextBase::UPackageNode::Execute(IServiceBase *pService) {
-    if (pService && mPackage) {
-        pService->OnPackage(mPackage);
+    if (pService && mPackage.IsValid()) {
+        pService->OnPackage(mPackage.Get());
     }
 }
 
@@ -42,7 +42,7 @@ void UContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interf
 
 void UContextBase::UEventNode::Execute(IServiceBase *pService) {
     if (pService && mEvent) {
-        pService->OnEvent(mEvent);
+        pService->OnEvent(mEvent.get());
     }
 }
 
@@ -68,18 +68,26 @@ void UContextBase::UTickerNode::Execute(IServiceBase *pService) {
 UContextBase::UContextBase()
     : mModule(nullptr),
       mServiceID(INVALID_SERVICE_ID),
-      mService(nullptr) {
+      mService(nullptr),
+      mPackagePool(nullptr),
+      mChannel(nullptr),
+      mShutdownTimer(nullptr) {
 }
 
 UContextBase::~UContextBase() {
     if (mShutdownTimer) {
         mShutdownTimer->cancel();
         ForceShutdown();
+
+        delete mShutdownTimer;
     }
 
     if (mChannel) {
         mChannel->close();
+        delete mChannel;
     }
+
+    delete mPackagePool;
 }
 
 void UContextBase::SetUpModule(IModuleBase *pModule) {
@@ -137,7 +145,7 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     }
 
     // Create Node Channel
-    mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
+    mChannel = new AContextChannel(GetServer()->GetIOContext(), 1024);
 
     // Create Package Pool For Data Exchange
     mPackagePool = network->CreatePackagePool();
@@ -195,7 +203,7 @@ awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     }
 
     // Create Node Channel
-    mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
+    mChannel = new AContextChannel(GetServer()->GetIOContext(), 1024);
 
     // Create Package Pool For Data Exchange
     mPackagePool = network->CreatePackagePool();
@@ -240,7 +248,7 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     if (!bForce && mState == EContextState::RUNNING) {
         mState = EContextState::WAITING;
 
-        mShutdownTimer = make_unique<ASteadyTimer>(GetServer()->GetIOContext());
+        mShutdownTimer = new ASteadyTimer(GetServer()->GetIOContext());
         if (func != nullptr)
             mShutdownCallback = func;
 
@@ -358,7 +366,7 @@ EContextState UContextBase::GetState() const {
     return mState;
 }
 
-void UContextBase::PushPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void UContextBase::PushPackage(const FPackageHandle &pkg) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
@@ -541,14 +549,11 @@ FContextHandle UContextBase::GenerateHandle() {
     return { mServiceID, weak_from_this() };
 }
 
-shared_ptr<IPackage_Interface> UContextBase::BuildPackage() const {
+FPackageHandle UContextBase::BuildPackage() const {
     if (mState != EContextState::IDLE || mState != EContextState::RUNNING)
-        return nullptr;
+        throw std::runtime_error(std::format("{} - In Error State[{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
-    if (const auto elem = mPackagePool->Acquire())
-        return std::dynamic_pointer_cast<IPackage_Interface>(elem);
-
-    return nullptr;
+    return mPackagePool->Acquire<IPackage_Interface>();
 }
 
 IServiceBase *UContextBase::GetOwningService() const {
@@ -563,28 +568,28 @@ awaitable<void> UContextBase::ProcessChannel() {
         co_return;
 
     while (mChannel->is_open()) {
-        auto [ec, node] = co_await mChannel->async_receive();
-        if (ec)
-            co_return;
-
-        if (node == nullptr)
-            continue;
-
-        if (mState >= EContextState::WAITING)
-            co_return;
-
-        mState = EContextState::RUNNING;
         try {
+            auto [ec, node] = co_await mChannel->async_receive();
+            if (ec)
+                co_return;
+
+            if (node == nullptr)
+                continue;
+
+            if (mState >= EContextState::WAITING)
+                co_return;
+
+            mState = EContextState::RUNNING;
             node->Execute(mService);
+
+            if (mState >= EContextState::WAITING) {
+                ForceShutdown();
+                co_return;
+            }
+
+            mState = EContextState::IDLE;
         } catch (const std::exception &e) {
             SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
         }
-
-        if (mState >= EContextState::WAITING) {
-            ForceShutdown();
-            co_return;
-        }
-
-        mState = EContextState::IDLE;
     }
 }

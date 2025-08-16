@@ -54,7 +54,7 @@ FPackageHandle IServiceBase::BuildPackage() const {
     if (mContext == nullptr)
         throw std::runtime_error("Service's Context Is NULL Pointer");
 
-    if (auto pkg = mContext->BuildPackage()) {
+    if (auto pkg = mContext->BuildPackage(); pkg.IsValid()) {
         pkg->SetSource(GetServiceID());
         return pkg;
     }

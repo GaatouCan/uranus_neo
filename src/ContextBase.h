@@ -3,16 +3,17 @@
 #include "base/Types.h"
 #include "base/SharedLibrary.h"
 #include "base/ContextHandle.h"
+#include "base/Recycler.h"
+#include "base/Package.h"
 
 
 class IServiceBase;
 class IModuleBase;
-class IRecyclerBase;
 class IEventParam_Interface;
 class IDataAsset_Interface;
-class IPackage_Interface;
 class UServer;
 
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 enum class EContextState {
     CREATED,
@@ -42,10 +43,10 @@ class BASE_API UContextBase : public std::enable_shared_from_this<UContextBase> 
 
     class BASE_API UPackageNode final : public ISchedule_Interface {
 
-        shared_ptr<IPackage_Interface> mPackage;
+        FPackageHandle mPackage;
 
     public:
-        void SetPackage(const shared_ptr<IPackage_Interface> &pkg);
+        void SetPackage(const FPackageHandle &pkg);
         void Execute(IServiceBase *pService) override;
     };
 
@@ -112,13 +113,13 @@ public:
 
     bool BootService();
 
-    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
+    [[nodiscard]] FPackageHandle BuildPackage() const;
 
     [[nodiscard]] IServiceBase *GetOwningService() const;
     [[nodiscard]] EContextState GetState() const;
 
 #pragma region Push
-    void PushPackage(const shared_ptr<IPackage_Interface> &pkg);
+    void PushPackage(const FPackageHandle &pkg);
     void PushTask(const std::function<void(IServiceBase *)> &task);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
@@ -145,13 +146,13 @@ private:
     FServiceHandle mServiceID;
     IServiceBase *mService;
 
-    shared_ptr<IRecyclerBase> mPackagePool;
-    unique_ptr<AContextChannel> mChannel;
+    IRecyclerBase *mPackagePool;
+    AContextChannel *mChannel;
 
     /** Loaded Library With Creator And Destroyer Of Service */
     FSharedLibrary mLibrary;
 
-    unique_ptr<ASteadyTimer> mShutdownTimer;
+    ASteadyTimer *mShutdownTimer;
     std::function<void(UContextBase *)> mShutdownCallback;
 
 protected:
