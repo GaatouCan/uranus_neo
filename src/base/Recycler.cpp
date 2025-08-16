@@ -100,87 +100,87 @@ namespace recycle {
         }
     }
 
-    FRecycleHandle::FRecycleHandle(detail::IElementNodeBase *pNode)
-        : mNode(pNode),
-          mElement(mNode->Get()) {
-        SPDLOG_TRACE("{} - New Handle", __FUNCTION__);
-    }
-
-    FRecycleHandle::~FRecycleHandle() {
-        Release();
-    }
-
-    FRecycleHandle::FRecycleHandle(const FRecycleHandle &rhs) {
-        mNode = rhs.mNode;
-        mElement = rhs.mElement;
-        if (mNode) {
-            mNode->IncRefCount();
-        }
-        SPDLOG_TRACE("FRecycleHandle Copy From Other");
-    }
-
-    FRecycleHandle &FRecycleHandle::operator=(const FRecycleHandle &rhs) {
-        if (this != &rhs) {
-            Release();
-            mNode = rhs.mNode;
-            mElement = rhs.mElement;
-            if (mNode) {
-                mNode->IncRefCount();
-            }
-            SPDLOG_TRACE("FRecycleHandle Copy Assign");
-        }
-        return *this;
-    }
-
-    FRecycleHandle::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
-        mNode = rhs.mNode;
-        mElement = rhs.mElement;
-        rhs.mNode = nullptr;
-        rhs.mElement = nullptr;
-        SPDLOG_TRACE("FRecycleHandle Move From Other");
-    }
-
-    FRecycleHandle &FRecycleHandle::operator=(FRecycleHandle &&rhs) noexcept {
-        if (this != &rhs) {
-            Release();
-            mNode = rhs.mNode;
-            mElement = rhs.mElement;
-            rhs.mNode = nullptr;
-            rhs.mElement = nullptr;
-            SPDLOG_TRACE("FRecycleHandle Move Assign");
-        }
-        return *this;
-    }
-
-    IRecycle_Interface *FRecycleHandle::operator->() const noexcept {
-        return mElement;
-    }
-
-    IRecycle_Interface &FRecycleHandle::operator*() const noexcept {
-        return *mElement;
-    }
-
-    IRecycle_Interface *FRecycleHandle::Get() const noexcept {
-        return mElement;
-    }
-
-    void FRecycleHandle::Release() noexcept {
-        SPDLOG_TRACE("{} - Release Handle", __FUNCTION__);
-        if (mNode && mNode->DecRefCount()) {
-            if (auto *recycler = mNode->GetRecycler()) {
-                SPDLOG_TRACE("{} - Do Recycle", __FUNCTION__);
-                recycler->Recycle(mNode);
-                mNode = nullptr;
-                return;
-            }
-
-            SPDLOG_TRACE("{} - Destroy Element", __FUNCTION__);
-            mNode->DestroyElement();
-            mNode->Destroy();
-        }
-
-        mNode = nullptr;
-    }
+    // FRecycleHandle::FRecycleHandle(detail::IElementNodeBase *pNode)
+    //     : mNode(pNode),
+    //       mElement(mNode->Get()) {
+    //     SPDLOG_TRACE("{} - New Handle", __FUNCTION__);
+    // }
+    //
+    // FRecycleHandle::~FRecycleHandle() {
+    //     Release();
+    // }
+    //
+    // FRecycleHandle::FRecycleHandle(const FRecycleHandle &rhs) {
+    //     mNode = rhs.mNode;
+    //     mElement = rhs.mElement;
+    //     if (mNode) {
+    //         mNode->IncRefCount();
+    //     }
+    //     SPDLOG_TRACE("FRecycleHandle Copy From Other");
+    // }
+    //
+    // FRecycleHandle &FRecycleHandle::operator=(const FRecycleHandle &rhs) {
+    //     if (this != &rhs) {
+    //         Release();
+    //         mNode = rhs.mNode;
+    //         mElement = rhs.mElement;
+    //         if (mNode) {
+    //             mNode->IncRefCount();
+    //         }
+    //         SPDLOG_TRACE("FRecycleHandle Copy Assign");
+    //     }
+    //     return *this;
+    // }
+    //
+    // FRecycleHandle::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
+    //     mNode = rhs.mNode;
+    //     mElement = rhs.mElement;
+    //     rhs.mNode = nullptr;
+    //     rhs.mElement = nullptr;
+    //     SPDLOG_TRACE("FRecycleHandle Move From Other");
+    // }
+    //
+    // FRecycleHandle &FRecycleHandle::operator=(FRecycleHandle &&rhs) noexcept {
+    //     if (this != &rhs) {
+    //         Release();
+    //         mNode = rhs.mNode;
+    //         mElement = rhs.mElement;
+    //         rhs.mNode = nullptr;
+    //         rhs.mElement = nullptr;
+    //         SPDLOG_TRACE("FRecycleHandle Move Assign");
+    //     }
+    //     return *this;
+    // }
+    //
+    // IRecycle_Interface *FRecycleHandle::operator->() const noexcept {
+    //     return mElement;
+    // }
+    //
+    // IRecycle_Interface &FRecycleHandle::operator*() const noexcept {
+    //     return *mElement;
+    // }
+    //
+    // IRecycle_Interface *FRecycleHandle::Get() const noexcept {
+    //     return mElement;
+    // }
+    //
+    // void FRecycleHandle::Release() noexcept {
+    //     SPDLOG_TRACE("{} - Release Handle", __FUNCTION__);
+    //     if (mNode && mNode->DecRefCount()) {
+    //         if (auto *recycler = mNode->GetRecycler()) {
+    //             SPDLOG_TRACE("{} - Do Recycle", __FUNCTION__);
+    //             recycler->Recycle(mNode);
+    //             mNode = nullptr;
+    //             return;
+    //         }
+    //
+    //         SPDLOG_TRACE("{} - Destroy Element", __FUNCTION__);
+    //         mNode->DestroyElement();
+    //         mNode->Destroy();
+    //     }
+    //
+    //     mNode = nullptr;
+    // }
 
     IRecyclerBase::IRecyclerBase()
         : mUsage(-1) {
@@ -223,7 +223,7 @@ namespace recycle {
         SPDLOG_TRACE("{} - Recycler Initial", __FUNCTION__);
     }
 
-    FRecycleHandle IRecyclerBase::Acquire() {
+    detail::IElementNodeBase *IRecyclerBase::AcquireNode() {
         if (mUsage < 0)
             throw std::runtime_error("Recycler not initialized");
 
@@ -241,7 +241,7 @@ namespace recycle {
                 SPDLOG_TRACE("{} - Recycler Acquire From Queue, Usage[{}], Idle[{}]",
                     __FUNCTION__, mUsage.load(), mQueue.size());
 
-                return FRecycleHandle{ pResult };
+                return pResult;
             }
         }
 
@@ -295,7 +295,7 @@ namespace recycle {
         // SPDLOG_TRACE("{} - Acquire From New, Usage[{}], Idle[{}]",
         //     __FUNCTION__, mUsage.load(), queueSize);
 
-        return FRecycleHandle{ pResult };
+        return pResult;
     }
 
     void IRecyclerBase::Shrink() {

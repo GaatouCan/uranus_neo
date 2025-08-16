@@ -61,6 +61,16 @@ namespace recycle {
             [[nodiscard]] virtual       IRecycle_Interface *    Get()       noexcept = 0;
             [[nodiscard]] virtual const IRecycle_Interface *    Get() const noexcept = 0;
 
+            template<CRecycleType Type>
+            Type *GetT() noexcept {
+                return static_cast<Type *>(Get());
+            }
+
+            template<CRecycleType Type>
+            const Type *GetT() const noexcept {
+                return static_cast<const Type *>(Get());
+            }
+
             [[nodiscard]] IRecyclerBase *GetRecycler() const noexcept;
 
         private:
@@ -70,35 +80,98 @@ namespace recycle {
     }
 #pragma endregion
 
-    class BASE_API FRecycleHandle final {
+    template<CRecycleType Type>
+    class FRecycleHandle final {
 
         friend class IRecyclerBase;
+        using ElementType = std::remove_extent_t<Type>;
 
-        explicit FRecycleHandle(detail::IElementNodeBase *pNode);
+        explicit FRecycleHandle(detail::IElementNodeBase *pNode)
+            : mNode(pNode) {
+            mElement = mNode->GetT<Type>();
+            assert(mElement != nullptr);
+        }
+
     public:
         FRecycleHandle() = delete;
-        ~FRecycleHandle();
+        ~FRecycleHandle() {
+            Release();
+        }
 
-        FRecycleHandle(const FRecycleHandle &rhs);
-        FRecycleHandle &operator=(const FRecycleHandle &rhs);
-        FRecycleHandle(FRecycleHandle &&rhs) noexcept;
-        FRecycleHandle &operator=(FRecycleHandle &&rhs) noexcept;
+        FRecycleHandle(const FRecycleHandle &rhs) {
+            mNode = rhs.mNode;
+            mElement = rhs.mElement;
+            if (mNode) {
+                mNode->IncRefCount();
+            }
+        }
 
-        IRecycle_Interface *operator->  () const noexcept;
-        IRecycle_Interface &operator*   () const noexcept;
+        FRecycleHandle &operator=(const FRecycleHandle &rhs) {
+            if (this != &rhs) {
+                Release();
+                mNode = rhs.mNode;
+                mElement = rhs.mElement;
+                if (mNode) {
+                    mNode->IncRefCount();
+                }
+            }
+            return *this;
+        }
 
-        [[nodiscard]] IRecycle_Interface *Get() const noexcept;
+        FRecycleHandle(FRecycleHandle &&rhs) noexcept {
+            mNode = rhs.mNode;
+            mElement = rhs.mElement;
+            rhs.mNode = nullptr;
+            rhs.mElement = nullptr;
+        }
+
+        FRecycleHandle &operator=(FRecycleHandle &&rhs) noexcept {
+            if (this != &rhs) {
+                Release();
+                mNode = rhs.mNode;
+                mElement = rhs.mElement;
+                rhs.mNode = nullptr;
+                rhs.mElement = nullptr;
+            }
+            return *this;
+        }
+
+        ElementType *operator->() const noexcept {
+            return mElement;
+        }
+
+        ElementType &operator*() const noexcept {
+            return *mElement;
+        }
+
+        [[nodiscard]] ElementType *Get() const noexcept {
+            return mElement;
+        }
+
+        template<CRecycleType T>
+        [[nodiscard]] Type *GetT() const noexcept {
+            if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
+                return mElement;
+            }
+            return static_cast<T *>(Get());
+        }
+
+        void Swap(FRecycleHandle &rhs) {
+            std::swap(mNode, rhs.mNode);
+            std::swap(mElement, rhs.mElement);
+        }
 
     private:
         void Release() noexcept;
 
     private:
-        detail::IElementNodeBase *  mNode;
-        IRecycle_Interface *        mElement;
+        detail::IElementNodeBase *mNode;
+        ElementType *mElement;
     };
 
     class BASE_API IRecyclerBase {
 
+        template<CRecycleType Type>
         friend class FRecycleHandle;
 
         static constexpr float      RECYCLER_EXPAND_THRESHOLD   = 0.75f;
@@ -121,7 +194,11 @@ namespace recycle {
 
         void Initial(size_t capacity = 64);
 
-        FRecycleHandle Acquire();
+        template<CRecycleType Type = IRecycle_Interface>
+        FRecycleHandle<Type> Acquire() {
+            return FRecycleHandle<Type>{ this->AcquireNode() };
+        }
+
         void Shrink();
 
         [[nodiscard]] size_t GetUsage()     const;
@@ -135,6 +212,7 @@ namespace recycle {
         static IRecyclerBase *Create();
 
     private:
+        detail::IElementNodeBase *AcquireNode();
         void Recycle(detail::IElementNodeBase *pNode);
 
     private:
@@ -145,6 +223,24 @@ namespace recycle {
     protected:
         detail::FControlBlock *mControl;
     };
+
+    template<CRecycleType Type>
+    inline void FRecycleHandle<Type>::Release() noexcept {
+        if (mNode && mNode->DecRefCount()) {
+            if (auto *recycler = mNode->GetRecycler()) {
+                //SPDLOG_TRACE("{} - Do Recycle", __FUNCTION__);
+                recycler->Recycle(mNode);
+                mNode = nullptr;
+                return;
+            }
+
+            //SPDLOG_TRACE("{} - Destroy Element", __FUNCTION__);
+            mNode->DestroyElement();
+            mNode->Destroy();
+        }
+
+        mNode = nullptr;
+    }
 
     namespace detail {
 
@@ -162,6 +258,7 @@ namespace recycle {
         template<CRecycleType Type, typename Allocator>
         class FElementNodeInplace final : public IElementNodeBase {
 
+            using ElementType   = std::remove_extent_t<Type>;
             using Traits        = std::allocator_traits<Allocator>;
             using AllocNode     = RebindAlloc<Allocator, FElementNodeInplace>;
 
@@ -173,12 +270,12 @@ namespace recycle {
                 ::new (static_cast<void*>(&mElement)) Type();
             }
 
-            Type *GetT() noexcept {
-                return std::launder(reinterpret_cast<Type*>(&mElement));
+            ElementType *GetT() noexcept {
+                return std::launder(reinterpret_cast<ElementType *>(&mElement));
             }
 
-            const Type *GetT() const noexcept {
-                return std::launder(reinterpret_cast<const Type*>(&mElement));
+            const ElementType *GetT() const noexcept {
+                return std::launder(reinterpret_cast<const ElementType *>(&mElement));
             }
 
             [[nodiscard]] IRecycle_Interface *Get() noexcept override {
@@ -202,11 +299,12 @@ namespace recycle {
 
         private:
             Allocator mAllocator;
-            alignas(Type) std::byte mElement[sizeof(Type)];
+            alignas(ElementType) std::byte mElement[sizeof(ElementType)];
         };
 
         template<CRecycleType Type, typename Allocator, typename Deleter>
         class FElementNodeSeparate final : public IElementNodeBase {
+            using ElementType   = std::remove_extent_t<Type>;
             using Traits        = std::allocator_traits<Allocator>;
             using AllocType     = RebindAlloc<Allocator, Type>;
             using AllocNode     = RebindAlloc<Allocator, FElementNodeSeparate>;
@@ -250,6 +348,24 @@ namespace recycle {
 
             [[nodiscard]] const IRecycle_Interface *Get() const noexcept override {
                 return static_cast<const IRecycle_Interface *>(mElement);
+            }
+
+            template<typename T>
+            T *GetT() noexcept {
+                if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
+                    return mElement;
+                } else {
+                    return static_cast<T *>(mElement);
+                }
+            }
+
+            template<typename T>
+            const T *GetT() const noexcept {
+                if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
+                    return mElement;
+                } else {
+                    return static_cast<const T *>(mElement);
+                }
             }
 
         private:
