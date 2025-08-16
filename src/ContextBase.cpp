@@ -526,7 +526,7 @@ void UContextBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &param)
 
 UServer *UContextBase::GetServer() const {
     if (mModule == nullptr)
-        return nullptr;
+        throw std::runtime_error(std::format("{} - Owner Module Is Still NULL Pointer", __FUNCTION__));
     return mModule->GetServer();
 }
 

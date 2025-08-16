@@ -1,6 +1,5 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
-#include "base/Package.h"
 #include "service/ServiceModule.h"
 #include "service/ServiceContext.h"
 #include "gateway/Gateway.h"
@@ -44,28 +43,28 @@ io_context &IServiceBase::GetIOContext() const {
 
 UServer *IServiceBase::GetServer() const {
     if (mContext == nullptr)
-        return nullptr;
+        throw std::runtime_error(std::format("{} - Context Is Still NULL Pointer", __FUNCTION__));
     return mContext->GetServer();
 }
 
-shared_ptr<IPackage_Interface> IServiceBase::BuildPackage() const {
+FPackageHandle IServiceBase::BuildPackage() const {
     if (mState != EServiceState::RUNNING)
-        return nullptr;
+        throw std::runtime_error("BuildPackage While Service Not In Running");
 
     if (mContext == nullptr)
-        return nullptr;
+        throw std::runtime_error("Service's Context Is NULL Pointer");
 
     if (auto pkg = mContext->BuildPackage()) {
         pkg->SetSource(GetServiceID());
         return pkg;
     }
 
-    return nullptr;
+    return {};
 }
 
-void IServiceBase::PostPackage(const shared_ptr<IPackage_Interface> &pkg) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::PostPackage(const FPackageHandle &pkg) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (pkg == nullptr)
         return;
@@ -88,9 +87,9 @@ void IServiceBase::PostPackage(const shared_ptr<IPackage_Interface> &pkg) const 
     }
 }
 
-void IServiceBase::PostPackage(const std::string &name, const shared_ptr<IPackage_Interface> &pkg) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     // Do Not Post To Self
     if (pkg == nullptr || name == GetServiceName())
@@ -111,9 +110,9 @@ void IServiceBase::PostPackage(const std::string &name, const shared_ptr<IPackag
     }
 }
 
-void IServiceBase::PostTask(int32_t target, const std::function<void(IServiceBase *)> &task) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::PostTask(const int64_t target, const std::function<void(IServiceBase *)> &task) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     // Do Not Post To Self
     if (target < 0 || target == GetServiceID())
@@ -132,8 +131,8 @@ void IServiceBase::PostTask(int32_t target, const std::function<void(IServiceBas
 }
 
 void IServiceBase::PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     // Do Not Post To Self
     if (name == GetServiceName())
@@ -151,9 +150,9 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
     }
 }
 
-void IServiceBase::SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (pkg == nullptr)
         return;
@@ -169,24 +168,24 @@ void IServiceBase::SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface
     }
 }
 
-void IServiceBase::PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::PostToPlayer(const int64_t pid, const std::function<void(IServiceBase *)> &task) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (task == nullptr)
         return;
 
     if (const auto *gateway = GetModule<UGateway>()) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
-         __FUNCTION__, GetServiceID(), GetServiceName(), pid);
+            __FUNCTION__, GetServiceID(), GetServiceName(), pid);
 
         gateway->PostToPlayer(pid, task);
     }
 }
 
-void IServiceBase::SendToClient(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
-    if (mState != EServiceState::RUNNING)
-        return;
+void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (pkg == nullptr)
         return;
@@ -204,10 +203,10 @@ void IServiceBase::SendToClient(int64_t pid, const shared_ptr<IPackage_Interface
 
 void IServiceBase::ListenEvent(const int event) const {
     if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
-        return;
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
     if (mContext == nullptr)
-        return;
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
     mContext->ListenEvent(event);
 }
@@ -220,21 +219,21 @@ void IServiceBase::RemoveListener(const int event) const {
 }
 
 void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const {
-    if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
-        return;
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (mContext == nullptr)
-        return;
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
     mContext->DispatchEvent(event);
 }
 
 int64_t IServiceBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
-    if (mState == EServiceState::INITIALIZED || mState == EServiceState::TERMINATED)
-        return -1;
+    if (mState <= EServiceState::INITIALIZED || mState == EServiceState::TERMINATED)
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
     if (mContext == nullptr)
-        return -1;
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
     return mContext->CreateTimer(task, delay, rate);
 }
@@ -254,8 +253,8 @@ void IServiceBase::CancelAllTimers() const {
 }
 
 void IServiceBase::TryCreateLogger(const std::string &name) const {
-    if (mState <= EServiceState::CREATED || mState >= EServiceState::TERMINATED)
-        return;
+    if (mState == EServiceState::CREATED || mState >= EServiceState::TERMINATED)
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
     auto *module = GetModule<ULoggerModule>();
     if (module == nullptr)
@@ -270,12 +269,10 @@ EServiceState IServiceBase::GetState() const {
 
 bool IServiceBase::Initial(const IDataAsset_Interface *pData) {
     if (mState != EServiceState::CREATED)
-        return false;
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
-    if (mContext == nullptr) {
-        SPDLOG_ERROR("{:<20} - Context Is Null", __FUNCTION__);
-        return false;
-    }
+    if (mContext == nullptr)
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
     mState = EServiceState::INITIALIZED;
     return true;
@@ -283,33 +280,34 @@ bool IServiceBase::Initial(const IDataAsset_Interface *pData) {
 
 awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *pData) {
     if (mState != EServiceState::CREATED)
-        co_return false;
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
-    if (mContext == nullptr) {
-        SPDLOG_ERROR("{:<20} - Context Is Null", __FUNCTION__);
-        co_return false;
-    }
+    if (mContext == nullptr)
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
     mState = EServiceState::INITIALIZED;
     co_return true;
 }
 
 bool IServiceBase::Start() {
+    if (mState != EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
+
     mState = EServiceState::RUNNING;
     return true;
 }
 
 void IServiceBase::Stop() {
     if (mState == EServiceState::TERMINATED)
-        return;
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
     mState = EServiceState::TERMINATED;
 }
 
-void IServiceBase::OnPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void IServiceBase::OnPackage(IPackage_Interface *pkg) {
 }
 
-void IServiceBase::OnEvent(const shared_ptr<IEventParam_Interface> &event) {
+void IServiceBase::OnEvent(IEventParam_Interface *event) {
 }
 
 void IServiceBase::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {

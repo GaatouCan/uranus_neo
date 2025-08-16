@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Server.h"
+#include "base/Recycler.h"
+#include "base/Package.h"
 #include "base/Types.h"
 #include "base/EventParam.h"
 
@@ -9,8 +11,8 @@
 
 class UContextBase;
 class IDataAsset_Interface;
-class IPackage_Interface;
 
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 enum class EServiceState {
     CREATED,
@@ -44,7 +46,7 @@ public:
     template<CModuleType Module>
     Module *GetModule() const;
 
-    [[nodiscard]] shared_ptr<IPackage_Interface> BuildPackage() const;
+    [[nodiscard]] FPackageHandle BuildPackage() const;
 
 protected:
 #pragma region Control By Context
@@ -57,19 +59,19 @@ protected:
 
 #pragma region Package
     /// Send To Other Service Use Target In Package
-    void PostPackage(const shared_ptr<IPackage_Interface> &pkg) const;
+    void PostPackage(const FPackageHandle &pkg) const;
 
     /// Send To Other Service Use Service Name
-    void PostPackage(const std::string &name, const shared_ptr<IPackage_Interface> &pkg) const;
+    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
 #pragma endregion
 
 #pragma region Task
-    void PostTask(int32_t target, const std::function<void(IServiceBase *)> &task) const;
+    void PostTask(int64_t target, const std::function<void(IServiceBase *)> &task) const;
     void PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const;
 
     template<class Type, class Callback, class... Args>
     requires std::derived_from<Type, IServiceBase>
-    void PostTaskT(int32_t target, Callback &&func, Args &&... args);
+    void PostTaskT(int64_t target, Callback &&func, Args &&... args);
 
     template<class Type, class Callback, class... Args>
     requires std::derived_from<Type, IServiceBase>
@@ -77,7 +79,7 @@ protected:
 #pragma endregion
 
 #pragma region To Player
-    virtual void SendToPlayer(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
+    virtual void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
     virtual void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
 
     template<class Type, class Callback, class... Args>
@@ -85,7 +87,7 @@ protected:
     void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
 #pragma endregion
 
-    virtual void SendToClient(int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
+    virtual void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
 
 #pragma region Event
     virtual void ListenEvent(int event) const;
@@ -106,8 +108,8 @@ protected:
     void TryCreateLogger(const std::string &name) const;
 
 #pragma region Implenment In Derived Class
-    virtual void OnPackage(const shared_ptr<IPackage_Interface> &pkg);
-    virtual void OnEvent(const shared_ptr<IEventParam_Interface> &event);
+    virtual void OnPackage(IPackage_Interface *pkg);
+    virtual void OnEvent(IEventParam_Interface *event);
     virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
 #pragma endregion
 
@@ -120,14 +122,11 @@ protected:
 
 template<CModuleType Module>
 inline Module *IServiceBase::GetModule() const {
-    if (GetServer() == nullptr)
-        return nullptr;
-
     return GetServer()->GetModule<Module>();
 }
 
 template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
-inline void IServiceBase::PostTaskT(int32_t target, Callback &&func, Args &&...args) {
+inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
         auto *ptr = dynamic_cast<Type *>(ser);
         if (ptr == nullptr)

@@ -36,7 +36,9 @@ public:
 
     virtual const char *GetModuleName() const = 0;
 
+    /** Call This Method After ::SetUpModule, Is Return Valid Pointer Or Throw Exception **/
     [[nodiscard]] UServer *GetServer() const;
+
     [[nodiscard]] EModuleState GetState() const;
 
 private:

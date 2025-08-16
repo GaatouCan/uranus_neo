@@ -1,5 +1,8 @@
 #include "Module.h"
 
+#include <format>
+#include <stdexcept>
+
 IModuleBase::IModuleBase()
     : mServer(nullptr),
       mState(EModuleState::CREATED) {
@@ -22,6 +25,8 @@ void IModuleBase::Stop() {
 }
 
 UServer *IModuleBase::GetServer() const {
+    if (mServer == nullptr)
+        throw std::runtime_error(std::format("{} - Server Is NULL Pointer", __FUNCTION__));
     return mServer;
 }
 
