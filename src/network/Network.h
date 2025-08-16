@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include "base/Package.h"
 #include "base/CodecFactory.h"
 #include "base/Recycler.h"
 
@@ -8,9 +9,9 @@
 #include <thread>
 
 
-class IPackage_Interface;
 class UConnection;
 
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 class BASE_API UNetwork final : public IModuleBase {
 
@@ -55,15 +56,15 @@ public:
     [[nodiscard]] io_context &GetIOContext();
 
     [[nodiscard]] IRecyclerBase *CreatePackagePool() const;
-    std::shared_ptr<IPackage_Interface> BuildPackage() const;
+    FRecycleHandle<IPackage_Interface> BuildPackage() const;
 
     shared_ptr<UConnection> FindConnection(const std::string &key) const;
     void RemoveConnection(const std::string &key, int64_t pid);
 
-    void SendToClient(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const;
+    void SendToClient(const std::string &key, const FPackageHandle &pkg) const;
 
-    void OnLoginSuccess(const std::string &key, int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const;
-    void OnLoginFailure(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const;
+    void OnLoginSuccess(const std::string &key, int64_t pid, const FPackageHandle &pkg) const;
+    void OnLoginFailure(const std::string &key, const FPackageHandle &pkg) const;
 
 private:
     awaitable<void> WaitForClient(uint16_t port);

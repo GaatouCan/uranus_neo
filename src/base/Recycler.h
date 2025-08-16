@@ -3,10 +3,12 @@
 #include "Common.h"
 #include "Recycle.h"
 
+#include <cassert>
 #include <queue>
 #include <atomic>
 #include <shared_mutex>
 #include <memory>
+#include <absl/container/internal/layout.h>
 
 namespace recycle {
     namespace detail {
@@ -93,28 +95,26 @@ namespace recycle {
         }
 
     public:
-        FRecycleHandle() = delete;
+        FRecycleHandle()
+            : mNode(nullptr),
+              mElement(nullptr) {
+
+        };
+
         ~FRecycleHandle() {
             Release();
         }
 
         FRecycleHandle(const FRecycleHandle &rhs) {
+            if (rhs.mNode) {
+                rhs.mNode->IncRefCount();
+            }
             mNode = rhs.mNode;
             mElement = rhs.mElement;
-            if (mNode) {
-                mNode->IncRefCount();
-            }
         }
 
         FRecycleHandle &operator=(const FRecycleHandle &rhs) {
-            if (this != &rhs) {
-                Release();
-                mNode = rhs.mNode;
-                mElement = rhs.mElement;
-                if (mNode) {
-                    mNode->IncRefCount();
-                }
-            }
+            FRecycleHandle(rhs).Swap(*this);
             return *this;
         }
 
@@ -126,13 +126,7 @@ namespace recycle {
         }
 
         FRecycleHandle &operator=(FRecycleHandle &&rhs) noexcept {
-            if (this != &rhs) {
-                Release();
-                mNode = rhs.mNode;
-                mElement = rhs.mElement;
-                rhs.mNode = nullptr;
-                rhs.mElement = nullptr;
-            }
+            FRecycleHandle(std::move(rhs)).Swap(*this);
             return *this;
         }
 
@@ -156,13 +150,56 @@ namespace recycle {
             return static_cast<T *>(Get());
         }
 
+        [[nodiscard]] bool IsValid() const noexcept {
+            return mNode != nullptr && mElement != nullptr;
+        }
+
+        void Swap(FRecycleHandle &rhs) {
+            std::swap(mNode, rhs.mNode);
+            std::swap(mElement, rhs.mElement);
+        }
+
+        void Reset() noexcept {
+            FRecycleHandle().Swap(*this);
+        }
+
+        template<CRecycleType T>
+        FRecycleHandle<T> CastTo() const noexcept;
+
+        bool operator==(const FRecycleHandle &rhs) const noexcept {
+            return mElement == rhs.mElement;
+        }
+
+        bool operator==(nullptr_t) const noexcept {
+            return mElement == nullptr;
+        }
+
     private:
+        template<CRecycleType T>
+        FRecycleHandle(const FRecycleHandle &rhs, T *pCast) {
+            if (rhs.mNode) {
+                rhs.mNode->IncRefCount();
+            }
+            mNode = rhs.mNode;
+            mElement = pCast;
+        }
+
         void Release() noexcept;
 
     private:
         detail::IElementNodeBase *mNode;
         ElementType *mElement;
     };
+
+    // template<CRecycleType L_Type, CRecycleType R_Type>
+    // inline bool operator==(const FRecycleHandle<L_Type> &lhs, const FRecycleHandle<R_Type> &rhs) {
+    //     return lhs.mElement == rhs.mElement;
+    // }
+    //
+    // template<CRecycleType Type>
+    // inline bool operator==(const FRecycleHandle<Type> &lhs, nullptr_t) {
+    //     return lhs.mElement == nullptr;
+    // }
 
     class BASE_API IRecyclerBase {
 
@@ -218,6 +255,15 @@ namespace recycle {
     protected:
         detail::FControlBlock *mControl;
     };
+
+    template<CRecycleType Type>
+    template<CRecycleType T>
+    FRecycleHandle<T> FRecycleHandle<Type>::CastTo() const noexcept {
+        if (const auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
+            return FRecycleHandle<T>(*this, pElement);
+        }
+        return {};
+    }
 
     template<CRecycleType Type>
     inline void FRecycleHandle<Type>::Release() noexcept {

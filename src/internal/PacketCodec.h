@@ -21,8 +21,8 @@ public:
 
     awaitable<bool> Initial() override;
 
-    awaitable<bool> EncodeT(const shared_ptr<FPacket> &pkg) override;
-    awaitable<bool> DecodeT(const shared_ptr<FPacket> &pkg) override;
+    awaitable<bool> EncodeT(FPacket *pkg) override;
+    awaitable<bool> DecodeT(FPacket *pkg) override;
 
     ATcpSocket &GetSocket() override;
 };

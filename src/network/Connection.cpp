@@ -101,15 +101,13 @@ UNetwork *UConnection::GetNetworkModule() const {
 }
 
 UServer *UConnection::GetServer() const {
-    if (mNetwork)
-        return mNetwork->GetServer();
-    return nullptr;
+    assert(mNetwork);
+    return mNetwork->GetServer();
 }
 
-shared_ptr<IPackage_Interface> UConnection::BuildPackage() const {
-    if (mNetwork)
-        return mNetwork->BuildPackage();
-    return nullptr;
+FPackageHandle UConnection::BuildPackage() const {
+    assert(mNetwork);
+    return mNetwork->BuildPackage();
 }
 
 asio::ip::address UConnection::RemoteAddress() const {
@@ -127,7 +125,7 @@ int64_t UConnection::GetPlayerID() const {
     return mPlayerID;
 }
 
-void UConnection::SendPackage(const shared_ptr<IPackage_Interface> &pkg) {
+void UConnection::SendPackage(const FPackageHandle &pkg) {
     if (pkg == nullptr)
         return;
 
@@ -151,7 +149,7 @@ awaitable<void> UConnection::WritePackage() {
             if (ec || pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Encode(pkg); !ret) {
+            if (const auto ret = co_await mCodec->Encode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }
@@ -176,7 +174,7 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Decode(pkg); !ret) {
+            if (const auto ret = co_await mCodec->Decode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }

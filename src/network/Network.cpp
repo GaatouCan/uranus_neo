@@ -1,6 +1,5 @@
 #include "Network.h"
 #include "base/CodecFactory.h"
-#include "base/Package.h"
 #include "Connection.h"
 #include "Server.h"
 #include "config/Config.h"
@@ -51,6 +50,8 @@ void UNetwork::Initial() {
 }
 
 void UNetwork::Start() {
+    assert(GetServer() != nullptr);
+
     if (mState != EModuleState::INITIALIZED)
         return;
 
@@ -87,6 +88,8 @@ IRecyclerBase *UNetwork::CreatePackagePool() const {
 }
 
 awaitable<void> UNetwork::WaitForClient(uint16_t port) {
+    assert(GetServer() != nullptr);
+
     try {
         mAcceptor.open(asio::ip::tcp::v4());
         mAcceptor.bind({asio::ip::tcp::v4(), port});
@@ -144,11 +147,13 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
     }
 }
 
-std::shared_ptr<IPackage_Interface> UNetwork::BuildPackage() const {
-    if (mState != EModuleState::RUNNING)
-        return nullptr;
+FRecycleHandle<IPackage_Interface> UNetwork::BuildPackage() const {
+    assert(mPackagePool != nullptr);
 
-    return std::dynamic_pointer_cast<IPackage_Interface>(mPackagePool->Acquire());
+    if (mState != EModuleState::RUNNING)
+        return {};
+
+    return mPackagePool->Acquire<IPackage_Interface>();
 }
 
 shared_ptr<UConnection> UNetwork::FindConnection(const std::string &key) const {
@@ -176,7 +181,7 @@ void UNetwork::RemoveConnection(const std::string &key, const int64_t pid) {
     }
 }
 
-void UNetwork::SendToClient(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::SendToClient(const std::string &key, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -188,7 +193,7 @@ void UNetwork::SendToClient(const std::string &key, const shared_ptr<IPackage_In
     }
 }
 
-void UNetwork::OnLoginSuccess(const std::string &key, const int64_t pid, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::OnLoginSuccess(const std::string &key, const int64_t pid, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -199,7 +204,7 @@ void UNetwork::OnLoginSuccess(const std::string &key, const int64_t pid, const s
     conn->SendPackage(pkg);
 }
 
-void UNetwork::OnLoginFailure(const std::string &key, const shared_ptr<IPackage_Interface> &pkg) const {
+void UNetwork::OnLoginFailure(const std::string &key, const FPackageHandle &pkg) const {
     if (mState != EModuleState::RUNNING)
         return;
 

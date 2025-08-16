@@ -1,18 +1,20 @@
 #pragma once
 
-#include "Common.h"
+#include "base/Package.h"
+#include "base/Recycler.h"
 #include "base/Types.h"
 
 
 class UNetwork;
 class UServer;
-class IPackage_Interface;
 class IPackageCodec_Interface;
+
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
-    using APackageChannel = TConcurrentChannel<void(std::error_code, shared_ptr<IPackage_Interface>)>;
+    using APackageChannel = TConcurrentChannel<void(std::error_code, FPackageHandle)>;
     friend class UNetwork;
 
     UNetwork *mNetwork;
@@ -49,13 +51,13 @@ public:
     [[nodiscard]] UNetwork *GetNetworkModule() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    shared_ptr<IPackage_Interface> BuildPackage() const;
+    FPackageHandle BuildPackage() const;
 
     asio::ip::address RemoteAddress() const;
     [[nodiscard]] const std::string &GetKey() const;
     [[nodiscard]] int64_t GetPlayerID() const;
 
-    void SendPackage(const shared_ptr<IPackage_Interface> &pkg);
+    void SendPackage(const FPackageHandle &pkg);
 
 private:
     awaitable<void> WritePackage();

@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #if defined(_WIN32) || defined(_WIN64)
-#include <WinSock2.h>
+#include <winsock2.h>
 #else
 #include <arpa/inet.h>
 #include <endian.h>
@@ -21,7 +21,7 @@ awaitable<bool> UPacketCodec::Initial() {
     co_return true;
 }
 
-awaitable<bool> UPacketCodec::EncodeT(const shared_ptr<FPacket> &pkg) {
+awaitable<bool> UPacketCodec::EncodeT(FPacket *pkg) {
     FPacket::FHeader header{};
     memset(&header, 0, sizeof(FPacket::FHeader));
 
@@ -76,7 +76,7 @@ awaitable<bool> UPacketCodec::EncodeT(const shared_ptr<FPacket> &pkg) {
     co_return true;
 }
 
-awaitable<bool> UPacketCodec::DecodeT(const shared_ptr<FPacket> &pkg) {
+awaitable<bool> UPacketCodec::DecodeT(FPacket *pkg) {
     if (const auto [ec, len] = co_await async_read(mStream, asio::buffer(&pkg->mHeader, FPacket::PACKAGE_HEADER_SIZE));
         ec || len == 0) {
         if (ec) {

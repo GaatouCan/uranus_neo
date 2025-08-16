@@ -1,15 +1,13 @@
 #pragma once
 
-#include "Common.h"
-
-#include <concepts>
+#include "Recycle.h"
 
 
-class BASE_API IPackage_Interface {
+class BASE_API IPackage_Interface : public IRecycle_Interface {
     
 public:
     IPackage_Interface() = default;
-    virtual ~IPackage_Interface() = default;
+    ~IPackage_Interface() override = default;
 
     DISABLE_COPY_MOVE(IPackage_Interface)
 
