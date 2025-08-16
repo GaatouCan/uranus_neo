@@ -268,22 +268,22 @@ EServiceState IServiceBase::GetState() const {
 }
 
 bool IServiceBase::Initial(const IDataAsset_Interface *pData) {
-    if (mState != EServiceState::CREATED)
-        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
-
     if (mContext == nullptr)
         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
+
+    if (mState != EServiceState::CREATED)
+        return false;
 
     mState = EServiceState::INITIALIZED;
     return true;
 }
 
 awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *pData) {
-    if (mState != EServiceState::CREATED)
-        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
-
     if (mContext == nullptr)
         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
+
+    if (mState != EServiceState::CREATED)
+        co_return false;
 
     mState = EServiceState::INITIALIZED;
     co_return true;
@@ -291,7 +291,7 @@ awaitable<bool> IServiceBase::AsyncInitial(const IDataAsset_Interface *pData) {
 
 bool IServiceBase::Start() {
     if (mState != EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
+        return false;
 
     mState = EServiceState::RUNNING;
     return true;
@@ -299,7 +299,7 @@ bool IServiceBase::Start() {
 
 void IServiceBase::Stop() {
     if (mState == EServiceState::TERMINATED)
-        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
+        return;
 
     mState = EServiceState::TERMINATED;
 }
