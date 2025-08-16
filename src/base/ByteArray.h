@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Common.h"
+
 #include <stdexcept>
 #include <vector>
-
-#include "Common.h"
 
 #ifdef __linux__
 #include <cstdint>

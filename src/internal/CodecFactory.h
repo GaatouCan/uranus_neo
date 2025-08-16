@@ -16,6 +16,6 @@ public:
     ~UCodecFactory() override;
 
     IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) override;
-    std::shared_ptr<IRecyclerBase> CreatePackagePool() override;
+    IRecyclerBase *CreatePackagePool() override;
 };
 

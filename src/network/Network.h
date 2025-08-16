@@ -25,11 +25,11 @@ class BASE_API UNetwork final : public IModuleBase {
     /** The Separate Thread For Handling Network Event **/
     std::thread mThread;
 
-    /** The Package Pool For Network Module **/
-    shared_ptr<IRecyclerBase> mPackagePool;
-
     /** Used To Generate Codec For Every Connection **/
-    unique_ptr<ICodecFactory_Interface> mCodecFactory;
+    ICodecFactory_Interface *mCodecFactory;
+
+    /** The Package Pool For Network Module **/
+    IRecyclerBase *mPackagePool;
 
     std::unordered_map<std::string, shared_ptr<UConnection>> mConnectionMap;
     mutable std::shared_mutex mMutex;
@@ -54,7 +54,7 @@ public:
 
     [[nodiscard]] io_context &GetIOContext();
 
-    [[nodiscard]] shared_ptr<IRecyclerBase> CreatePackagePool() const;
+    [[nodiscard]] IRecyclerBase *CreatePackagePool() const;
     std::shared_ptr<IPackage_Interface> BuildPackage() const;
 
     shared_ptr<UConnection> FindConnection(const std::string &key) const;
@@ -74,5 +74,5 @@ inline void UNetwork::SetCodecFactory(Args &&...args) {
     if (mState != EModuleState::CREATED)
         return;
 
-    mCodecFactory = std::make_unique<Type>(std::forward<Args>(args)...);
+    mCodecFactory = new Type(std::forward<Args>(args)...);
 }

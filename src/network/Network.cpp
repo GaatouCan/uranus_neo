@@ -13,12 +13,15 @@
 
 UNetwork::UNetwork()
     : mAcceptor(mIOContext),
-      mPackagePool(nullptr),
-      mCodecFactory(nullptr) {
+      mCodecFactory(nullptr),
+      mPackagePool(nullptr) {
 }
 
 UNetwork::~UNetwork() {
     Stop();
+
+    delete mPackagePool;
+    delete mCodecFactory;
 
     if (mThread.joinable()) {
         mThread.join();
@@ -77,7 +80,7 @@ io_context &UNetwork::GetIOContext() {
     return mIOContext;
 }
 
-shared_ptr<IRecyclerBase> UNetwork::CreatePackagePool() const {
+IRecyclerBase *UNetwork::CreatePackagePool() const {
     if (mCodecFactory)
         return mCodecFactory->CreatePackagePool();
     return nullptr;
