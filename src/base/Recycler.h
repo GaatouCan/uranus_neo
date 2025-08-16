@@ -191,16 +191,6 @@ namespace recycle {
         ElementType *mElement;
     };
 
-    // template<CRecycleType L_Type, CRecycleType R_Type>
-    // inline bool operator==(const FRecycleHandle<L_Type> &lhs, const FRecycleHandle<R_Type> &rhs) {
-    //     return lhs.mElement == rhs.mElement;
-    // }
-    //
-    // template<CRecycleType Type>
-    // inline bool operator==(const FRecycleHandle<Type> &lhs, nullptr_t) {
-    //     return lhs.mElement == nullptr;
-    // }
-
     class BASE_API IRecyclerBase {
 
         template<CRecycleType Type>
