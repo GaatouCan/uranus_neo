@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/Package.h"
-#include "base/Recycler.h"
+#include "base/RecycleHandle.h"
 #include "base/Types.h"
 
 

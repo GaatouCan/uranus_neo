@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Common.h"
 #include "Recycle.h"
+#include "RecycleHandle.h"
 
-#include <cassert>
 #include <queue>
 #include <atomic>
-#include <shared_mutex>
 #include <memory>
-#include <absl/container/internal/layout.h>
+#include <cassert>
+#include <shared_mutex>
+
 
 namespace recycle {
     namespace detail {
@@ -82,119 +82,7 @@ namespace recycle {
     }
 #pragma endregion
 
-    template<CRecycleType Type>
-    class FRecycleHandle final {
 
-        friend class IRecyclerBase;
-        using ElementType = std::remove_extent_t<Type>;
-
-        explicit FRecycleHandle(detail::IElementNodeBase *pNode)
-            : mNode(pNode) {
-            mElement = mNode->GetT<Type>();
-            assert(mElement != nullptr);
-        }
-
-    public:
-        FRecycleHandle()
-            : mNode(nullptr),
-              mElement(nullptr) {
-
-        }
-
-        FRecycleHandle(nullptr_t)
-            : FRecycleHandle() {
-
-        }
-
-        ~FRecycleHandle() {
-            Release();
-        }
-
-        FRecycleHandle(const FRecycleHandle &rhs) {
-            if (rhs.mNode) {
-                rhs.mNode->IncRefCount();
-            }
-            mNode = rhs.mNode;
-            mElement = rhs.mElement;
-        }
-
-        FRecycleHandle &operator=(const FRecycleHandle &rhs) {
-            FRecycleHandle(rhs).Swap(*this);
-            return *this;
-        }
-
-        FRecycleHandle(FRecycleHandle &&rhs) noexcept {
-            mNode = rhs.mNode;
-            mElement = rhs.mElement;
-            rhs.mNode = nullptr;
-            rhs.mElement = nullptr;
-        }
-
-        FRecycleHandle &operator=(FRecycleHandle &&rhs) noexcept {
-            FRecycleHandle(std::move(rhs)).Swap(*this);
-            return *this;
-        }
-
-        ElementType *operator->() const noexcept {
-            return mElement;
-        }
-
-        ElementType &operator*() const noexcept {
-            return *mElement;
-        }
-
-        [[nodiscard]] ElementType *Get() const noexcept {
-            return mElement;
-        }
-
-        template<CRecycleType T>
-        [[nodiscard]] Type *GetT() const noexcept {
-            if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
-                return mElement;
-            }
-            return static_cast<T *>(Get());
-        }
-
-        [[nodiscard]] bool IsValid() const noexcept {
-            return mNode != nullptr && mElement != nullptr;
-        }
-
-        void Swap(FRecycleHandle &rhs) {
-            std::swap(mNode, rhs.mNode);
-            std::swap(mElement, rhs.mElement);
-        }
-
-        void Reset() noexcept {
-            FRecycleHandle().Swap(*this);
-        }
-
-        template<CRecycleType T>
-        FRecycleHandle<T> CastTo() const noexcept;
-
-        bool operator==(const FRecycleHandle &rhs) const noexcept {
-            return mElement == rhs.mElement;
-        }
-
-        bool operator==(nullptr_t) const noexcept {
-            return mElement == nullptr;
-        }
-
-    private:
-        template<CRecycleType T>
-        FRecycleHandle(const FRecycleHandle &rhs, T *pCast) {
-            if (rhs.mNode) {
-                rhs.mNode->IncRefCount();
-            }
-            mNode = rhs.mNode;
-            mElement = pCast;
-        }
-
-        void Release() noexcept;
-
-    private:
-        detail::IElementNodeBase *mNode;
-        ElementType *mElement;
-    };
 
     class BASE_API IRecyclerBase {
 
@@ -252,12 +140,108 @@ namespace recycle {
     };
 
     template<CRecycleType Type>
+    FRecycleHandle<Type>::FRecycleHandle(detail::IElementNodeBase *pNode)
+        : mNode(pNode) {
+        mElement = mNode->GetT<Type>();
+        assert(mElement);
+    }
+
+    template<CRecycleType Type>
+    FRecycleHandle<Type>::FRecycleHandle()
+        : mNode(nullptr),
+          mElement(nullptr) {
+    }
+
+    template<CRecycleType Type>
+    FRecycleHandle<Type>::FRecycleHandle(nullptr_t)
+        : FRecycleHandle() {
+    }
+
+    template<CRecycleType Type>
+    FRecycleHandle<Type>::~FRecycleHandle() {
+        this->Release();
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle &rhs) {
+        if (rhs.mNode) {
+            rhs.mNode->IncRefCount();
+        }
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type> &FRecycleHandle<Type>::operator=(const FRecycleHandle &rhs) {
+        FRecycleHandle(rhs).Swap(*this);
+        return *this;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type>::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        rhs.mNode = nullptr;
+        rhs.mElement = nullptr;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type> & FRecycleHandle<Type>::operator=(FRecycleHandle &&rhs) noexcept {
+        FRecycleHandle(std::move(rhs)).Swap(*this);
+        return *this;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type>::ElementType *FRecycleHandle<Type>::operator->() const noexcept {
+        return mElement;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type>::ElementType &FRecycleHandle<Type>::operator*() const noexcept {
+        return *mElement;
+    }
+
+    template<CRecycleType Type>
+    inline FRecycleHandle<Type>::ElementType *FRecycleHandle<Type>::Get() const noexcept {
+        return mElement;
+    }
+
+    template<CRecycleType Type>
     template<CRecycleType T>
-    FRecycleHandle<T> FRecycleHandle<Type>::CastTo() const noexcept {
+    inline Type *FRecycleHandle<Type>::GetT() const noexcept {
+        if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
+            return mElement;
+        }
+        return static_cast<T *>(Get());
+    }
+
+    template<CRecycleType Type>
+    template<CRecycleType T>
+    inline FRecycleHandle<T> FRecycleHandle<Type>::CastTo() const noexcept {
         if (const auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
             return FRecycleHandle<T>(*this, pElement);
         }
         return {};
+    }
+
+    template<CRecycleType Type>
+    inline bool FRecycleHandle<Type>::operator==(const FRecycleHandle &rhs) const noexcept {
+        return this->mElement == rhs.mElement;
+    }
+
+    template<CRecycleType Type>
+    inline bool FRecycleHandle<Type>::operator==(nullptr_t) const noexcept {
+        return this->mElement == nullptr;
+    }
+
+    template<CRecycleType Type>
+    template<CRecycleType T>
+    inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle &rhs, T *pCast) {
+        if (rhs.mNode) {
+            rhs.mNode->IncRefCount();
+        }
+        mNode = rhs.mNode;
+        mElement = pCast;
     }
 
     template<CRecycleType Type>

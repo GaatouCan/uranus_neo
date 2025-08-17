@@ -2,6 +2,7 @@
 #include "ServiceBase.h"
 #include "Server.h"
 #include "base/DataAsset.h"
+#include "base/Recycler.h"
 #include "service/ServiceModule.h"
 #include "network/Network.h"
 #include "base/Package.h"

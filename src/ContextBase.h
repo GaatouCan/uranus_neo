@@ -1,11 +1,14 @@
 #pragma once
 
 #include "base/Types.h"
+#include "base/Package.h"
 #include "base/SharedLibrary.h"
 #include "base/ContextHandle.h"
-#include "base/Recycler.h"
-#include "base/Package.h"
+#include "base/RecycleHandle.h"
 
+namespace recycle {
+    class IRecyclerBase;
+}
 
 class IServiceBase;
 class IModuleBase;
@@ -13,7 +16,9 @@ class IEventParam_Interface;
 class IDataAsset_Interface;
 class UServer;
 
+using recycle::IRecyclerBase;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+
 
 enum class EContextState {
     CREATED,

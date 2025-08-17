@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base/PackageCodec.h"
-#include "Packet.h"
 #include "base/Types.h"
+#include "Packet.h"
 
 #include <asio/ssl/stream.hpp>
 
