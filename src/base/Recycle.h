@@ -4,14 +4,13 @@
 
 #include <concepts>
 
-
 #ifdef __linux__
 #include <cstdint>
 #endif
 
-namespace recycle {
-    class IRecyclerBase;
-}
+
+class IRecyclerBase;
+
 
 /**
  * The Interface Of Recyclable Object,
@@ -19,7 +18,7 @@ namespace recycle {
  */
 class BASE_API IRecycle_Interface {
 
-    friend class recycle::IRecyclerBase;
+    friend class IRecyclerBase;
 
 protected:
     /** Called When It Created By Recycler */

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Package.h"
 #include "Types.h"
+#include "Package.h"
 
 
 class BASE_API IPackageCodec_Interface {

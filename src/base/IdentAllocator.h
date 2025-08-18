@@ -10,8 +10,8 @@ class TIdentAllocator {
 
     struct FEmptyMutex {};
 
-    using AAllocatorMutex = std::conditional_t<bConcurrent, std::mutex, FEmptyMutex>;
-    using AIntegralType = std::conditional_t<bConcurrent, std::atomic<Type>, Type>;
+    using AAllocatorMutex   = std::conditional_t<bConcurrent, std::mutex, FEmptyMutex>;
+    using AIntegralType     = std::conditional_t<bConcurrent, std::atomic<Type>, Type>;
 
 public:
     Type AllocateTS();
@@ -23,13 +23,14 @@ public:
     Type GetUsage() const;
 
 private:
-    std::unordered_set<Type> mHashSet;
-    AAllocatorMutex mMutex;
-    AIntegralType mNext;
-    AIntegralType mUsage;
+    std::unordered_set<Type>    mHashSet;
+    AAllocatorMutex             mMutex;
+    AIntegralType               mNext;
+    AIntegralType               mUsage;
 };
 
-template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
+template<class Type, bool bConcurrent>
+requires std::is_integral_v<Type>
 inline Type TIdentAllocator<Type, bConcurrent>::AllocateTS() {
     if constexpr (bConcurrent) {
         std::unique_lock lock(mMutex);
@@ -54,7 +55,8 @@ inline Type TIdentAllocator<Type, bConcurrent>::AllocateTS() {
     return ++mNext;
 }
 
-template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
+template<class Type, bool bConcurrent>
+requires std::is_integral_v<Type>
 Type TIdentAllocator<Type, bConcurrent>::Allocate() {
     if (const auto iter = mHashSet.begin(); iter != mHashSet.end()) {
         const auto res = *iter;
@@ -68,7 +70,8 @@ Type TIdentAllocator<Type, bConcurrent>::Allocate() {
     return ++mNext;
 }
 
-template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
+template<class Type, bool bConcurrent>
+requires std::is_integral_v<Type>
 inline void TIdentAllocator<Type, bConcurrent>::RecycleTS(Type id) {
     if constexpr (bConcurrent) {
         std::unique_lock lock(mMutex);
@@ -85,7 +88,8 @@ inline void TIdentAllocator<Type, bConcurrent>::RecycleTS(Type id) {
     }
 }
 
-template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
+template<class Type, bool bConcurrent>
+requires std::is_integral_v<Type>
 inline void TIdentAllocator<Type, bConcurrent>::Recycle(Type id) {
     mHashSet.emplace(id);
 
@@ -97,7 +101,8 @@ inline void TIdentAllocator<Type, bConcurrent>::Recycle(Type id) {
     }
 }
 
-template<class Type, bool bConcurrent> requires std::is_integral_v<Type>
+template<class Type, bool bConcurrent>
+requires std::is_integral_v<Type>
 inline Type TIdentAllocator<Type, bConcurrent>::GetUsage() const {
     if constexpr (bConcurrent) {
         return mUsage.load();

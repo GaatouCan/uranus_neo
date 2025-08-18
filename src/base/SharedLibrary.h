@@ -18,8 +18,8 @@ using AModuleHandle = void *;
 class BASE_API FSharedLibrary final {
 
     struct FControlBlock {
-        AModuleHandle handle;
-        std::atomic_size_t refCount;
+        AModuleHandle       handle;
+        std::atomic_size_t  refCount;
     };
 
     FControlBlock *mControl;
@@ -40,9 +40,8 @@ public:
     template<typename Type>
     Type GetSymbol(const std::string &name) const;
 
-    [[nodiscard]] size_t GetUseCount() const noexcept;
-
-    [[nodiscard]] bool IsValid() const noexcept;
+    [[nodiscard]] size_t    GetUseCount()   const noexcept;
+    [[nodiscard]] bool      IsValid()       const noexcept;
 
     void Swap(FSharedLibrary &rhs);
     void Reset();

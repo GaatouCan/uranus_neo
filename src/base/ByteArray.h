@@ -2,8 +2,9 @@
 
 #include "Common.h"
 
-#include <stdexcept>
+#include <string>
 #include <vector>
+#include <stdexcept>
 
 #ifdef __linux__
 #include <cstdint>
@@ -24,11 +25,10 @@ public:
 
     explicit operator std::vector<uint8_t>() const;
 
-    FByteArray(const FByteArray &rhs) = default;
-    FByteArray &operator=(const FByteArray &rhs) = default;
-
-    FByteArray(FByteArray &&rhs) noexcept = default;
-    FByteArray &operator=(FByteArray &&rhs) noexcept = default;
+    FByteArray(const FByteArray &rhs)                   = default;
+    FByteArray &operator=(const FByteArray &rhs)        = default;
+    FByteArray(FByteArray &&rhs) noexcept               = default;
+    FByteArray &operator=(FByteArray &&rhs) noexcept    = default;
 
     /** Clean The Data And Release The Space */
     void Reset();
@@ -36,22 +36,22 @@ public:
     void Clear();
 
     [[nodiscard]] size_t Size() const;
-    void Resize(size_t size);
 
+    void Resize (size_t size);
     void Reserve(size_t capacity);
 
-    [[nodiscard]] uint8_t *Data();
-    [[nodiscard]] const uint8_t *Data() const;
+    [[nodiscard]]       uint8_t *   Data();
+    [[nodiscard]] const uint8_t *   Data() const;
+
     std::vector<uint8_t> &RawRef();
 
-    void FromString(std::string_view sv);
-    [[nodiscard]] std::string ToString() const;
+    void                        FromString  (std::string_view sv);
+    [[nodiscard]] std::string   ToString    ()const;
 
-    auto Begin() -> decltype(mByteArray)::iterator;
-    auto End() -> decltype(mByteArray)::iterator;
-
-    [[nodiscard]] auto Begin() const -> decltype(mByteArray)::const_iterator;
-    [[nodiscard]] auto End() const -> decltype(mByteArray)::const_iterator;
+    auto                Begin()         -> decltype(mByteArray)::iterator;
+    auto                End()           -> decltype(mByteArray)::iterator;
+    [[nodiscard]] auto  Begin()  const  -> decltype(mByteArray)::const_iterator;
+    [[nodiscard]] auto  End()    const  -> decltype(mByteArray)::const_iterator;
 
     [[nodiscard]] uint8_t operator[](size_t pos) const noexcept;
 
@@ -230,7 +230,7 @@ template<typename T>
 requires (!std::is_pointer_v<T>) && std::is_trivial_v<T> && std::is_standard_layout_v<T>
 void ByteArrayToVector(const std::vector<uint8_t> &src, std::vector<T> &dist) {
     constexpr auto size = sizeof(T);
-    const size_t count = src.size() / size;
+    const size_t count  = src.size() / size;
     const size_t length = size * count;
 
     if (count == 0)

@@ -56,7 +56,7 @@ void FByteArray::FromString(const std::string_view sv) {
 }
 
 std::string FByteArray::ToString() const {
-    return { reinterpret_cast<const char*>(mByteArray.data()), mByteArray.size() };
+    return {reinterpret_cast<const char *>(mByteArray.data()), mByteArray.size()};
 }
 
 auto FByteArray::Begin() -> decltype(mByteArray)::iterator {

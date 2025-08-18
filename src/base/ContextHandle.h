@@ -12,8 +12,9 @@ class UContextBase;
 
 
 struct BASE_API FContextHandle {
-    FServiceHandle sid;
-    weak_ptr<UContextBase> weakPtr;
+
+    FServiceHandle          sid;
+    weak_ptr<UContextBase>  weakPtr;
 
     FContextHandle() = default;
 
