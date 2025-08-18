@@ -259,11 +259,11 @@ inline bool FRecycleHandle<Type>::operator==(nullptr_t) const noexcept {
 template<CRecycleType Type>
 template<CRecycleType T>
 inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle<T> &rhs, ElementType *pCast) {
+    if (rhs.mNode)
+        rhs.mNode->IncRefCount();
+
     mNode       = rhs.mNode;
     mElement    = pCast;
-    if (mNode) {
-        mNode->IncRefCount();
-    }
 }
 
 template<CRecycleType Type>
