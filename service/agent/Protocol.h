@@ -6,5 +6,5 @@ class FPacket;
 class UPlayer;
 
 namespace protocol {
-    void AppearanceRequest(uint32_t, const std::shared_ptr<FPacket> &, UPlayer *);
+    void AppearanceRequest(uint32_t, FPacket *, UPlayer *);
 }

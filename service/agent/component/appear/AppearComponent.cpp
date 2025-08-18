@@ -25,6 +25,6 @@ UAppearComponent::~UAppearComponent() {
 // DB_DESERIALIZE_END
 
 
-void protocol::AppearanceRequest(uint32_t pid, const std::shared_ptr<FPacket> &pkg, UPlayer *plr) {
+void protocol::AppearanceRequest(uint32_t pid, FPacket *pkg, UPlayer *plr) {
 
 }

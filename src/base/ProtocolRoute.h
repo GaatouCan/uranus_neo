@@ -20,7 +20,7 @@ public:
     }
 
     template<class ... Args>
-    void OnReceivePackage(const std::shared_ptr<Type> &pkg, Args && ... args) {
+    void OnReceivePackage(Type *pkg, Args && ... args) {
         const auto iter = mProtocolMap.find(pkg->GetPackageID());
         if (iter == mProtocolMap.end())
             return;

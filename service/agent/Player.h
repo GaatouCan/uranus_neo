@@ -12,7 +12,7 @@
 
 class UPlayer final : public IPlayerAgent {
 
-    using AProtocolFunctor = std::function<void(uint32_t, const std::shared_ptr<FPacket>&, UPlayer *)>;
+    using AProtocolFunctor = std::function<void(uint32_t, FPacket *, UPlayer *)>;
 
 public:
     UPlayer();
@@ -23,7 +23,7 @@ public:
 
     void RegisterProtocol(uint32_t id, const AProtocolFunctor &func);
 
-    void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) override;
+    void OnPackage(IPackage_Interface *pkg) override;
 
     UComponentModule &GetComponentModule();
 
