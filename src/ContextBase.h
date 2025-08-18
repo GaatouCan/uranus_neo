@@ -6,18 +6,17 @@
 #include "base/ContextHandle.h"
 #include "base/RecycleHandle.h"
 
-namespace recycle {
-    class IRecyclerBase;
-}
+
 
 class IServiceBase;
 class IModuleBase;
+class IRecyclerBase;
 class IEventParam_Interface;
 class IDataAsset_Interface;
 class UServer;
 
-using recycle::IRecyclerBase;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using std::unique_ptr;
 
 
 enum class EContextState {

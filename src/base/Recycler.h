@@ -120,8 +120,14 @@ public:
     template<
         CRecycleType Type,
         class Allocator = std::allocator<Type>,
-        class Deleter   = std::default_delete<Type> >
-    static IRecyclerBase *Create();
+        class Deleter   = std::default_delete<Type>>
+    static IRecyclerBase *Create(Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
+
+    template<
+        CRecycleType Type,
+        class Allocator = std::allocator<Type>,
+        class Deleter   = std::default_delete<Type>>
+    static std::unique_ptr<IRecyclerBase> CreateUnique(Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
 
 private:
     detail::IElementNodeBase *AcquireNode();
@@ -446,17 +452,44 @@ template<
     class Allocator = std::allocator<Type>,
     class Deleter   = std::default_delete<Type>>
 class TRecycler final : public IRecyclerBase {
+
+public:
+    template<typename A = Allocator, typename D = Deleter>
+    explicit TRecycler(A &&alloc = Allocator{}, D && deleter = Deleter{})
+        : mAllocator(std::forward<A>(alloc)),
+          mDeleter(std::forward<D>(deleter)) {
+
+    }
+
+    DISABLE_COPY_MOVE(TRecycler)
+
 protected:
     detail::IElementNodeBase *CreateNode() const override {
         return detail::CreateElementNode<Type, Allocator, Deleter>(mControl, mAllocator, mDeleter);
     }
 
 private:
-    Allocator mAllocator{};
-    Deleter mDeleter{};
+    Allocator mAllocator;
+    Deleter mDeleter;
 };
 
-template<CRecycleType Type, class Allocator, class Deleter>
-inline IRecyclerBase *IRecyclerBase::Create() {
-    return new TRecycler<Type, Allocator, Deleter>();
+template<
+    CRecycleType Type,
+    class Allocator,
+    class Deleter>
+inline IRecyclerBase *IRecyclerBase::Create(Allocator &&allocator, Deleter &&deleter) {
+    return IRecyclerBase::CreateUnique<Type, Allocator, Deleter>(
+        std::forward<Allocator>(allocator),
+        std::forward<Deleter>(deleter))
+    .release();
+}
+
+template<
+    CRecycleType Type,
+    class Allocator,
+    class Deleter>
+std::unique_ptr<IRecyclerBase> IRecyclerBase::CreateUnique(Allocator &&allocator, Deleter &&deleter) {
+    return std::make_unique<TRecycler<Type, Allocator, Deleter>>(
+        std::forward<Allocator>(allocator),
+        std::forward<Deleter>(deleter));
 }
