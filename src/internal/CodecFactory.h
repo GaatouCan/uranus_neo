@@ -8,6 +8,7 @@
 
 class BASE_API UCodecFactory final : public ICodecFactory_Interface {
 
+private:
     using ASslStream = asio::ssl::stream<ATcpSocket>;
 
     asio::ssl::context mSSLContext;
@@ -16,6 +17,6 @@ public:
     UCodecFactory();
     ~UCodecFactory() override;
 
-    IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) override;
-    unique_ptr<IRecyclerBase> CreateUniquePackagePool() override;
+    unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket socket) override;
+    unique_ptr<IRecyclerBase>           CreateUniquePackagePool()                   override;
 };

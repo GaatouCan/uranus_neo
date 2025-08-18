@@ -1,10 +1,10 @@
 #include "Connection.h"
 #include "Network.h"
 #include "Server.h"
+#include "Utils.h"
 #include "login/LoginAuth.h"
 #include "gateway/Gateway.h"
 #include "base/PackageCodec.h"
-#include "Utils.h"
 
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
@@ -15,14 +15,14 @@ using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
 
 
-UConnection::UConnection(IPackageCodec_Interface *codec)
+UConnection::UConnection(unique_ptr<IPackageCodec_Interface> &&codec)
     : mNetwork(nullptr),
-      mCodec(codec),
+      mCodec(std::move(codec)),
       mChannel(mCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mCodec->GetSocket().get_executor()),
       mExpiration(std::chrono::seconds(30)),
       mPlayerID(-1) {
-    // mKey = static_cast<int64_t>(GetSocket().native_handle());
+
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 

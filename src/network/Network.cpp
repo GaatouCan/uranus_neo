@@ -2,7 +2,7 @@
 #include "Connection.h"
 #include "Server.h"
 #include "Utils.h"
-#include "base/CodecFactory.h"
+#include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "config/Config.h"
 #include "login/LoginAuth.h"
@@ -111,7 +111,7 @@ awaitable<void> UNetwork::WaitForClient(uint16_t port) {
                     }
                 }
 
-                const auto conn = make_shared<UConnection>(mCodecFactory->CreatePackageCodec(std::move(socket)));
+                const auto conn = make_shared<UConnection>(mCodecFactory->CreateUniquePackageCodec(std::move(socket)));
                 conn->SetUpModule(this);
 
                 if (const auto key = conn->GetKey(); !key.empty()) {

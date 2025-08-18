@@ -1,8 +1,8 @@
 #pragma once
 
+#include "base/Types.h"
 #include "base/Package.h"
 #include "base/RecycleHandle.h"
-#include "base/Types.h"
 
 
 class UNetwork;
@@ -10,6 +10,7 @@ class UServer;
 class IPackageCodec_Interface;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using std::unique_ptr;
 
 
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
@@ -35,7 +36,7 @@ protected:
 public:
     UConnection() = delete;
 
-    explicit UConnection(IPackageCodec_Interface *codec);
+    explicit UConnection(unique_ptr<IPackageCodec_Interface> &&codec);
     ~UConnection();
 
     [[nodiscard]] ATcpSocket &GetSocket() const;
