@@ -83,4 +83,88 @@ namespace memory {
         ElementType *mPtr;
     };
 
+    template<class T>
+    class TSharedPointer;
+
+    template<class T>
+    class TWeakPointer;
+
+    template<class T>
+    class ISharedBase {
+    public:
+        using ElementType = typename std::remove_cv_t<T>;
+
+        [[nodiscard]] size_t GetUseCount() const noexcept {
+            return mRef ? mRef->GetRefCount() : 0;
+        }
+
+        template<class T>
+        [[nodiscard]] bool IsOwnerBefore(const ISharedBase<T> &other) const noexcept {
+            return mRef < other.mRef;
+        }
+
+        DISABLE_COPY(ISharedBase)
+
+    protected:
+        [[nodiscard]] ElementType *Get() const noexcept {
+            return mPtr;
+        }
+
+        constexpr ISharedBase() noexcept = default;
+        virtual ~ISharedBase() noexcept = default;
+
+        template<typename Ty>
+        void MoveFrom(ISharedBase<Ty> &&other) {
+            mPtr = other.mPtr;
+            mRef = other.mRef;
+
+            other.mPtr = nullptr;
+            other.mRef = nullptr;
+        }
+
+        template<typename Ty>
+        void CopyFrom(const TSharedPointer<Ty> &other) noexcept {
+            other.IncRefCount();
+
+            mPtr = other.mPtr;
+            mRef = other.mRef;
+        }
+
+        template<typename Ty>
+        void CastFrom(const TSharedPointer<Ty> &other, ElementType *ptr) noexcept {
+            other.IncRefCount();
+
+            mPtr = ptr;
+            mRef = other.mRef;
+        }
+
+        template<typename Ty>
+        void MoveCastFrom(TSharedPointer<Ty> &&other, ElementType *ptr) noexcept {
+            mPtr = ptr;
+            mRef = other.mRef;
+
+            other.mPtr = nullptr;
+            other.mRef = nullptr;
+        }
+
+        void IncRefCount()  const noexcept { if (mRef) mRef->IncRefCount();     }
+        void DecRefCount()  const noexcept { if (mRef) mRef->DecRefCount();     }
+        void IncWeakCount() const noexcept { if (mRef) mRef->IncWeakCount();    }
+        void DecWeakCount() const noexcept { if (mRef) mRef->DecWeakCount();    }
+
+    private:
+        ElementType *       mPtr{ nullptr };
+        ISharedCountBase *  mRef{ nullptr };
+    };
+
+    template<class T>
+    class TSharedPointer : public ISharedBase<T> {
+
+    };
+
+    template<class T>
+    class TWeakPointer : public ISharedBase<T> {
+
+    };
+
 }
