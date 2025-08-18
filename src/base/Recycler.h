@@ -179,7 +179,9 @@ inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle &rhs) {
 
 template<CRecycleType Type>
 inline FRecycleHandle<Type> &FRecycleHandle<Type>::operator=(const FRecycleHandle &rhs) {
-    FRecycleHandle(rhs).Swap(*this);
+    if (this != &rhs) {
+        FRecycleHandle(rhs).Swap(*this);
+    }
     return *this;
 }
 
@@ -193,7 +195,9 @@ inline FRecycleHandle<Type>::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
 
 template<CRecycleType Type>
 inline FRecycleHandle<Type> &FRecycleHandle<Type>::operator=(FRecycleHandle &&rhs) noexcept {
-    FRecycleHandle(std::move(rhs)).Swap(*this);
+    if (this != &rhs) {
+        FRecycleHandle(std::move(rhs)).Swap(*this);
+    }
     return *this;
 }
 
