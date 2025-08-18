@@ -115,7 +115,7 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     }
 
     if (GetServer() == nullptr)
-        return false;
+        throw std::runtime_error("GetServer is null");
 
     const auto network = GetServer()->GetModule<UNetwork>();
     if (network == nullptr) {
@@ -127,6 +127,7 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     // Start To Create Service
     mState = EContextState::INITIALIZING;
 
+    // Load The Constructor From Shared Library
     auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
     if (creator == nullptr) {
         SPDLOG_ERROR("{:<20} - Can't Load Creator", __FUNCTION__);
