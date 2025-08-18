@@ -7,13 +7,12 @@
 #include "base/RecycleHandle.h"
 
 
-
+class UServer;
 class IServiceBase;
 class IModuleBase;
 class IRecyclerBase;
 class IEventParam_Interface;
 class IDataAsset_Interface;
-class UServer;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using std::unique_ptr;
@@ -150,13 +149,13 @@ private:
     FServiceHandle mServiceID;
     IServiceBase *mService;
 
-    IRecyclerBase *mPackagePool;
-    AContextChannel *mChannel;
+    unique_ptr<IRecyclerBase> mPackagePool;
+    unique_ptr<AContextChannel> mChannel;
 
     /** Loaded Library With Creator And Destroyer Of Service */
     FSharedLibrary mLibrary;
 
-    ASteadyTimer *mShutdownTimer;
+    unique_ptr<ASteadyTimer> mShutdownTimer;
     std::function<void(UContextBase *)> mShutdownCallback;
 
 protected:

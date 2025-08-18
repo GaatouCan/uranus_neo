@@ -1,9 +1,9 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
-#include "service/ServiceModule.h"
-#include "service/ServiceContext.h"
 #include "gateway/Gateway.h"
 #include "logger/LoggerModule.h"
+#include "service/ServiceModule.h"
+#include "service/ServiceContext.h"
 
 #include <spdlog/spdlog.h>
 

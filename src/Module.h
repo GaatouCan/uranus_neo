@@ -57,6 +57,7 @@ concept CModuleType = std::derived_from<T, IModuleBase> && !std::is_same_v<T, IM
 private: \
     friend class UServer; \
     using Super = IModuleBase; \
+    using ThisClass = module; \
 public: \
     DISABLE_COPY_MOVE(module) \
 private:

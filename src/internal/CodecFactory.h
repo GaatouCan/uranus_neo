@@ -5,6 +5,7 @@
 #include <asio/ssl/stream.hpp>
 #include <asio/ssl/context.hpp>
 
+
 class BASE_API UCodecFactory final : public ICodecFactory_Interface {
 
     using ASslStream = asio::ssl::stream<ATcpSocket>;
@@ -16,6 +17,5 @@ public:
     ~UCodecFactory() override;
 
     IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) override;
-    IRecyclerBase *CreatePackagePool() override;
+    unique_ptr<IRecyclerBase> CreateUniquePackagePool() override;
 };
-

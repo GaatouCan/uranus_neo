@@ -10,6 +10,7 @@
 
 #include <spdlog/spdlog.h>
 
+using std::make_shared;
 
 UNetwork::UNetwork()
     : mAcceptor(mIOContext),
@@ -20,9 +21,6 @@ UNetwork::UNetwork()
 UNetwork::~UNetwork() {
     Stop();
 
-    delete mPackagePool;
-    delete mCodecFactory;
-
     if (mThread.joinable()) {
         mThread.join();
     }
@@ -32,7 +30,7 @@ void UNetwork::Initial() {
     assert(mState == EModuleState::CREATED);
     assert(mCodecFactory != nullptr);
 
-    mPackagePool = mCodecFactory->CreatePackagePool();
+    mPackagePool = mCodecFactory->CreateUniquePackagePool();
     mPackagePool->Initial();
 
     mThread = std::thread([this] {
@@ -80,9 +78,9 @@ io_context &UNetwork::GetIOContext() {
     return mIOContext;
 }
 
-IRecyclerBase *UNetwork::CreatePackagePool() const {
+unique_ptr<IRecyclerBase> UNetwork::CreatePackagePool() const {
     if (mCodecFactory)
-        return mCodecFactory->CreatePackagePool();
+        return mCodecFactory->CreateUniquePackagePool();
     return nullptr;
 }
 

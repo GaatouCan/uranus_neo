@@ -21,6 +21,6 @@ IPackageCodec_Interface *UCodecFactory::CreatePackageCodec(ATcpSocket socket) {
     return new UPacketCodec(ASslStream(std::move(socket), mSSLContext));
 }
 
-IRecyclerBase *UCodecFactory::CreatePackagePool() {
-    return IRecyclerBase::Create<FPacket>();
+unique_ptr<IRecyclerBase> UCodecFactory::CreateUniquePackagePool() {
+    return IRecyclerBase::CreateUnique<FPacket>();
 }

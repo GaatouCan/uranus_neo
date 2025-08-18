@@ -6,13 +6,13 @@
 #include "base/RecycleHandle.h"
 #include "base/EventParam.h"
 
-#include <string>
-
 
 class UContextBase;
 class IDataAsset_Interface;
 
+using std::shared_ptr;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+
 
 enum class EServiceState {
     CREATED,
@@ -156,7 +156,7 @@ inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...
         if (pService == nullptr)
             return;
 
-        std::invoke(func, pService, args...);
+        std::invoke(func, pService, std::forward<Args>(args)...);
     };
     this->PostToPlayer(pid, task);
 }
