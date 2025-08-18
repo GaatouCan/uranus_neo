@@ -7,9 +7,6 @@
 #include <unordered_map>
 
 
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-
-
 class BASE_API ULoginAuth final : public IModuleBase {
 
     DECLARE_MODULE(ULoginAuth)

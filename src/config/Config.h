@@ -7,8 +7,8 @@
 #include <unordered_map>
 
 
-constexpr auto SERVER_CONFIG_FILE = "/server.yaml";
-constexpr auto SERVER_CONFIG_JSON = "/json";
+inline constexpr auto SERVER_CONFIG_FILE = "/server.yaml";
+inline constexpr auto SERVER_CONFIG_JSON = "/json";
 
 
 class BASE_API UConfig final : public IModuleBase {

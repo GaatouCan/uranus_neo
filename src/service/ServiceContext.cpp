@@ -1,7 +1,6 @@
 #include "ServiceContext.h"
-
-#include "Server.h"
 #include "ServiceModule.h"
+#include "Server.h"
 
 
 UServiceContext::UServiceContext()
