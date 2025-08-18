@@ -6,8 +6,6 @@
 
 
 class UServer;
-class ULoginAuth;
-
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 

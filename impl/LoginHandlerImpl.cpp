@@ -1,6 +1,7 @@
 #include "LoginHandlerImpl.h"
 #include "Server.h"
 #include "internal/Packet.h"
+#include "base/Recycler.h"
 #include "service/ServiceModule.h"
 
 #include <login.pb.h>
@@ -16,8 +17,8 @@ ULoginHandlerImpl::~ULoginHandlerImpl() {
 void ULoginHandlerImpl::UpdateAddressList() {
 }
 
-ILoginHandler::FLoginToken ULoginHandlerImpl::ParseLoginRequest(const std::shared_ptr<IPackage_Interface> &pkg) {
-    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+ILoginHandler::FLoginToken ULoginHandlerImpl::ParseLoginRequest(const FPackageHandle &pkg) {
+    const auto pkt = pkg.CastTo<FPacket>();
     if (pkt == nullptr)
         return {};
 
@@ -33,8 +34,8 @@ ILoginHandler::FLoginToken ULoginHandlerImpl::ParseLoginRequest(const std::share
     };
 }
 
-FPlatformInfo ULoginHandlerImpl::ParsePlatformInfo(const std::shared_ptr<IPackage_Interface> &pkg) {
-    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+FPlatformInfo ULoginHandlerImpl::ParsePlatformInfo(const FPackageHandle &pkg) {
+    const auto pkt = pkg.CastTo<FPacket>();
     if (pkt == nullptr)
         return {};
 
@@ -53,8 +54,8 @@ FPlatformInfo ULoginHandlerImpl::ParsePlatformInfo(const std::shared_ptr<IPackag
     return info;
 }
 
-void ULoginHandlerImpl::OnAgentError(const int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg, const std::string &desc) {
-    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+void ULoginHandlerImpl::OnAgentError(const int64_t pid, const std::string &addr, const FPackageHandle &pkg, const std::string &desc) {
+    const auto pkt = pkg.CastTo<FPacket>();
     if (pkt == nullptr)
         return;
 
@@ -69,12 +70,12 @@ void ULoginHandlerImpl::OnAgentError(const int64_t pid, const std::string &addr,
     pkt->SetData(response.SerializeAsString());
 }
 
-void ULoginHandlerImpl::OnLoginSuccess(const int64_t pid, const std::shared_ptr<IPackage_Interface> &pkg) const {
+void ULoginHandlerImpl::OnLoginSuccess(const int64_t pid, const FPackageHandle &pkg) const {
     const auto *service = GetServer()->GetModule<UServiceModule>();
     if (service == nullptr)
         return;
 
-    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+    const auto pkt = pkg.CastTo<FPacket>();
     if (pkt == nullptr)
         return;
 
@@ -92,8 +93,8 @@ void ULoginHandlerImpl::OnLoginSuccess(const int64_t pid, const std::shared_ptr<
     pkt->SetData(res.SerializeAsString());
 }
 
-void ULoginHandlerImpl::OnRepeatLogin(const int64_t pid, const std::string &addr, const std::shared_ptr<IPackage_Interface> &pkg) {
-    const auto pkt = std::dynamic_pointer_cast<FPacket>(pkg);
+void ULoginHandlerImpl::OnRepeatLogin(const int64_t pid, const std::string &addr, const FPackageHandle &pkg) {
+    const auto pkt = pkg.CastTo<FPacket>();
     if (pkt == nullptr)
         return;
 

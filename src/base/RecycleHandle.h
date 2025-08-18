@@ -11,6 +11,10 @@ template<CRecycleType Type>
 class FRecycleHandle final {
 
     friend class IRecyclerBase;
+
+    template<CRecycleType T>
+    friend class FRecycleHandle;
+
     using ElementType = std::remove_extent_t<Type>;
 
     explicit FRecycleHandle(detail::IElementNodeBase *pNode);
@@ -47,7 +51,7 @@ public:
 
 private:
     template<CRecycleType T>
-    FRecycleHandle(const FRecycleHandle &rhs, T *pCast);
+    FRecycleHandle(const FRecycleHandle<T> &rhs, ElementType *pCast);
 
     void Release() noexcept;
 

@@ -240,8 +240,8 @@ inline void FRecycleHandle<Type>::Reset() noexcept {
 template<CRecycleType Type>
 template<CRecycleType T>
 inline FRecycleHandle<T> FRecycleHandle<Type>::CastTo() const noexcept {
-    if (const auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
-        return FRecycleHandle<T>(*this, pElement);
+    if (auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
+        return FRecycleHandle<T>{*this, pElement};
     }
     return {};
 }
@@ -258,12 +258,12 @@ inline bool FRecycleHandle<Type>::operator==(nullptr_t) const noexcept {
 
 template<CRecycleType Type>
 template<CRecycleType T>
-inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle &rhs, T *pCast) {
-    if (rhs.mNode) {
-        rhs.mNode->IncRefCount();
-    }
+inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle<T> &rhs, ElementType *pCast) {
     mNode       = rhs.mNode;
     mElement    = pCast;
+    if (mNode) {
+        mNode->IncRefCount();
+    }
 }
 
 template<CRecycleType Type>
