@@ -147,10 +147,37 @@ namespace memory {
             other.mRef = nullptr;
         }
 
+        template<class Ty>
+        friend class TWeakPointer;
+
+        template<class Ty>
+        bool FromWeak(const TWeakPointer<Ty> &other) noexcept {
+            if (other.mRef && other.mRef->IncRefCount_NotZero()) {
+                mPtr = other.mPtr;
+                mRef = other.mRef;
+                return true;
+            }
+            return false;
+        }
+
         void IncRefCount()  const noexcept { if (mRef) mRef->IncRefCount();     }
         void DecRefCount()  const noexcept { if (mRef) mRef->DecRefCount();     }
         void IncWeakCount() const noexcept { if (mRef) mRef->IncWeakCount();    }
         void DecWeakCount() const noexcept { if (mRef) mRef->DecWeakCount();    }
+
+        void Swap(ISharedBase &rhs) noexcept {
+            std::swap(mPtr, rhs.mPtr);
+            std::swap(mRef, rhs.mRef);
+        }
+
+        template<class Ty>
+        void WeaklyFrom(const ISharedBase<Ty> &other) noexcept {
+            if (other.mRef) {
+                mRef = other.mRef;
+                mPtr = other.mPtr;
+                mRef->IncWeakCount();
+            }
+        }
 
     private:
         ElementType *       mPtr{ nullptr };
