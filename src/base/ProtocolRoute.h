@@ -3,7 +3,6 @@
 #include "Package.h"
 
 #include <unordered_map>
-#include <memory>
 
 
 template<CPackageType Type, typename Functor>
