@@ -62,7 +62,7 @@ namespace memory {
     template<class T>
     class TSharedRefCount final : public ISharedCountBase {
 
-        using ElementType = typename std::remove_cv_t<T>;
+        using ElementType = std::remove_cv_t<T>;
 
     public:
         explicit TSharedRefCount(ElementType *element) noexcept
@@ -92,7 +92,7 @@ namespace memory {
     template<class T>
     class ISharedBase {
     public:
-        using ElementType = typename std::remove_cv_t<T>;
+        using ElementType = std::remove_cv_t<T>;
 
         [[nodiscard]] size_t GetUseCount() const noexcept {
             return mRef ? mRef->GetRefCount() : 0;
