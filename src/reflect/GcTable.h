@@ -6,7 +6,7 @@
 #include <vector>
 
 
-class IObjectNodeBase;
+class IGCNodeBase;
 
 class BASE_API UGCTable final {
 
@@ -19,11 +19,11 @@ public:
     void Collect();
 
 private:
-    void Mark(IObjectNodeBase *node);
+    void Mark(IGCNodeBase *node);
     void Sweep();
 
 private:
-    std::vector<std::unique_ptr<IObjectNodeBase>> mAllNodes;
-    std::vector<IObjectNodeBase *> mRoots;
+    std::vector<std::unique_ptr<IGCNodeBase>> mAllNodes;
+    std::vector<IGCNodeBase *> mRoots;
 };
 

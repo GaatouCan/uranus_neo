@@ -1,5 +1,5 @@
 #include "GcTable.h"
-#include "ObjectNode.h"
+#include "GCNode.h"
 
 UGCTable::UGCTable() {
 }
@@ -7,7 +7,7 @@ UGCTable::UGCTable() {
 UGCTable::~UGCTable() {
 }
 
-void UGCTable::Mark(IObjectNodeBase *node) {
+void UGCTable::Mark(IGCNodeBase *node) {
     if (node == nullptr)
         return;
 
