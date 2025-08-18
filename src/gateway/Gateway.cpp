@@ -10,6 +10,8 @@
 #include <spdlog/spdlog.h>
 #include <ranges>
 
+using std::shared_ptr;
+using std::make_shared;
 
 UGateway::UGateway() {
 }

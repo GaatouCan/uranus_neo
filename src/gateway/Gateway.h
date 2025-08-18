@@ -4,7 +4,7 @@
 #include "base/SharedLibrary.h"
 #include "base/PlatformInfo.h"
 #include "base/Package.h"
-#include "base/Recycler.h"
+#include "base/RecycleHandle.h"
 
 #include <functional>
 #include <shared_mutex>

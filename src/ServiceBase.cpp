@@ -1,5 +1,6 @@
 #include "ServiceBase.h"
 #include "ContextBase.h"
+#include "base/Recycler.h"
 #include "gateway/Gateway.h"
 #include "logger/LoggerModule.h"
 #include "service/ServiceModule.h"
