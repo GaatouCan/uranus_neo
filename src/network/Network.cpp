@@ -2,7 +2,6 @@
 #include "Connection.h"
 #include "Server.h"
 #include "Utils.h"
-#include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "config/Config.h"
 #include "login/LoginAuth.h"
