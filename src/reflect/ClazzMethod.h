@@ -1,13 +1,13 @@
 #pragma once
 
-#include "common.h"
+#include "Common.h"
 
 #include <string>
 #include <typeinfo>
 
 class UObject;
 
-class REFLECT_API IClazzMethod {
+class BASE_API IClazzMethod {
 public:
     IClazzMethod() = delete;
 

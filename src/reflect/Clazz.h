@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "Common.h"
 #include "Constructor.h"
 
 #include <unordered_map>
@@ -15,7 +15,7 @@ class IClazzMethod;
 class IConstructor;
 class UClazzFactory;
 
-class REFLECT_API UClazz {
+class BASE_API UClazz {
 
 protected:
     UClazz();

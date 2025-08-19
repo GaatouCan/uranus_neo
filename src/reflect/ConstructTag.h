@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <typeinfo>
 
 
 template<class T>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "Common.h"
 
 #include <string>
 #include <typeinfo>
@@ -8,7 +8,7 @@
 
 class UObject;
 
-class REFLECT_API IClazzField {
+class BASE_API IClazzField {
 public:
     IClazzField() = delete;
 

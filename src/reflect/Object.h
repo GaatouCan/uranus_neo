@@ -5,7 +5,7 @@
 #include "Clazz.h"
 
 
-class REFLECT_API UObject {
+class BASE_API UObject {
 
 public:
     UObject();

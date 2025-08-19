@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "Common.h"
 #include "ConstructTag.h"
 
 #include <typeindex>
@@ -9,7 +9,7 @@
 class UObject;
 
 
-class REFLECT_API IConstructor {
+class BASE_API IConstructor {
 public:
     IConstructor() = default;
     virtual ~IConstructor() = default;

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "common.h"
+#include "Common.h"
 
 #include <string>
 #include <unordered_map>
 
 class UClazz;
 
-class REFLECT_API UClazzFactory final {
+class BASE_API UClazzFactory final {
 
     UClazzFactory();
 
