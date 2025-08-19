@@ -1,49 +1,47 @@
 #pragma once
 
-#include "base/Package.h"
-#include "base/CodecFactory.h"
-#include "base/RecycleHandle.h"
+#include "Module.h"
+#include "base/Types.h"
+#include "base/MultiIOContextPool.h"
 
 #include <absl/container/flat_hash_map.h>
 #include <shared_mutex>
+#include <memory>
 
 
 class UConnection;
-class UServer;
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
-class BASE_API UNetwork final {
+using std::shared_ptr;
+using std::make_shared;
 
-    friend class UServer;
+class BASE_API UNetwork final : public IModuleBase {
 
-private:
-    UNetwork();
-
-    void SetUpModule(UServer *server);
+    DECLARE_MODULE(UNetwork)
 
 public:
-    ~UNetwork();
+    UNetwork();
+    ~UNetwork() override;
 
-    DISABLE_COPY_MOVE(UNetwork)
+    [[nodiscard]] constexpr const char *GetModuleName() const override {
+        return "Network";
+    }
 
-    void OnAccept(ATcpSocket &&socket);
+    shared_ptr<UConnection> FindConnection(const std::string &key) const;
+
     void RemoveConnection(const std::string &key);
 
-    template<typename T, typename... Args>
-    requires std::derived_from<T, ICodecFactory_Interface>
-    void SetCodecFactory(Args && ... args);
+protected:
+    void Start() override;
+    void Stop() override;
 
 private:
-    UServer *mServer;
+    awaitable<void> WaitForClient(uint16_t port);
+
+private:
+    io_context mIOContext;
+    ATcpAcceptor mAcceptor;
+    UMultiIOContextPool mPool;
 
     absl::flat_hash_map<std::string, shared_ptr<UConnection>> mConnMap;
     mutable std::shared_mutex mMutex;
-
-    unique_ptr<ICodecFactory_Interface> mCodecFactory;
 };
-
-template<typename T, typename ... Args>
-requires std::derived_from<T, ICodecFactory_Interface>
-void UNetwork::SetCodecFactory(Args &&...args) {
-    mCodecFactory = make_unique<T>(std::forward<Args>(args)...);
-}

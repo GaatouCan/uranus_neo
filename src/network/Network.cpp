@@ -1,4 +1,5 @@
 #include "Network.h"
+#include "Server.h"
 #include "Connection.h"
 #include "base/PackageCodec.h"
 
@@ -21,53 +22,42 @@
 //     }
 // }
 //
-// void UNetwork::Initial() {
-//     assert(mState == EModuleState::CREATED);
-//     assert(mCodecFactory != nullptr);
-//
-//     mPackagePool = mCodecFactory->CreateUniquePackagePool();
-//     mPackagePool->Initial();
-//
-//     mThread = std::thread([this] {
-//        SPDLOG_INFO("Network Work In Thread[{}]", utils::ThreadIDToInt(std::this_thread::get_id()));
-//
-//        asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
-//        signals.async_wait([this](auto, auto) {
-//            Stop();
-//        });
-//        mIOContext.run();
-//    });
-//
-//     mState = EModuleState::INITIALIZED;
-// }
-//
-// void UNetwork::Start() {
-//     assert(GetServer() != nullptr);
-//
-//     if (mState != EModuleState::INITIALIZED)
-//         return;
-//
-//     uint16_t port = 8080;
-//     if (const auto *config = GetServer()->GetModule<UConfig>(); config != nullptr) {
-//         port = config->GetServerConfig()["server"]["port"].as<uint16_t>();
-//     }
-//
-//     co_spawn(mIOContext, WaitForClient(port), detached);
-//     mState = EModuleState::RUNNING;
-// }
-//
-// void UNetwork::Stop() {
-//     if (mState == EModuleState::STOPPED)
-//         return;
-//
-//     mState = EModuleState::STOPPED;
-//
-//     if (!mIOContext.stopped()) {
-//         mIOContext.stop();
-//     }
-//
-//     mConnectionMap.clear();
-// }
+
+void UNetwork::Start() {
+    if (mState != EModuleState::INITIALIZED)
+        return;
+
+    uint16_t port = 8080;
+    // if (const auto *config = GetServer()->GetModule<UConfig>(); config != nullptr) {
+    //     port = config->GetServerConfig()["server"]["port"].as<uint16_t>();
+    // }
+
+    mPool.Start(4);
+
+    asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
+    signals.async_wait([this](auto, auto) {
+        mIOContext.stop();
+    });
+
+    co_spawn(mIOContext, WaitForClient(port), detached);
+    mState = EModuleState::RUNNING;
+
+    mIOContext.run();
+}
+
+void UNetwork::Stop() {
+    if (mState == EModuleState::STOPPED)
+        return;
+
+    mState = EModuleState::STOPPED;
+
+    if (!mIOContext.stopped()) {
+        mIOContext.stop();
+    }
+
+    mConnMap.clear();
+    mPool.Stop();
+}
 //
 // io_context &UNetwork::GetIOContext() {
 //     return mIOContext;
@@ -208,44 +198,91 @@
 //     conn->Disconnect();
 // }
 UNetwork::UNetwork()
-    : mServer(nullptr) {
+    : mAcceptor(mIOContext) {
 }
 
-void UNetwork::SetUpModule(UServer *server) {
-    mServer = server;
-}
 
 UNetwork::~UNetwork() {
 }
 
-void UNetwork::OnAccept(ATcpSocket &&socket) {
-    if (mCodecFactory == nullptr)
-        throw std::runtime_error("Network::OnAccept: mCodecFactory is null");
+shared_ptr<UConnection> UNetwork::FindConnection(const std::string &key) const {
+    if (mState != EModuleState::RUNNING)
+        return nullptr;
 
-    const auto conn = make_shared<UConnection>(mCodecFactory->CreateUniquePackageCodec(std::move(socket)));
-    if (conn == nullptr)
-        return;
-
-    bool bSuccess = false;
-
-    {
-        std::unique_lock lock(mMutex);
-        if (mConnMap.contains(conn->GetKey())) {
-            bSuccess = false;
-        } else {
-            bSuccess = true;
-            mConnMap[conn->GetKey()] = conn;
-        }
-    }
-
-    if (bSuccess) {
-        conn->ConnectToClient();
-    } else {
-        conn->Disconnect();
-    }
+    std::shared_lock lock(mMutex);
+    const auto it = mConnMap.find(key);
+    return it == mConnMap.end() ? nullptr : it->second;
 }
 
 void UNetwork::RemoveConnection(const std::string &key) {
     std::unique_lock lock(mMutex);
     mConnMap.erase(key);
+}
+
+awaitable<void> UNetwork::WaitForClient(const uint16_t port) {
+     try {
+         mAcceptor.open(asio::ip::tcp::v4());
+         mAcceptor.bind({asio::ip::tcp::v4(), port});
+         mAcceptor.listen(port);
+
+         SPDLOG_INFO("Waiting For Client To Connect - Server Port: {}", port);
+
+         while (mState == EModuleState::RUNNING) {
+             auto [ec, socket] = co_await mAcceptor.async_accept(mPool.GetIOContext());
+
+             if (ec) {
+                 SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, ec.message());
+                 continue;
+             }
+
+             if (socket.is_open()) {
+                 // if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+                 //     if (!login->VerifyAddress(socket.remote_endpoint())) {
+                 //         SPDLOG_WARN("Reject Client From {}", socket.remote_endpoint().address().to_string());
+                 //         socket.close();
+                 //         continue;
+                 //     }
+                 // }
+
+                 const auto conn = make_shared<UConnection>(GetServer()->CreateUniquePackageCodec(std::move(socket)));
+                 // conn->SetUpModule(this);
+
+                 bool bSuccess = true;
+
+                 if (const auto key = conn->GetKey(); !key.empty()) {
+                     std::unique_lock lock(mMutex);
+                     if (mConnMap.contains(key)) {
+                         SPDLOG_WARN("{:<20} - Connection[{}] Has Already Exist.", __FUNCTION__, key);
+                         bSuccess = false;
+                     } else {
+                         bSuccess = true;
+                         mConnMap.insert_or_assign(key, conn);
+                     }
+
+                 } else {
+                     SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
+                         __FUNCTION__, conn->RemoteAddress().to_string());
+
+                     bSuccess = false;
+                     continue;
+                 }
+
+                 if (!bSuccess) {
+                     conn->Disconnect();
+                     continue;
+                 }
+
+                 SPDLOG_INFO("{:<20} - New Connection From {} - key[{}]",
+                     __FUNCTION__, conn->RemoteAddress().to_string(), conn->GetKey());
+
+                 conn->ConnectToClient();
+
+                 // if (auto *monitor = GetServer()->GetModule<UMonitor>(); monitor != nullptr) {
+                 //     monitor->OnAcceptClient(conn);
+                 // }
+             }
+         }
+     } catch (const std::exception &e) {
+         SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+     }
 }

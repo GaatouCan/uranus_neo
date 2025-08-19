@@ -1,9 +1,9 @@
 #include "Server.h"
+#include "base/PackageCodec.h"
+#include "base/Recycler.h"
 
 #include <spdlog/spdlog.h>
-
-#include "network/Network.h"
-
+#include <format>
 
 // UServer::UServer()
 //     : mWorkGuard(asio::make_work_guard(mIOContext)),
@@ -103,99 +103,59 @@
 // }
 
 UServer::UServer()
-    : mAcceptor(mIOContext) {
-
-    mNetwork = new UNetwork();
-    mNetwork->SetUpModule(this);
+    : mState(EServerState::CREATED) {
 }
 
 UServer::~UServer() {
+}
 
-    delete mNetwork;
+EServerState UServer::GetState() const {
+    return mState;
 }
 
 void UServer::Initial() {
+    if (mState != EServerState::CREATED)
+        throw std::logic_error(std::format("{} - Server Not In CREATED State", __FUNCTION__));
+
+    for (const auto &pModule : mModuleOrder) {
+        pModule->Initial();
+    }
+
+    mState = EServerState::INITIALIZED;
 }
 
 void UServer::Start() {
+    if (mState != EServerState::INITIALIZED)
+        throw std::logic_error(std::format("{} - Server Not In INITIALIZED State", __FUNCTION__));
 
-    asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
-    signals.async_wait([this](auto, auto) {
-        Shutdown();
-    });
+    for (const auto &pModule : mModuleOrder) {
+        pModule->Start();
+    }
 
-    co_spawn(mIOContext, WaitForClient(), detached);
-
-    mIOContext.run();
+    mState = EServerState::RUNNING;
 }
 
 void UServer::Shutdown() {
-    if (!mIOContext.stopped())
-        mIOContext.stop();
-}
+    if (mState == EServerState::TERMINATED)
+        return;
 
-awaitable<void> UServer::WaitForClient() {
-    constexpr int port = 8080;
+    mState = EServerState::TERMINATED;
 
-    try {
-        mAcceptor.open(asio::ip::tcp::v4());
-        mAcceptor.bind({asio::ip::tcp::v4(), port});
-        mAcceptor.listen(port);
-
-        while (!mIOContext.stopped()) {
-            auto [ec, socket] = co_await mAcceptor.async_accept();
-            if (ec) {
-                SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, ec.message());
-                continue;
-            }
-
-            if (!socket.is_open())
-                continue;
-
-            auto addr = socket.remote_endpoint().address();
-            // TODO: Check Address
-
-            mNetwork->OnAccept(std::move(socket));
-        }
-    } catch (const std::exception &e) {
+    for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
+        (*iter)->Stop();
     }
 }
 
-// void UServer::Run() {
-//     if (bRunning)
-//         return;
-//
-//     for (const auto &type : mModuleOrder) {
-//         if (auto *module = mModuleMap[type].get()) {
-//             module->Start();
-//             SPDLOG_INFO("{} Started.", module->GetModuleName());
-//         }
-//     }
-//
-//     asio::signal_set signals(mIOContext, SIGINT, SIGTERM);
-//     signals.async_wait([this](auto, auto) {
-//         Shutdown();
-//     });
-//
-//     mIOContext.run();
-// }
-//
-// void UServer::Shutdown() {
-//     if (bShutdown)
-//         return;
-//
-//     bShutdown = true;
-//     SPDLOG_INFO("Shutting Down...");
-//
-//     for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
-//         if (auto *module = mModuleMap[*iter].get()) {
-//             module->Stop();
-//             SPDLOG_INFO("{} Stopped.", module->GetModuleName());
-//         }
-//     }
-//
-//     mWorkGuard.reset();
-//     mIOContext.stop();
-//
-//     SPDLOG_INFO("Server Shutdown Completed!");
-// }
+unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket &&socket) const {
+    if (mCodecFactory == nullptr)
+        return nullptr;
+
+    return mCodecFactory->CreateUniquePackageCodec(std::move(socket));
+}
+
+unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool() const {
+    if (mCodecFactory == nullptr)
+        return nullptr;
+
+    return mCodecFactory->CreateUniquePackagePool();
+}
