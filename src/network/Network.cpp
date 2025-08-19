@@ -245,7 +245,7 @@ awaitable<void> UNetwork::WaitForClient(const uint16_t port) {
                  // }
 
                  const auto conn = make_shared<UConnection>(GetServer()->CreateUniquePackageCodec(std::move(socket)));
-                 // conn->SetUpModule(this);
+                 conn->SetUpModule(this);
 
                  bool bSuccess = true;
 
