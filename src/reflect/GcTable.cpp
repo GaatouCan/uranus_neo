@@ -11,10 +11,10 @@ void UGCTable::Mark(UObject *node) {
     if (node == nullptr)
         return;
 
-    if (node->mControl.bMarked)
+    if (node->mControl.IsMarked())
         return;
 
-    node->mControl.bMarked= true;
+    node->mControl.Mark();
 
     for (const auto &val : node->mControl.nodes) {
         this->Mark(val);
@@ -27,7 +27,7 @@ void UGCTable::Sweep() {
     });
 
     for (const auto &val : mAllNodes) {
-        val->mControl.bMarked = false;
+        val->mControl.ResetMark();
     }
 }
 

@@ -3,6 +3,26 @@
 #include "ClazzField.h"
 
 
+void detail::FObjectControl::Erase(UObject *obj) {
+    nodes.erase(obj);
+}
+
+void detail::FObjectControl::Insert(UObject *obj) {
+    nodes.insert(obj);
+}
+
+bool detail::FObjectControl::IsMarked() const {
+    return bMarked;
+}
+
+void detail::FObjectControl::Mark() {
+    bMarked = true;
+}
+
+void detail::FObjectControl::ResetMark() {
+    bMarked = false;
+}
+
 UObject::UObject() {
 }
 
@@ -73,4 +93,17 @@ bool UObject::GetFieldWithTypeInfo(const std::string &name, void *ret, const std
         return false;
 
     return field->GetValue(this, ret);
+}
+
+void UObject::AttachTo(UObject *obj) {
+    if (!obj)
+        return;
+
+    mControl.parent->mControl.Erase(this);
+    obj->mControl.Insert(this);
+    mControl.parent = obj;
+}
+
+void UObject::SetUpParent(UObject *parent) {
+    mControl.parent = parent;
 }

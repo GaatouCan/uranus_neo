@@ -12,8 +12,16 @@ class UObject;
 
 namespace detail {
     struct FObjectControl {
+        UObject *parent;
         std::unordered_set<UObject *> nodes;
         bool bMarked = false;
+
+        void Erase(UObject *obj);
+        void Insert(UObject *obj);
+
+        [[nodiscard]] bool IsMarked() const;
+        void Mark();
+        void ResetMark();
     };
 }
 
@@ -50,6 +58,11 @@ protected:
     bool SetFieldWithTypeInfo(const std::string &name, void *value, const std::type_info &info);
     bool GetFieldWithTypeInfo(const std::string &name, void *ret, const std::type_info &info) const;
 
+    void AttachTo(UObject *obj);
+
+private:
+    void SetUpParent(UObject *parent);
+
 private:
     detail::FObjectControl mControl;
 };
@@ -74,10 +87,14 @@ inline bool UObject::Invoke(const std::string &name, void *ret, Args &&...args) 
     return this->InvokeMethod(name, ret, reinterpret_cast<void *>(&param));
 }
 
-template<class Type> requires std::derived_from<Type, UObject>
+template<class Type>
+requires std::derived_from<Type, UObject>
 Type *UObject::CreateSubObject() {
-    auto *res = new Type();
+    Type *res = new Type();
+
     mControl.nodes.insert(res);
+    res->SetUpParent(this);
+
     return res;
 }
 
