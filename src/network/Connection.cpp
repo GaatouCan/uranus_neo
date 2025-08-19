@@ -16,12 +16,10 @@ using namespace std::literals::chrono_literals;
 
 
 UConnection::UConnection(unique_ptr<IPackageCodec_Interface> &&codec)
-    : mNetwork(nullptr),
-      mCodec(std::move(codec)),
+    : mCodec(std::move(codec)),
       mChannel(mCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mCodec->GetSocket().get_executor()),
-      mExpiration(std::chrono::seconds(30)),
-      mPlayerID(-1) {
+      mExpiration(std::chrono::seconds(30)) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -29,9 +27,6 @@ UConnection::UConnection(unique_ptr<IPackageCodec_Interface> &&codec)
     mKey = fmt::format("{}-{}",mCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
 }
 
-void UConnection::SetUpModule(UNetwork *owner) {
-    mNetwork = owner;
-}
 
 UConnection::~UConnection() {
     Disconnect();
@@ -53,12 +48,6 @@ void UConnection::SetExpireSecond(const int sec) {
     mExpiration = std::chrono::seconds(sec);
 }
 
-void UConnection::SetPlayerID(const int64_t id) {
-    if (mPlayerID > 0)
-        return;
-
-    mPlayerID = id;
-}
 
 void UConnection::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
@@ -82,31 +71,6 @@ void UConnection::Disconnect() {
 
     mWatchdog.cancel();
     GetSocket().close();
-
-    mNetwork->RemoveConnection(mKey, mPlayerID);
-
-    if (mPlayerID > 0) {
-        if (GetServer() != nullptr) {
-            if (auto *gateway = GetServer()->GetModule<UGateway>()) {
-                gateway->OnPlayerLogout(mPlayerID);
-            }
-        }
-        mPlayerID = -1;
-    }
-}
-
-UNetwork *UConnection::GetNetworkModule() const {
-    return mNetwork;
-}
-
-UServer *UConnection::GetServer() const {
-    assert(mNetwork);
-    return mNetwork->GetServer();
-}
-
-FPackageHandle UConnection::BuildPackage() const {
-    assert(mNetwork);
-    return mNetwork->BuildPackage();
 }
 
 asio::ip::address UConnection::RemoteAddress() const {
@@ -118,10 +82,6 @@ asio::ip::address UConnection::RemoteAddress() const {
 
 const std::string &UConnection::GetKey() const {
     return mKey;
-}
-
-int64_t UConnection::GetPlayerID() const {
-    return mPlayerID;
 }
 
 void UConnection::SendPackage(const FPackageHandle &pkg) {
@@ -137,11 +97,6 @@ void UConnection::SendPackage(const FPackageHandle &pkg) {
 
 
 awaitable<void> UConnection::WritePackage() {
-    if (GetServer() == nullptr) {
-        SPDLOG_CRITICAL("{:<20} - Use GetServer() Before Set Up!", __FUNCTION__);
-        co_return;
-    }
-
     try {
         while (IsSocketOpen()) {
             const auto [ec, pkg] = co_await mChannel.async_receive();
@@ -162,11 +117,6 @@ awaitable<void> UConnection::WritePackage() {
 }
 
 awaitable<void> UConnection::ReadPackage() {
-    if (GetServer() == nullptr) {
-        SPDLOG_CRITICAL("{:<20} - Use GetServer() Before Set Up!", __FUNCTION__);
-        co_return;
-    }
-
     try {
         while (IsSocketOpen()) {
             const auto pkg = BuildPackage();
@@ -181,49 +131,49 @@ awaitable<void> UConnection::ReadPackage() {
             const auto now = std::chrono::steady_clock::now();
 
             // Run The Login Branch
-            if (mPlayerID < 0) {
-                // Do Not Try Login Too Frequently
-                if (now - mReceiveTime > std::chrono::seconds(3)) {
-                    --mPlayerID;
-
-                    // Try Login Failed 3 Times Then Disconnect This
-                    if (mPlayerID < -3) {
-                        SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
-                        Disconnect();
-                        break;
-                    }
-
-                    // Handle Login Logic
-                    if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-                        login->OnLoginRequest(mKey, pkg);
-                    }
-                }
-
-                mReceiveTime = now;
-                continue;
-            }
+            // if (mPlayerID < 0) {
+            //     // Do Not Try Login Too Frequently
+            //     if (now - mReceiveTime > std::chrono::seconds(3)) {
+            //         --mPlayerID;
+            //
+            //         // Try Login Failed 3 Times Then Disconnect This
+            //         if (mPlayerID < -3) {
+            //             SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
+            //             Disconnect();
+            //             break;
+            //         }
+            //
+            //         // Handle Login Logic
+            //         if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+            //             login->OnLoginRequest(mKey, pkg);
+            //         }
+            //     }
+            //
+            //     mReceiveTime = now;
+            //     continue;
+            // }
 
             // Update Receive Time Point For Watchdog
             mReceiveTime = now;
 
-            const auto *gateway = GetServer()->GetModule<UGateway>();
-            const auto *auth = GetServer()->GetModule<ULoginAuth>();
-
-            if (gateway != nullptr && auth != nullptr) {
-                switch (pkg->GetPackageID()) {
-                    case HEARTBEAT_PACKAGE_ID: {
-                        gateway->OnHeartBeat(mPlayerID, pkg);
-                    }
-                        break;
-                    case LOGIN_REQUEST_PACKAGE_ID: break;
-                    case PLATFORM_PACKAGE_ID: {
-                        auth->OnPlatformInfo(mPlayerID, pkg);
-                    }
-                        break;
-                    default:
-                        gateway->OnClientPackage(mPlayerID, pkg);
-                }
-            }
+            // const auto *gateway = GetServer()->GetModule<UGateway>();
+            // const auto *auth = GetServer()->GetModule<ULoginAuth>();
+            //
+            // if (gateway != nullptr && auth != nullptr) {
+            //     switch (pkg->GetPackageID()) {
+            //         case HEARTBEAT_PACKAGE_ID: {
+            //             gateway->OnHeartBeat(mPlayerID, pkg);
+            //         }
+            //             break;
+            //         case LOGIN_REQUEST_PACKAGE_ID: break;
+            //         case PLATFORM_PACKAGE_ID: {
+            //             auth->OnPlatformInfo(mPlayerID, pkg);
+            //         }
+            //             break;
+            //         default:
+            //             gateway->OnClientPackage(mPlayerID, pkg);
+            //     }
+            // }
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
