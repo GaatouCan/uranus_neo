@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Clazz.h"
+#include "GcTable.h"
 
 #include <typeinfo>
 #include <unordered_set>
@@ -9,31 +10,17 @@
 class UGCTable;
 class UObject;
 
-class BASE_API IGCNodeBase {
-
-    friend class UGCTable;
-
-public:
-    IGCNodeBase();
-    virtual ~IGCNodeBase() = default;
-
-    DISABLE_COPY_MOVE(IGCNodeBase)
-
-    [[nodiscard]] virtual UObject *Get() = 0;
-
-    void InsertSubNode(IGCNodeBase *node);
-
-private:
-    std::unordered_set<IGCNodeBase *> mFields;
-    bool bMarked;
-};
+namespace detail {
+    struct FObjectControl {
+        std::unordered_set<UObject *> nodes;
+        bool bMarked = false;
+    };
+}
 
 
 class BASE_API UObject {
 
-    template<class Type>
-    requires std::derived_from<Type, UObject>
-    friend class TGCNode;
+    friend class UGCTable;
 
 public:
     UObject();
@@ -64,33 +51,8 @@ protected:
     bool GetFieldWithTypeInfo(const std::string &name, void *ret, const std::type_info &info) const;
 
 private:
-    void SetUpNode(IGCNodeBase *node);
-
-private:
-    IGCNodeBase *mNode;
+    detail::FObjectControl mControl;
 };
-
-template<class Type>
-requires std::derived_from<Type, UObject>
-class TGCNode final : public IGCNodeBase {
-
-public:
-    TGCNode() {
-        mObject.SetUpNode(this);
-    }
-
-    ~TGCNode() override {
-
-    }
-
-    UObject *Get() override {
-        return &mObject;
-    }
-
-private:
-    Type mObject;
-};
-
 
 template<class Type>
 bool UObject::SetField(const std::string &name, Type &&value) {
@@ -114,7 +76,8 @@ inline bool UObject::Invoke(const std::string &name, void *ret, Args &&...args) 
 
 template<class Type> requires std::derived_from<Type, UObject>
 Type *UObject::CreateSubObject() {
-    auto *node = new TGCNode<Type>();
-    mNode->InsertSubNode(node);
-    return node->Get();
+    auto *res = new Type();
+    mControl.nodes.insert(res);
+    return res;
 }
+

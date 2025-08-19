@@ -7,27 +7,27 @@ UGCTable::UGCTable() {
 UGCTable::~UGCTable() {
 }
 
-void UGCTable::Mark(IGCNodeBase *node) {
+void UGCTable::Mark(UObject *node) {
     if (node == nullptr)
         return;
 
-    if (node->bMarked)
+    if (node->mControl.bMarked)
         return;
 
-    node->bMarked = true;
+    node->mControl.bMarked= true;
 
-    for (const auto &val : node->mFields) {
+    for (const auto &val : node->mControl.nodes) {
         this->Mark(val);
     }
 }
 
 void UGCTable::Sweep() {
-    std::erase_if(mAllNodes,[](const auto &node) {
-        return !node->bMarked;
+    std::erase_if(mAllNodes,[](const std::unique_ptr<UObject> &node) {
+        return !node->mControl.bMarked;
     });
 
     for (const auto &val : mAllNodes) {
-        val->bMarked = false;
+        val->mControl.bMarked = false;
     }
 }
 
