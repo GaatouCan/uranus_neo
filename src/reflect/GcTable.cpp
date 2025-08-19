@@ -1,5 +1,5 @@
 #include "GcTable.h"
-#include "GCNode.h"
+#include "Object.h"
 
 UGCTable::UGCTable() {
 }

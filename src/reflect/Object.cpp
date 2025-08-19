@@ -2,7 +2,16 @@
 #include "ClazzMethod.h"
 #include "ClazzField.h"
 
-UObject::UObject() {
+IGCNodeBase::IGCNodeBase()
+    : bMarked(false) {
+}
+
+void IGCNodeBase::InsertSubNode(IGCNodeBase *node) {
+    mFields.insert(node);
+}
+
+UObject::UObject()
+    : mNode(nullptr) {
 }
 
 UObject::~UObject() {
@@ -72,4 +81,8 @@ bool UObject::GetFieldWithTypeInfo(const std::string &name, void *ret, const std
         return false;
 
     return field->GetValue(this, ret);
+}
+
+void UObject::SetUpNode(IGCNodeBase *node) {
+    mNode = node;
 }
