@@ -16,15 +16,15 @@ using namespace std::literals::chrono_literals;
 
 
 UConnection::UConnection(unique_ptr<IPackageCodec_Interface> &&codec)
-    : mCodec(std::move(codec)),
-      mChannel(mCodec->GetSocket().get_executor(), 1024),
-      mWatchdog(mCodec->GetSocket().get_executor()),
+    : mPackageCodec(std::move(codec)),
+      mChannel(mPackageCodec->GetSocket().get_executor(), 1024),
+      mWatchdog(mPackageCodec->GetSocket().get_executor()),
       mExpiration(std::chrono::seconds(30)) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 
-    mKey = fmt::format("{}-{}",mCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
+    mKey = fmt::format("{}-{}",mPackageCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
 }
 
 
@@ -37,11 +37,22 @@ bool UConnection::IsSocketOpen() const {
 }
 
 ATcpSocket &UConnection::GetSocket() const {
-    return mCodec->GetSocket();
+    return mPackageCodec->GetSocket();
 }
 
 UConnection::APackageChannel &UConnection::GetChannel() {
     return mChannel;
+}
+
+UNetwork *UConnection::GetNetwork() const {
+    return mNetwork;
+}
+
+UServer *UConnection::GetServer() const {
+    if (!mNetwork)
+        throw std::runtime_error(std::format("{} - Network Is Null Pointer", __FUNCTION__));
+
+    return mNetwork->GetServer();
 }
 
 void UConnection::SetExpireSecond(const int sec) {
@@ -53,7 +64,7 @@ void UConnection::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        if (const auto ret = co_await self->mCodec->Initial(); !ret) {
+        if (const auto ret = co_await self->mPackageCodec->Initial(); !ret) {
             co_return;
         }
 
@@ -71,6 +82,13 @@ void UConnection::Disconnect() {
 
     mWatchdog.cancel();
     GetSocket().close();
+}
+
+FPackageHandle UConnection::BuildPackage() const {
+    if (!mPackagePool)
+        throw std::runtime_error(std::format("{} - Package Pool Is Null Pointer", __FUNCTION__));
+
+    return mPackagePool->Acquire<IPackage_Interface>();
 }
 
 asio::ip::address UConnection::RemoteAddress() const {
@@ -95,6 +113,11 @@ void UConnection::SendPackage(const FPackageHandle &pkg) {
     }
 }
 
+void UConnection::SetUpModule(UNetwork *network) {
+    mNetwork = network;
+    mPackagePool = GetServer()->CreateUniquePackagePool();
+}
+
 
 awaitable<void> UConnection::WritePackage() {
     try {
@@ -103,7 +126,7 @@ awaitable<void> UConnection::WritePackage() {
             if (ec || pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Encode(pkg.Get()); !ret) {
+            if (const auto ret = co_await mPackageCodec->Encode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }
@@ -123,7 +146,7 @@ awaitable<void> UConnection::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mCodec->Decode(pkg.Get()); !ret) {
+            if (const auto ret = co_await mPackageCodec->Decode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }

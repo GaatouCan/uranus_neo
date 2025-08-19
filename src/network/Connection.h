@@ -2,11 +2,12 @@
 
 #include "base/Types.h"
 #include "base/Package.h"
-#include "base/RecycleHandle.h"
-
+#include "base/Recycler.h"
 
 
 class IPackageCodec_Interface;
+class UNetwork;
+class UServer;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using std::unique_ptr;
@@ -14,17 +15,9 @@ using std::unique_ptr;
 
 class BASE_API UConnection final : public std::enable_shared_from_this<UConnection> {
 
+    friend class UNetwork;
+
     using APackageChannel = TConcurrentChannel<void(std::error_code, FPackageHandle)>;
-
-    unique_ptr<IPackageCodec_Interface> mCodec;
-    APackageChannel mChannel;
-
-    ASteadyTimer mWatchdog;
-    ASteadyTimePoint mReceiveTime;
-    ASteadyDuration mExpiration;
-
-    std::string mKey;
-    std::atomic<int64_t> mPlayerID;
 
 public:
     UConnection() = delete;
@@ -35,6 +28,9 @@ public:
     [[nodiscard]] ATcpSocket &GetSocket() const;
     [[nodiscard]] bool IsSocketOpen() const;
     [[nodiscard]] APackageChannel &GetChannel();
+
+    [[nodiscard]] UNetwork *GetNetwork() const;
+    [[nodiscard]] UServer *GetServer() const;
 
     void SetExpireSecond(int sec);
 
@@ -49,8 +45,25 @@ public:
     void SendPackage(const FPackageHandle &pkg);
 
 private:
+    void SetUpModule(UNetwork *network);
+
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
     awaitable<void> Watchdog();
+
+private:
+    UNetwork *mNetwork;
+
+    unique_ptr<IPackageCodec_Interface> mPackageCodec;
+    unique_ptr<IRecyclerBase> mPackagePool;
+
+    APackageChannel mChannel;
+
+    ASteadyTimer mWatchdog;
+    ASteadyTimePoint mReceiveTime;
+    ASteadyDuration mExpiration;
+
+    std::string mKey;
+    std::atomic<int64_t> mPlayerID;
 };
 
