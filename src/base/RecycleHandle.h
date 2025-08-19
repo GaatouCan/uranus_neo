@@ -21,7 +21,10 @@ class FRecycleHandle final {
 
 public:
     FRecycleHandle();
+
+    // NOLINT(google-explicit-constructor)
     FRecycleHandle(nullptr_t);
+
     ~FRecycleHandle();
 
     FRecycleHandle(const FRecycleHandle &rhs);
