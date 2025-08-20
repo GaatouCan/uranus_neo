@@ -23,7 +23,7 @@ public:
     [[nodiscard]] UServer* GetServer() const;
 
     virtual FPackageHandle OnLoginSuccess(int64_t pid) = 0;
-    virtual FPackageHandle OnLoginFailure(int64_t pid, const std::string &desc) = 0;
+    virtual FPackageHandle OnLoginFailure(const std::string &desc) = 0;
 
     virtual FPackageHandle OnRepeated(const std::string &addr) = 0;
 

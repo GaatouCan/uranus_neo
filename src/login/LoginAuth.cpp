@@ -3,6 +3,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "Agent.h"
+
 
 ULoginAuth::ULoginAuth() {
 }
@@ -55,6 +57,11 @@ void ULoginAuth::OnLoginRequest(const std::string &key, const FPackageHandle &pk
     const auto [token, pid] = mLoginHandler->ParseLoginRequest(pkg);
     if (token.empty() || pid == 0) {
         SPDLOG_WARN("{:<20} - fd[{}] Parse Login Request Failed.", __FUNCTION__, key);
+
+        if (const auto agent = GetServer()->FindAgent(key)) {
+            agent->OnLoginFailed("Fail To Parse Token");
+        }
+
         return;
     }
 

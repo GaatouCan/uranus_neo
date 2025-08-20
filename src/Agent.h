@@ -111,6 +111,7 @@ public:
 
     void SendPackage(const FPackageHandle &pkg);
 
+    void OnLoginFailed(const std::string &desc);
     void OnRepeat(const std::string &addr);
 
 private:

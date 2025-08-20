@@ -240,6 +240,23 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
     }
 }
 
+void UAgent::OnLoginFailed(const std::string &desc) {
+    if (mHandler != nullptr)
+        throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
+
+    const auto pkg = mHandler->OnLoginFailure(desc);
+    if (pkg == nullptr) {
+        this->Disconnect();
+        return;
+    }
+
+    pkg->SetPackageID(LOGIN_FAILED_PACKAGE_ID);
+    pkg->SetSource(SERVER_SOURCE_ID);
+    pkg->SetTarget(CLIENT_TARGET_ID);
+
+    this->SendPackage(pkg);
+}
+
 void UAgent::OnRepeat(const std::string &addr) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
