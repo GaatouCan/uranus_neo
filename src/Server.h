@@ -3,14 +3,12 @@
 #include "Module.h"
 #include "base/MultiIOContextPool.h"
 #include "base/CodecFactory.h"
+#include "base/PlayerFactory.h"
 
 #include <typeindex>
 #include <shared_mutex>
 #include <absl/container/flat_hash_map.h>
 
-
-class UAgent;
-class IPlayerBase;
 
 enum class EServerState {
     CREATED,
@@ -66,8 +64,20 @@ public:
         mCodecFactory = make_unique<T>(std::forward<Args>(args)...);
     }
 
+    template<class T, class... Args>
+    requires std::derived_from<T, IPlayerFactory_Interface>
+    void SetPlayerFactory(Args && ... args) {
+        if (mState != EServerState::CREATED)
+            throw std::logic_error("Only can set PlayerFactory in CREATED state");
+
+        mPlayerFactory = make_unique<T>(std::forward<Args>(args)...);
+    }
+
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool() const;
+
+    unique_ptr<IPlayerBase> CreatePlayer() const;
+    unique_ptr<IAgentHandler> CreateAgentHandler() const;
 
     [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
@@ -98,6 +108,7 @@ private:
 #pragma endregion
 
     unique_ptr<ICodecFactory_Interface> mCodecFactory;
+    unique_ptr<IPlayerFactory_Interface> mPlayerFactory;
 
     EServerState mState;
 };

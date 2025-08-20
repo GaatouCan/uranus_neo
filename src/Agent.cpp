@@ -92,10 +92,11 @@ UServer *UAgent::GetServer() const {
 
 void UAgent::SetUpAgent(UServer *pServer) {
     mServer = pServer;
+
     mPackagePool = mServer->CreateUniquePackagePool();
     mPackagePool->Initial();
 
-    // TODO: Get Handler
+    mHandler = mServer->CreateAgentHandler();
     mHandler->SetUpAgent(this);
 }
 
@@ -132,7 +133,6 @@ void UAgent::Disconnect() {
     mPackageChannel.close();
     mScheduleChannel.close();
 
-    // TODO: Do Logout Logic
     if (mPlayer != nullptr) {
         mPlayer->OnLogout();
         mPlayer->Save();

@@ -2,6 +2,7 @@
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "Agent.h"
+#include "base/AgentHandler.h"
 #include "PlayerBase.h"
 #include "login/LoginAuth.h"
 
@@ -146,7 +147,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
         player->Save();
         player->OnRepeat();
     } else {
-        // TODO: Create Player Instance
+        player = mPlayerFactory->CreatePlayer();
     }
 
     agent->SetUpPlayer(std::move(player));
@@ -164,6 +165,20 @@ unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool() const {
         return nullptr;
 
     return mCodecFactory->CreateUniquePackagePool();
+}
+
+unique_ptr<IPlayerBase> UServer::CreatePlayer() const {
+    if (mPlayerFactory == nullptr)
+        return nullptr;
+
+    return mPlayerFactory->CreatePlayer();
+}
+
+unique_ptr<IAgentHandler> UServer::CreateAgentHandler() const {
+    if (mPlayerFactory == nullptr)
+        return nullptr;
+
+    return mPlayerFactory->CreateAgentHandler();
 }
 
 awaitable<void> UServer::WaitForClient(const uint16_t port) {
