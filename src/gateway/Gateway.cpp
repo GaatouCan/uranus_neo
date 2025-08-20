@@ -63,13 +63,25 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
     if (!conn)
         return;
 
-    const auto agent = CreateAgent(pid);
+    const auto agent = make_shared<UAgent>();
+
+    shared_ptr<UAgent> existed;
+    {
+        std::unique_lock lock(mMutex);
+        if (const auto iter = mAgentMap.find(pid); iter != mAgentMap.end()) {
+            existed = iter->second;
+        }
+        mAgentMap.insert_or_assign(pid, agent);
+    }
+
+    if (existed) {
+        existed->OnRepeat();
+    }
 
     agent->SetUpModule(this);
     agent->SetUpConnection(conn);
     agent->SetUpPlayerID(pid);
-
-    // TODO: Boot Agent
+    agent->Start();
 }
 
 shared_ptr<UAgent> UGateway::CreateAgent(const int64_t pid) {
