@@ -130,17 +130,10 @@ void UAgent::Disconnect() {
         return;
 
     GetSocket().close();
-    mWatchdog.cancel();
-    mPackageChannel.close();
-    mScheduleChannel.close();
-
-    if (mPlayer != nullptr) {
-        mPlayer->OnLogout();
-        mPlayer->Save();
-        mServer->RemovePlayer(mPlayer->GetPlayerID(), bCached);
-    }
-
-    mServer->RemoveAgent(mKey);
+    co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+        self->Destroy();
+        co_return;
+    }, detached);
 }
 
 void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
@@ -402,4 +395,18 @@ awaitable<void> UAgent::ProcessChannel() {
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
     }
+}
+
+void UAgent::Destroy() {
+    mWatchdog.cancel();
+    mPackageChannel.close();
+    mScheduleChannel.close();
+
+    if (mPlayer != nullptr) {
+        mPlayer->OnLogout();
+        mPlayer->Save();
+        mServer->RemovePlayer(mPlayer->GetPlayerID(), bCached);
+    }
+
+    mServer->RemoveAgent(mKey);
 }

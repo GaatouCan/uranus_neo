@@ -120,6 +120,7 @@ private:
     awaitable<void> Watchdog();
 
     awaitable<void> ProcessChannel();
+    void Destroy();
 
 private:
     UServer *mServer;

@@ -150,8 +150,8 @@ private:
     FServiceHandle mServiceID;
     IServiceBase *mService;
 
+    AContextChannel mChannel;
     unique_ptr<IRecyclerBase> mPackagePool;
-    unique_ptr<AContextChannel> mChannel;
 
     FSharedLibrary mLibrary;
 };
