@@ -1,224 +1,86 @@
 #include "Gateway.h"
-#include "AgentContext.h"
-#include "PlayerAgent.h"
 #include "Server.h"
+#include "Agent.h"
 #include "network/Network.h"
-#include "service/ServiceModule.h"
-#include "service/ServiceContext.h"
-#include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
 #include <ranges>
 
-using std::shared_ptr;
-using std::make_shared;
 
 UGateway::UGateway() {
+}
+
+void UGateway::Initial() {
+
+}
+
+void UGateway::Stop() {
+
 }
 
 UGateway::~UGateway() {
     Stop();
 }
 
-void UGateway::OnPlayerLogin(const int64_t pid, const std::string &key) {
-    if (mState != EModuleState::RUNNING || GetServer() == nullptr)
-        return;
-
-    auto *module = GetServer()->GetModule<UServiceModule>();
-    if (module == nullptr)
-        return;
-
-    const auto sid = module->AcquireServiceID();
-    if (sid < 0)
-        return;
-
-    const auto agent = make_shared<UAgentContext>();
-
-    agent->SetUpModule(this);
-    agent->SetUpLibrary(mLibrary);
-    agent->SetUpServiceID(sid);
-    agent->SetPlayerID(pid);
-    agent->SetConnectionKey(key);
-
-    co_spawn(GetServer()->GetIOContext(), [this, agent, key, pid, func = __FUNCTION__]() -> awaitable<void> {
-        if (const auto ret = co_await agent->AsyncInitial(nullptr); ret) {
-            agent->BootService();
-            SPDLOG_INFO("{:<20} - Player[{}] Login", func, pid);
-
-            // Add To Map
-            {
-                std::unique_lock lock(mMutex);
-                mPlayerMap[pid] = agent;
-                mConnToPlayer[key] = pid;
-            }
-            co_return;
-        }
-
-        if (const auto *auth = GetServer()->GetModule<ULoginAuth>()) {
-            auth->OnAgentError(key, pid, "Could Not Create Agent Service.");
-        }
-
-        agent->ForceShutdown();
-    }, detached);
-}
-
-void UGateway::OnPlayerLogout(const int64_t pid) {
-    if (mState != EModuleState::RUNNING || GetServer() == nullptr)
-        return;
-
-    shared_ptr<UAgentContext> agent;
-
-    {
-        std::unique_lock lock(mMutex);
-
-        if (const auto node = mPlayerMap.extract(pid); !node.empty()) {
-            agent = node.mapped();
-        }
-
-        if (agent == nullptr)
-            return;
-
-        mConnToPlayer.erase(agent->GetConnectionKey());
-    }
-
-    SPDLOG_INFO("{:<20} - Player[{}] Logout", __FUNCTION__, agent->GetPlayerID());
-    agent->Shutdown(false, 0, nullptr);
-}
-
-std::string UGateway::GetConnectionKey(const int64_t pid) const {
+bool UGateway::IsAgentExist(const int64_t pid) const {
     if (mState != EModuleState::RUNNING)
-        return {};
+        return false;
 
     std::shared_lock lock(mMutex);
-
-    const auto iter = mPlayerMap.find(pid);
-    if (iter == mPlayerMap.end())
-        return {};
-
-    if (const auto agent = iter->second) {
-        return agent->GetConnectionKey();
-    }
-
-    return {};
+    return mAgentMap.contains(pid);
 }
 
-std::shared_ptr<UAgentContext> UGateway::FindPlayerAgent(const int64_t pid) const {
+shared_ptr<UAgent> UGateway::FindAgent(const int64_t pid) const {
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
     std::shared_lock lock(mMutex);
-    const auto iter = mPlayerMap.find(pid);
-    return iter == mPlayerMap.end() ? nullptr : iter->second;
+
+    const auto iter = mAgentMap.find(pid);
+    return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
-void UGateway::Initial() {
-    if (mState != EModuleState::CREATED)
+void UGateway::RemoveAgent(const int64_t pid) {
+    if (mState != EModuleState::RUNNING)
         return;
 
-    std::string agent = PLAYER_AGENT_DIRECTORY;
+    std::unique_lock lock(mMutex);
+    mAgentMap.erase(pid);
+}
 
-#if defined(_WIN32) || defined(_WIN64)
-    agent += "/agent.dll";
-#else
-    agent += "/libagent.so";
-#endif
+void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
+    if (mState != EModuleState::RUNNING)
+        return;
 
-    mLibrary = FSharedLibrary(agent);
-    if (!mLibrary.IsValid()) {
-        SPDLOG_ERROR("Gateway Module Fail To Load Agent Library");
-        GetServer()->Shutdown();
-        exit(-5);
+    if (pid <= 0 || key.empty())
+        return;
+
+    const auto *network = GetServer()->GetModule<UNetwork>();
+    if (!network)
+        return;
+
+    const auto conn = network->FindConnection(key);
+    if (!conn)
+        return;
+
+    const auto agent = make_shared<UAgent>();
+
+    bool bSuccess = false;
+    {
+        std::unique_lock lock(mMutex);
+        if (mAgentMap.contains(pid)) {
+            bSuccess = false;
+        } else {
+            bSuccess = true;
+            mAgentMap.insert_or_assign(pid, agent);
+        }
     }
 
-    SPDLOG_INFO("Loaded Player Agent From {}", agent);
-    mState = EModuleState::INITIALIZED;
-}
+    if (bSuccess) {
+        agent->SetUpModule(this);
+        agent->SetUpConnection(conn);
+        agent->SetUpPlayerID(pid);
 
-void UGateway::Stop() {
-    if (mState == EModuleState::STOPPED)
-        return;
-
-    mState = EModuleState::STOPPED;
-
-    for (const auto &agent: mPlayerMap | std::views::values) {
-        agent->Shutdown(false, 0, nullptr);
+        // TODO: Boot Agent
     }
-
-    mLibrary.Reset();
-}
-
-void UGateway::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (pkg == nullptr)
-        return;
-
-    if (const auto agent = FindPlayerAgent(pid))
-        agent->PushPackage(pkg);
-}
-
-void UGateway::PostToPlayer(const int64_t pid, const std::function<void(IServiceBase *)> &task) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (task == nullptr)
-        return;
-
-    if (const auto agent = FindPlayerAgent(pid))
-        agent->PushTask(task);
-}
-
-void UGateway::OnClientPackage(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (pkg == nullptr)
-        return;
-
-    // const auto source = pkg->GetSource();
-    const auto target = pkg->GetTarget();
-
-    // To Player Agent
-    if (target == PLAYER_AGENT_ID) {
-        SendToPlayer(pid, pkg);
-        return;
-    }
-
-    if (const auto context = GetServer()->GetModule<UServiceModule>()->FindService(target))
-        context->PushPackage(pkg);
-}
-
-void UGateway::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (pkg == nullptr || pid < 0)
-        return;
-
-    const auto agent = FindPlayerAgent(pid);
-    if (agent == nullptr)
-        return;
-
-    if (const auto *network = GetServer()->GetModule<UNetwork>())
-        network->SendToClient(agent->GetConnectionKey(), pkg);
-}
-
-void UGateway::OnHeartBeat(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (pkg == nullptr)
-        return;
-
-    if (const auto agent = FindPlayerAgent(pid))
-        agent->OnHeartBeat(pkg);
-}
-
-void UGateway::OnPlatformInfo(const FPlatformInfo &info) const {
-    if (mState != EModuleState::RUNNING)
-        return;
-
-    if (const auto agent = FindPlayerAgent(info.playerID); agent != nullptr)
-        agent->OnPlatformInfo(info);
 }

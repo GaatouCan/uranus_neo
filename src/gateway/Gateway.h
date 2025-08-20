@@ -1,22 +1,15 @@
 #pragma once
 
 #include "Module.h"
-#include "base/SharedLibrary.h"
-#include "base/PlatformInfo.h"
-#include "base/Package.h"
-#include "base/RecycleHandle.h"
 
-#include <functional>
+#include <memory>
+#include <absl/container/flat_hash_map.h>
 #include <shared_mutex>
-#include <unordered_map>
 
 
-class IServiceBase;
-class IPlayerAgent;
-class UAgentContext;
+class UAgent;
+using std::shared_ptr;
 
-using std::unordered_map;
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 class BASE_API UGateway final : public IModuleBase {
 
@@ -35,26 +28,14 @@ public:
         return "Gateway Module";
     }
 
-    void OnPlayerLogin(int64_t pid, const std::string &key);
-    void OnPlayerLogout(int64_t pid);
+    [[nodiscard]] bool IsAgentExist(int64_t pid) const;
 
-    std::string GetConnectionKey(int64_t pid) const;
-    std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
+    [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
+    void RemoveAgent(int64_t pid);
 
-    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
-
-    void OnClientPackage(int64_t pid, const FPackageHandle &pkg) const;
-    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
-
-    void OnHeartBeat(int64_t pid, const FPackageHandle &pkg) const;
-    void OnPlatformInfo(const FPlatformInfo &info) const;
+    void OnPlayerLogin(const std::string &key, int64_t pid);
 
 private:
-    FSharedLibrary mLibrary;
-
-    unordered_map<std::string, int64_t> mConnToPlayer;
-    unordered_map<int64_t, std::shared_ptr<UAgentContext>> mPlayerMap;
-
+    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mAgentMap;
     mutable std::shared_mutex mMutex;
 };

@@ -163,7 +163,7 @@ void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) co
         __FUNCTION__, GetServiceID(), GetServiceName(), pid);
 
         pkg->SetSource(GetServiceID());
-        pkg->SetTarget(PLAYER_AGENT_ID);
+        pkg->SetTarget(AGENT_TARGET_ID);
 
         gateway->SendToPlayer(pid, pkg);
     }

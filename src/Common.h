@@ -77,7 +77,7 @@ RegisterMethod(new TClazzMethod(#method, &##clazz##::##method));
 
 inline constexpr auto EmptyCallback = [](auto && ...){};
 
-inline constexpr int PLAYER_AGENT_ID        = -1;
+inline constexpr int AGENT_TARGET_ID        = -1;
 inline constexpr int CLIENT_TARGET_ID       = -2;
 inline constexpr int SERVER_SOURCE_ID       = -3;
 inline constexpr int INVALID_SERVICE_ID     = -10;

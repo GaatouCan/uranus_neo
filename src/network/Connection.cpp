@@ -64,9 +64,8 @@ void UConnection::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        if (const auto ret = co_await self->mPackageCodec->Initial(); !ret) {
+        if (const auto ret = co_await self->mPackageCodec->Initial(); !ret)
             co_return;
-        }
 
         co_await (
             self->ReadPackage() ||
