@@ -1,13 +1,13 @@
 #include "Server.h"
+#include "Agent.h"
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
-#include "Agent.h"
 #include "base/AgentHandler.h"
-#include "PlayerBase.h"
 #include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
 #include <format>
+
 
 UServer::UServer()
     : mAcceptor(mIOContext),
@@ -71,11 +71,11 @@ void UServer::Shutdown() {
     }
 }
 
-shared_ptr<UAgent> UServer::FindAgent(const int64_t pid) const {
+shared_ptr<UAgent> UServer::FindPlayer(const int64_t pid) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
-    std::shared_lock lock(mAgentMutex);
+    std::shared_lock lock(mPlayerMutex);
     const auto iter = mPlayerMap.find(pid);
     return iter == mPlayerMap.end() ? nullptr : iter->second;
 }
@@ -89,24 +89,44 @@ shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
     return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
-void UServer::RemoveAgent(std::unique_ptr<IPlayerBase> &&player) {
+void UServer::RemovePlayer(const int64_t pid, const bool bCache) {
     if (mState != EServerState::RUNNING)
         return;
 
     shared_ptr<UAgent> agent;
 
     {
-        std::unique_lock lock(mAgentMutex);
-        if (const auto iter = mPlayerMap.find(player->GetPlayerID()); iter != mPlayerMap.end()) {
+        std::unique_lock lock(mPlayerMutex);
+        if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
             agent = iter->second;
             mPlayerMap.erase(iter);
         }
     }
 
+    if (!bCache)
+        return;
+
     if (!agent)
         return;
 
-    // TODO: Cached Player Instance
+    auto player = agent->ExtractPlayer();
+    if (player == nullptr)
+        return;
+
+    // Push To Cached Map
+    std::unique_lock lock(mCacheMutex);
+    mCachedMap.insert_or_assign(pid, FCachedNode{
+        std::move(player),
+        std::chrono::steady_clock::now()
+    });
+}
+
+void UServer::RemoveAgent(const std::string &key) {
+    if (mState != EServerState::RUNNING)
+        return;
+
+    std::unique_lock lock(mAgentMutex);
+    mAgentMap.erase(key);
 }
 
 void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
@@ -119,7 +139,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     shared_ptr<UAgent> existed;
 
     {
-        std::unique_lock lock(mAgentMutex);
+        std::scoped_lock lock(mAgentMutex, mPlayerMutex);
         if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
             if (iter->second->GetKey() == key)
                 return;
@@ -136,16 +156,29 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
         }
     }
 
+    // Query The Cached Map
+    {
+        std::unique_lock lock(mCacheMutex);
+        if (player == nullptr) {
+            if (const auto iter = mCachedMap.find(pid); iter != mCachedMap.end()) {
+                player = std::move(iter->second.player);
+                mCachedMap.erase(iter);
+            }
+        }
+
+        mCachedMap.erase(pid);
+    }
+
     if (!agent)
         return;
 
     if (existed) {
-        existed->OnRepeat(agent->RemoteAddress().to_string());
+        existed->OnRepeated(agent->RemoteAddress().to_string());
     }
 
     if (player) {
         player->Save();
-        player->OnRepeat();
+        player->OnReset();
     } else {
         player = mPlayerFactory->CreatePlayer();
     }

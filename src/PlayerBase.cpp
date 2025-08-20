@@ -28,6 +28,6 @@ void IPlayerBase::OnPackage(IPackage_Interface *pkg) {
 void IPlayerBase::OnEvent(IEventParam_Interface *event) {
 }
 
-void IPlayerBase::OnRepeat() {
+void IPlayerBase::OnReset() {
 
 }

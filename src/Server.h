@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include "PlayerBase.h"
 #include "base/MultiIOContextPool.h"
 #include "base/CodecFactory.h"
 #include "base/PlayerFactory.h"
@@ -17,7 +18,13 @@ enum class EServerState {
     TERMINATED,
 };
 
+
 class BASE_API UServer final {
+
+    struct BASE_API FCachedNode {
+        unique_ptr<IPlayerBase> player;
+        ASteadyTimePoint timepoint;
+    };
 
 public:
     UServer();
@@ -79,10 +86,11 @@ public:
     unique_ptr<IPlayerBase> CreatePlayer() const;
     unique_ptr<IAgentHandler> CreateAgentHandler() const;
 
-    [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
+    [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
 
-    void RemoveAgent(std::unique_ptr<IPlayerBase> &&player);
+    void RemovePlayer(int64_t pid, bool bCache = true);
+    void RemoveAgent(const std::string &key);
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
@@ -98,8 +106,14 @@ private:
 
 #pragma region Agent Management
     absl::flat_hash_map<std::string, shared_ptr<UAgent>> mAgentMap;
-    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mPlayerMap;
     mutable std::shared_mutex mAgentMutex;
+
+    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mPlayerMap;
+    mutable std::shared_mutex mPlayerMutex;
+
+    absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
+    mutable std::shared_mutex mCacheMutex;
+
 #pragma endregion
 
 #pragma region Module Define

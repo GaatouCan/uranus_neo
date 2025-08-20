@@ -112,7 +112,7 @@ public:
     void SendPackage(const FPackageHandle &pkg);
 
     void OnLoginFailed(const std::string &desc);
-    void OnRepeat(const std::string &addr);
+    void OnRepeated(const std::string &addr);
 
 private:
     awaitable<void> WritePackage();
@@ -139,5 +139,6 @@ private:
     unique_ptr<IPlayerBase> mPlayer;
 
     std::string mKey;
+    bool bCached;
 };
 

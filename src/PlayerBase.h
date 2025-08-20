@@ -26,5 +26,5 @@ public:
     virtual void OnEvent(IEventParam_Interface *event);
 
 protected:
-    virtual void OnRepeat();
+    virtual void OnReset();
 };

@@ -4,8 +4,8 @@
 #include "Utils.h"
 #include "base/Recycler.h"
 #include "base/AgentHandler.h"
-#include "login/LoginAuth.h"
 #include "base/PackageCodec.h"
+#include "login/LoginAuth.h"
 
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
@@ -51,7 +51,8 @@ UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
       mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mPackageCodec->GetSocket().get_executor()),
-      mExpiration(std::chrono::seconds(30)) {
+      mExpiration(std::chrono::seconds(30)),
+      bCached(true) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -136,8 +137,10 @@ void UAgent::Disconnect() {
     if (mPlayer != nullptr) {
         mPlayer->OnLogout();
         mPlayer->Save();
-        mServer->RemoveAgent(std::move(mPlayer));
+        mServer->RemovePlayer(mPlayer->GetPlayerID(), bCached);
     }
+
+    mServer->RemoveAgent(mKey);
 }
 
 void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
@@ -244,6 +247,8 @@ void UAgent::OnLoginFailed(const std::string &desc) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
+    bCached = false;
+
     const auto pkg = mHandler->OnLoginFailure(desc);
     if (pkg == nullptr) {
         this->Disconnect();
@@ -257,7 +262,7 @@ void UAgent::OnLoginFailed(const std::string &desc) {
     this->SendPackage(pkg);
 }
 
-void UAgent::OnRepeat(const std::string &addr) {
+void UAgent::OnRepeated(const std::string &addr) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
@@ -330,7 +335,21 @@ awaitable<void> UAgent::ReadPackage() {
 
             // Update Receive Time Point For Watchdog
             mReceiveTime = now;
-            mPlayer->OnPackage(pkg.Get());
+
+            switch (pkg->GetPackageID()) {
+                case LOGIN_REQUEST_PACKAGE_ID: break;
+                case HEARTBEAT_PACKAGE_ID: break;
+                case PLATFORM_PACKAGE_ID: {
+                    // TODO: Parse Platform Info
+                } break;
+                case LOGOUT_REQUEST_PACKAGE_ID: {
+                    // TODO: Parse Logout Request
+                    bCached = false;
+                } break;
+                default: {
+                    mPlayer->OnPackage(pkg.Get());
+                }
+            }
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());

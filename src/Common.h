@@ -92,3 +92,4 @@ inline constexpr int LOGIN_RESPONSE_PACKAGE_ID  = 1003;
 inline constexpr int LOGIN_FAILED_PACKAGE_ID    = 1004;
 inline constexpr int LOGIN_REPEATED_PACKAGE_ID  = 1005;
 inline constexpr int PLATFORM_PACKAGE_ID        = 1006;
+inline constexpr int LOGOUT_REQUEST_PACKAGE_ID  = 1007;
