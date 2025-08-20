@@ -2,10 +2,11 @@
 
 #include "base/Types.h"
 #include "base/Package.h"
-#include "base/Recycler.h"
+#include "base/RecycleHandle.h"
 
 
 class IPackageCodec_Interface;
+class IAgentHandler;
 class UServer;
 class IPlayerBase;
 
@@ -66,6 +67,8 @@ public:
 
     void SendPackage(const FPackageHandle &pkg);
 
+    void OnRepeat(const std::string &addr);
+
 private:
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
@@ -77,6 +80,8 @@ private:
     UServer *mServer;
 
     unique_ptr<IPackageCodec_Interface> mPackageCodec;
+
+    unique_ptr<IAgentHandler> mHandler;
     unique_ptr<IRecyclerBase> mPackagePool;
 
     APackageChannel mPackageChannel;
@@ -86,7 +91,6 @@ private:
     ASteadyTimePoint mReceiveTime;
     ASteadyDuration mExpiration;
 
-    int64_t mPlayerID;
     unique_ptr<IPlayerBase> mPlayer;
 
     std::string mKey;

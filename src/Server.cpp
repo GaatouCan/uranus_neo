@@ -134,12 +134,12 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
         }
     }
 
-    if (existed) {
-        existed->Disconnect();
-    }
-
     if (!agent)
         return;
+
+    if (existed) {
+        existed->OnRepeat(agent->RemoteAddress().to_string());
+    }
 
     if (player) {
         player->Save();
@@ -165,7 +165,7 @@ unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool() const {
     return mCodecFactory->CreateUniquePackagePool();
 }
 
-awaitable<void> UServer::WaitForClient(uint16_t port) {
+awaitable<void> UServer::WaitForClient(const uint16_t port) {
     try {
         mAcceptor.open(asio::ip::tcp::v4());
         mAcceptor.bind({asio::ip::tcp::v4(), port});
@@ -191,35 +191,25 @@ awaitable<void> UServer::WaitForClient(uint16_t port) {
                 }
 
                 const auto agent = make_shared<UAgent>(CreateUniquePackageCodec(std::move(socket)));
-                agent->SetUpAgent(this);
+                const auto key = agent->GetKey();
 
-                bool bSuccess = true;
-
-                if (const auto key = agent->GetKey(); !key.empty()) {
-                    std::unique_lock lock(mAgentMutex);
-                    if (mAgentMap.contains(key)) {
-                        SPDLOG_WARN("{:<20} - Connection[{}] Has Already Exist.", __FUNCTION__, key);
-                        bSuccess = false;
-                    } else {
-                        bSuccess = true;
-                        mAgentMap.insert_or_assign(key, agent);
-                    }
-                } else {
-                    SPDLOG_WARN("{:<20} - Failed To Get Connection ID From {}",
-                        __FUNCTION__, agent->RemoteAddress().to_string());
-
-                    bSuccess = false;
+                if (key.empty()) {
                     continue;
                 }
 
-                if (!bSuccess) {
-                    agent->Disconnect();
-                    continue;
+                {
+                    std::unique_lock lock(mAgentMutex);
+                    if (mAgentMap.contains(key)) {
+                        SPDLOG_WARN("{:<20} - Connection[{}] Has Already Exist.", __FUNCTION__, key);
+                        continue;
+                    }
+                    mAgentMap.insert_or_assign(key, agent);
                 }
 
                 SPDLOG_INFO("{:<20} - New Connection From {} - key[{}]",
                     __FUNCTION__, agent->RemoteAddress().to_string(), agent->GetKey());
 
+                agent->SetUpAgent(this);
                 agent->ConnectToClient();
             }
         }

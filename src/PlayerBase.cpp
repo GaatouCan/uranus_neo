@@ -11,6 +11,12 @@ int64_t IPlayerBase::GetPlayerID() const {
     return -1;
 }
 
+void IPlayerBase::OnLogin() {
+}
+
+void IPlayerBase::OnLogout() {
+}
+
 void IPlayerBase::Save() {
     // TODO
 }

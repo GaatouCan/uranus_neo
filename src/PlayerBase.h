@@ -16,6 +16,9 @@ public:
 
     [[nodiscard]] int64_t GetPlayerID() const;
 
+    virtual void OnLogin();
+    virtual void OnLogout();
+
     virtual void Save();
 
     virtual void OnPackage(IPackage_Interface *pkg) const;

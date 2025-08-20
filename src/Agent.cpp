@@ -2,6 +2,8 @@
 #include "Server.h"
 #include "PlayerBase.h"
 #include "Utils.h"
+#include "base/Recycler.h"
+#include "AgentHandler.h"
 #include "login/LoginAuth.h"
 #include "base/PackageCodec.h"
 
@@ -19,7 +21,7 @@ UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
       mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mPackageCodec->GetSocket().get_executor()),
-      mExpiration(std::chrono::seconds(30)), mPlayerID(-1) {
+      mExpiration(std::chrono::seconds(30)) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -62,6 +64,9 @@ void UAgent::SetUpAgent(UServer *pServer) {
     mServer = pServer;
     mPackagePool = mServer->CreateUniquePackagePool();
     mPackagePool->Initial();
+
+    // TODO: Get Handler
+    mHandler->SetUpAgent(this);
 }
 
 FPackageHandle UAgent::BuildPackage() const {
@@ -113,12 +118,18 @@ void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
         throw std::runtime_error(std::format("{} - Other Player Already Exists", __FUNCTION__));
 
     mPlayer = std::move(plr);
-    mPlayerID = mPlayer->GetPlayerID();
+    mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+        const auto pkg = self->mHandler->OnLoginSuccess(self->mPlayer->GetPlayerID());
 
-        // TODO: Player Login Logic
+        pkg->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
+        pkg->SetSource(SERVER_SOURCE_ID);
+        pkg->SetTarget(CLIENT_TARGET_ID);
 
+        self->SendPackage(pkg);
+
+        self->mPlayer->OnLogin();
         co_await self->ProcessChannel();
     }, detached);
 }
@@ -137,6 +148,23 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
             co_await self->mPackageChannel.async_send(std::error_code{}, pkg);
         }, detached);
     }
+}
+
+void UAgent::OnRepeat(const std::string &addr) {
+    if (mHandler != nullptr)
+        throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
+
+    const auto pkg = mHandler->OnRepeated(addr);
+    if (pkg == nullptr) {
+        this->Disconnect();
+        return;
+    }
+
+    pkg->SetPackageID(LOGIN_REPEATED_PACKAGE_ID);
+    pkg->SetSource(SERVER_SOURCE_ID);
+    pkg->SetTarget(CLIENT_TARGET_ID);
+
+    this->SendPackage(pkg);
 }
 
 
@@ -158,6 +186,11 @@ awaitable<void> UAgent::WritePackage() {
             }
 
             // Can Do Something Here
+            if (pkg->GetPackageID() == LOGIN_FAILED_PACKAGE_ID ||
+                pkg->GetPackageID() == LOGIN_REPEATED_PACKAGE_ID) {
+                this->Disconnect();
+                break;
+            }
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
@@ -180,25 +213,11 @@ awaitable<void> UAgent::ReadPackage() {
             const auto now = std::chrono::steady_clock::now();
 
             // Run The Login Branch
-            if (mPlayerID < 0 && mPlayer == nullptr) {
-                // Do Not Try Login Too Frequently
-                if (now - mReceiveTime > std::chrono::seconds(3)) {
-                    --mPlayerID;
-
-                    // Try Login Failed 3 Times Then Disconnect This
-                    if (mPlayerID < -3) {
-                        SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
-                        Disconnect();
-                        break;
-                    }
-
-                    // Handle Login Logic
-                    if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-                        login->OnLoginRequest(mKey, pkg);
-                    }
+            if (mPlayer == nullptr) {
+                // Handle Login Logic
+                if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+                    login->OnLoginRequest(mKey, pkg);
                 }
-
-                mReceiveTime = now;
                 continue;
             }
 
