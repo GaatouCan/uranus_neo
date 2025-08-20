@@ -6,7 +6,6 @@
 
 
 class IPackageCodec_Interface;
-class UGateway;
 class UServer;
 class IPlayerBase;
 
@@ -52,10 +51,9 @@ public:
     [[nodiscard]] asio::ip::address RemoteAddress() const;
     [[nodiscard]] const std::string &GetKey() const;
 
-    [[nodiscard]] UGateway *GetGateway() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    void SetUpModule(UGateway *network);
+    void SetUpAgent(UServer *pServer);
     void SetExpireSecond(int sec);
 
     FPackageHandle BuildPackage() const;
@@ -63,7 +61,7 @@ public:
     void ConnectToClient();
     void Disconnect();
 
-    void OnLogin(unique_ptr<IPlayerBase> &&plr);
+    void SetUpPlayer(unique_ptr<IPlayerBase> &&plr);
     [[nodiscard]] unique_ptr<IPlayerBase> ExtractPlayer();
 
     void SendPackage(const FPackageHandle &pkg);
@@ -76,7 +74,7 @@ private:
     awaitable<void> ProcessChannel();
 
 private:
-    UGateway *mGateway;
+    UServer *mServer;
 
     unique_ptr<IPackageCodec_Interface> mPackageCodec;
     unique_ptr<IRecyclerBase> mPackagePool;
@@ -88,6 +86,7 @@ private:
     ASteadyTimePoint mReceiveTime;
     ASteadyDuration mExpiration;
 
+    int64_t mPlayerID;
     unique_ptr<IPlayerBase> mPlayer;
 
     std::string mKey;

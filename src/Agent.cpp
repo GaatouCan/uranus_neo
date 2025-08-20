@@ -1,5 +1,4 @@
 #include "Agent.h"
-#include "Gateway.h"
 #include "Server.h"
 #include "PlayerBase.h"
 #include "Utils.h"
@@ -20,7 +19,7 @@ UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
       mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mPackageCodec->GetSocket().get_executor()),
-      mExpiration(std::chrono::seconds(30)) {
+      mExpiration(std::chrono::seconds(30)), mPlayerID(-1) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
@@ -51,24 +50,18 @@ const std::string &UAgent::GetKey() const {
     return mKey;
 }
 
-void UAgent::SetUpModule(UGateway *network) {
-    mGateway = network;
-    mPackagePool = GetServer()->CreateUniquePackagePool();
-}
-
 void UAgent::SetExpireSecond(const int sec) {
     mExpiration = std::chrono::seconds(sec);
 }
 
-UGateway *UAgent::GetGateway() const {
-    return mGateway;
+UServer *UAgent::GetServer() const {
+    return mServer;
 }
 
-UServer *UAgent::GetServer() const {
-    if (!mGateway)
-        throw std::runtime_error(std::format("{} - Network Is Null Pointer", __FUNCTION__));
-
-    return mGateway->GetServer();
+void UAgent::SetUpAgent(UServer *pServer) {
+    mServer = pServer;
+    mPackagePool = mServer->CreateUniquePackagePool();
+    mPackagePool->Initial();
 }
 
 FPackageHandle UAgent::BuildPackage() const {
@@ -103,12 +96,16 @@ void UAgent::Disconnect() {
     mWatchdog.cancel();
     mPackageChannel.close();
     mScheduleChannel.close();
-    mPlayer.reset();
 
     // TODO: Do Logout Logic
+    if (mPlayer != nullptr) {
+
+
+        mServer->RemoveAgent(mPlayer->GetPlayerID());
+    }
 }
 
-void UAgent::OnLogin(unique_ptr<IPlayerBase> &&plr) {
+void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
     if (!IsSocketOpen())
         return;
 
@@ -116,6 +113,8 @@ void UAgent::OnLogin(unique_ptr<IPlayerBase> &&plr) {
         throw std::runtime_error(std::format("{} - Other Player Already Exists", __FUNCTION__));
 
     mPlayer = std::move(plr);
+    mPlayerID = mPlayer->GetPlayerID();
+
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
 
         // TODO: Player Login Logic
@@ -181,49 +180,31 @@ awaitable<void> UAgent::ReadPackage() {
             const auto now = std::chrono::steady_clock::now();
 
             // Run The Login Branch
-            // if (mPlayerID < 0) {
-            //     // Do Not Try Login Too Frequently
-            //     if (now - mReceiveTime > std::chrono::seconds(3)) {
-            //         --mPlayerID;
-            //
-            //         // Try Login Failed 3 Times Then Disconnect This
-            //         if (mPlayerID < -3) {
-            //             SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
-            //             Disconnect();
-            //             break;
-            //         }
-            //
-            //         // Handle Login Logic
-            //         if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
-            //             login->OnLoginRequest(mKey, pkg);
-            //         }
-            //     }
-            //
-            //     mReceiveTime = now;
-            //     continue;
-            // }
+            if (mPlayerID < 0 && mPlayer == nullptr) {
+                // Do Not Try Login Too Frequently
+                if (now - mReceiveTime > std::chrono::seconds(3)) {
+                    --mPlayerID;
+
+                    // Try Login Failed 3 Times Then Disconnect This
+                    if (mPlayerID < -3) {
+                        SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
+                        Disconnect();
+                        break;
+                    }
+
+                    // Handle Login Logic
+                    if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+                        login->OnLoginRequest(mKey, pkg);
+                    }
+                }
+
+                mReceiveTime = now;
+                continue;
+            }
 
             // Update Receive Time Point For Watchdog
             mReceiveTime = now;
-
-            // const auto *gateway = GetServer()->GetModule<UGateway>();
-            // const auto *auth = GetServer()->GetModule<ULoginAuth>();
-            //
-            // if (gateway != nullptr && auth != nullptr) {
-            //     switch (pkg->GetPackageID()) {
-            //         case HEARTBEAT_PACKAGE_ID: {
-            //             gateway->OnHeartBeat(mPlayerID, pkg);
-            //         }
-            //             break;
-            //         case LOGIN_REQUEST_PACKAGE_ID: break;
-            //         case PLATFORM_PACKAGE_ID: {
-            //             auth->OnPlatformInfo(mPlayerID, pkg);
-            //         }
-            //             break;
-            //         default:
-            //             gateway->OnClientPackage(mPlayerID, pkg);
-            //     }
-            // }
+            mPlayer->OnPackage(pkg.Get());
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());

@@ -1,6 +1,5 @@
 #include "LoginAuth.h"
 #include "Server.h"
-#include "gateway/Gateway.h"
 
 #include <spdlog/spdlog.h>
 
@@ -83,8 +82,5 @@ void ULoginAuth::OnLoginSuccess(const std::string &key, const int64_t pid) {
         mRecentLoginMap.erase(key);
     }
 
-    // Create Player Agent In Gateway
-    if (auto *gateway = GetServer()->GetModule<UGateway>()) {
-        gateway->OnPlayerLogin(key, pid);
-    }
+    GetServer()->OnPlayerLogin(key, pid);
 }

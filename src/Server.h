@@ -1,11 +1,16 @@
 #pragma once
 
 #include "Module.h"
+#include "base/MultiIOContextPool.h"
 #include "base/CodecFactory.h"
 
 #include <typeindex>
+#include <shared_mutex>
 #include <absl/container/flat_hash_map.h>
 
+
+class UAgent;
+class IPlayerBase;
 
 enum class EServerState {
     CREATED,
@@ -64,7 +69,29 @@ public:
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool() const;
 
+    [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
+    [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
+
+    void RemoveAgent(int64_t pid);
+
+    void OnPlayerLogin(const std::string &key, int64_t pid);
+
 private:
+    awaitable<void> WaitForClient(uint16_t port);
+
+private:
+#pragma region IO Management
+    io_context              mIOContext;
+    ATcpAcceptor            mAcceptor;
+    UMultiIOContextPool     mIOContextPool;
+#pragma endregion IO Manage
+
+#pragma region Agent Management
+    absl::flat_hash_map<std::string, shared_ptr<UAgent>> mAgentMap;
+    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mPlayerMap;
+    mutable std::shared_mutex mAgentMutex;
+#pragma endregion
+
 #pragma region Module Define
     absl::flat_hash_map<std::type_index, std::unique_ptr<IModuleBase>> mModuleMap;
     std::vector<IModuleBase *> mModuleOrder;
