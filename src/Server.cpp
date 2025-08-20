@@ -141,7 +141,10 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     if (!agent)
         return;
 
-    if (!player) {
+    if (player) {
+        player->Save();
+        player->OnRepeat();
+    } else {
         // TODO: Create Player Instance
     }
 
