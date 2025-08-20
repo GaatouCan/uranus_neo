@@ -15,6 +15,7 @@ using std::weak_ptr;
 class BASE_API UAgent final : public std::enable_shared_from_this<UAgent> {
 
     friend class UGateway;
+    friend class UConnection;
 
 public:
     UAgent();
@@ -31,6 +32,9 @@ protected:
     void SetUpModule(UGateway *gateway);
     void SetUpConnection(const shared_ptr<UConnection> &conn);
     void SetUpPlayerID(int64_t pid);
+
+    void OnRepeat();
+    void OnLogout();
 
 private:
     UGateway *mGateway;

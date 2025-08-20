@@ -63,24 +63,36 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
     if (!conn)
         return;
 
-    const auto agent = make_shared<UAgent>();
+    const auto agent = CreateAgent(pid);
 
-    bool bSuccess = false;
+    agent->SetUpModule(this);
+    agent->SetUpConnection(conn);
+    agent->SetUpPlayerID(pid);
+
+    // TODO: Boot Agent
+}
+
+shared_ptr<UAgent> UGateway::CreateAgent(const int64_t pid) {
+    if (mState != EModuleState::RUNNING)
+        throw std::logic_error(std::format("{} - Called In Not RUNNING State", __FUNCTION__));
+
+    shared_ptr<UAgent> agent = nullptr;
+
+    bool bExist = false;
     {
         std::unique_lock lock(mMutex);
-        if (mAgentMap.contains(pid)) {
-            bSuccess = false;
+        if (const auto iter = mAgentMap.find(pid); iter != mAgentMap.end()) {
+            bExist = true;
+            agent = iter->second;
         } else {
-            bSuccess = true;
+            agent = make_shared<UAgent>();
             mAgentMap.insert_or_assign(pid, agent);
         }
     }
 
-    if (bSuccess) {
-        agent->SetUpModule(this);
-        agent->SetUpConnection(conn);
-        agent->SetUpPlayerID(pid);
-
-        // TODO: Boot Agent
+    if (bExist) {
+        agent->OnRepeat();
     }
+
+    return agent;
 }

@@ -39,3 +39,18 @@ void UAgent::SetUpConnection(const shared_ptr<UConnection> &conn) {
 void UAgent::SetUpPlayerID(const int64_t pid) {
     mPlayerID = pid;
 }
+
+void UAgent::OnRepeat() {
+    // Do Not Need To Remove Self From Gateway
+    // TODO: Send The Message To The Old Client And Then Disconnect It
+
+
+    mConn.reset();
+}
+
+void UAgent::OnLogout() {
+    if (mPlayerID < 0)
+        return;
+
+    // TODO: Logout Logic
+}

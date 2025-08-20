@@ -36,6 +36,9 @@ public:
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
 private:
+    shared_ptr<UAgent> CreateAgent(int64_t pid);
+
+private:
     absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mAgentMap;
     mutable std::shared_mutex mMutex;
 };

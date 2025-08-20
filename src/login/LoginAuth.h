@@ -4,7 +4,7 @@
 #include "LoginHandler.h"
 #include "base/Types.h"
 
-#include <unordered_map>
+#include <absl/container/flat_hash_map.h>
 
 
 class BASE_API ULoginAuth final : public IModuleBase {
@@ -32,9 +32,7 @@ public:
     bool VerifyAddress(const asio::ip::tcp::endpoint &endpoint);
 
     void OnLoginRequest(const std::string &key, const FPackageHandle &pkg);
-    void OnPlatformInfo(int64_t pid, const FPackageHandle &pkg) const;
-
-    void OnAgentError(const std::string &key, int64_t pid, const std::string &error) const;
+    FPlatformInfo OnPlatformInfo(int64_t pid, const FPackageHandle &pkg) const;
 
 private:
     void OnLoginSuccess(const std::string &key, int64_t pid);
@@ -42,7 +40,7 @@ private:
 private:
     std::unique_ptr<ILoginHandler> mLoginHandler;
 
-    std::unordered_map<std::string, ASteadyTimePoint> mRecentLoginMap;
+    absl::flat_hash_map<std::string, ASteadyTimePoint> mRecentLoginMap;
     mutable std::mutex mMutex;
 };
 
