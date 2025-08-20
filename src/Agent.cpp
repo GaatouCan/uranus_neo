@@ -134,9 +134,9 @@ void UAgent::Disconnect() {
 
     // TODO: Do Logout Logic
     if (mPlayer != nullptr) {
-
-
-        mServer->RemoveAgent(mPlayer->GetPlayerID());
+        mPlayer->OnLogout();
+        mPlayer->Save();
+        mServer->RemoveAgent(std::move(mPlayer));
     }
 }
 

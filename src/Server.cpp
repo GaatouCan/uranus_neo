@@ -88,14 +88,15 @@ shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
     return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
-void UServer::RemoveAgent(const int64_t pid) {
+void UServer::RemoveAgent(std::unique_ptr<IPlayerBase> &&player) {
     if (mState != EServerState::RUNNING)
         return;
 
     shared_ptr<UAgent> agent;
+
     {
         std::unique_lock lock(mAgentMutex);
-        if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
+        if (const auto iter = mPlayerMap.find(player->GetPlayerID()); iter != mPlayerMap.end()) {
             agent = iter->second;
             mPlayerMap.erase(iter);
         }

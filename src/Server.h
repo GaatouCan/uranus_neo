@@ -72,7 +72,7 @@ public:
     [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
 
-    void RemoveAgent(int64_t pid);
+    void RemoveAgent(std::unique_ptr<IPlayerBase> &&player);
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
