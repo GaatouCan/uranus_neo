@@ -388,7 +388,7 @@ awaitable<void> UAgent::ProcessChannel() {
     try {
         while (IsSocketOpen() && mScheduleChannel.is_open() && mPlayer != nullptr) {
             const auto [ec, node] = co_await mScheduleChannel.async_receive();
-            if (ec)
+            if (ec || !mScheduleChannel.is_open())
                 break;
 
             if (node == nullptr)

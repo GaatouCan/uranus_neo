@@ -1,11 +1,13 @@
 #include "Server.h"
 #include "Agent.h"
+#include "Context.h"
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "base/AgentHandler.h"
 #include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
+#include <ranges>
 #include <format>
 
 
@@ -29,6 +31,24 @@ void UServer::Initial() {
         pModule->Initial();
     }
 
+    // FIXME: Create Core Service From Config
+    for (const auto &path : { "gameworld" }) {
+        const FServiceHandle sid = mAllocator.Allocate();
+
+        const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
+        context->SetUpServer(this);
+        context->SetUpServiceID(sid);
+
+        // TODO: Get Library Handle;
+
+        if (context->Initial(nullptr)) {
+            mContextMap.insert_or_assign(sid, context);
+        } else {
+            SPDLOG_CRITICAL("Failed To Initial Service: {}", path);
+            mAllocator.Recycle(sid);
+        }
+    }
+
     mIOContextPool.Start(4);
     mWorkerPool.Start(4);
 
@@ -43,8 +63,9 @@ void UServer::Start() {
         pModule->Start();
     }
 
-    // TODO: Create Service
-
+    for (const auto &context : mContextMap | std::views::values) {
+        context->BootService();
+    }
 
     co_spawn(mIOContext, WaitForClient(8080), detached);
 
@@ -70,6 +91,11 @@ void UServer::Shutdown() {
 
     mAgentMap.clear();
     mPlayerMap.clear();
+    mContextMap.clear();
+
+    for (const auto &context : mContextMap | std::views::values) {
+        context->Stop();
+    }
 
     for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
         (*iter)->Stop();
@@ -189,6 +215,15 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     }
 
     agent->SetUpPlayer(std::move(player));
+}
+
+shared_ptr<UContext> UServer::FindService(const FServiceHandle &sid) const {
+    if (mState != EServerState::RUNNING)
+        return nullptr;
+
+    std::shared_lock lock(mContextMutex);
+    const auto iter = mContextMap.find(sid);
+    return iter == mContextMap.end() ? nullptr : iter->second;
 }
 
 unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket &&socket) const {

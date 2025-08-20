@@ -10,7 +10,6 @@
 
 
 typedef IServiceBase *(*AServiceCreator)();
-
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 using std::make_unique;
@@ -72,65 +71,45 @@ UContext::UContext(asio::io_context &ctx)
       mServiceID(INVALID_SERVICE_ID),
       mService(nullptr),
       mPackagePool(nullptr),
-      mChannel(nullptr),
-      mShutdownTimer(nullptr) {
+      mChannel(nullptr) {
 }
 
 UContext::~UContext() {
-    if (mShutdownTimer) {
-        mShutdownTimer->cancel();
-        ForceShutdown();
-    }
-
-    if (mChannel) {
-        mChannel->close();
-    }
+    Shutdown();
 }
 
 
 void UContext::SetUpServer(UServer *pServer) {
-    if (mState != EContextState::CREATED)
-        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
-
     mServer = pServer;
 }
 
 void UContext::SetUpServiceID(const FServiceHandle sid) {
-    if (mState != EContextState::CREATED)
-        return;
     mServiceID = sid;
 }
 
 void UContext::SetUpLibrary(const FSharedLibrary &library) {
-    if (mState != EContextState::CREATED)
-        return;
     mLibrary = library;
 }
 
 bool UContext::Initial(const IDataAsset_Interface *pData) {
-    if (mState != EContextState::CREATED)
-        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
+    if (mServer == nullptr || !mLibrary.IsValid())
+        throw std::logic_error(std::format("{} - Server Is Null", __FUNCTION__));
 
-    if (!mLibrary.IsValid()) {
-        SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
+    if (mService != nullptr)
         return false;
-    }
 
     // Start To Create Service
-    mState = EContextState::INITIALIZING;
 
     // Load The Constructor From Shared Library
     auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
     if (creator == nullptr) {
         SPDLOG_ERROR("{:<20} - Can't Load Creator", __FUNCTION__);
-        mState = EContextState::CREATED;
         return false;
     }
 
     mService = std::invoke(creator);
     if (mService == nullptr) {
         SPDLOG_ERROR("{:<20} - Can't Create Service", __FUNCTION__);
-        mState = EContextState::CREATED;
         return false;
     }
 
@@ -146,7 +125,6 @@ bool UContext::Initial(const IDataAsset_Interface *pData) {
     const auto ret = mService->Initial(pData);
 
     // Context And Service Initialized
-    mState = EContextState::INITIALIZED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
         __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
@@ -156,170 +134,27 @@ bool UContext::Initial(const IDataAsset_Interface *pData) {
     return ret;
 }
 
-awaitable<bool> UContext::AsyncInitial(const IDataAsset_Interface *pData) {
-    if (mState != EContextState::CREATED)
-        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
-
-    if (!mLibrary.IsValid()) {
-        SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
-        co_return false;
-    }
-
-    // Start To Create Service
-    mState = EContextState::INITIALIZING;
-
-    auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
-    if (creator == nullptr) {
-        SPDLOG_ERROR("{:<20} - Can't Load Creator", __FUNCTION__);
-        mState = EContextState::CREATED;
-        co_return false;
-    }
-
-    mService = std::invoke(creator);
-    if (mService == nullptr) {
-        SPDLOG_ERROR("{:<20} - Can't Create Service", __FUNCTION__);
-        mState = EContextState::CREATED;
-        co_return false;
-    }
-
-    // Create Node Channel
-    mChannel = make_unique<AContextChannel>(mCtx, 1024);
-
-    // Create Package Pool For Data Exchange
-    mPackagePool = mServer->CreateUniquePackagePool();
-    mPackagePool->Initial();
-
-    // Initial Service
-    mService->SetUpContext(this);
-    const auto ret = co_await mService->AsyncInitial(pData);
-
-    // Context And Service Initialized
-    mState = EContextState::INITIALIZED;
-    SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
-                 __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
-
-    // Delete The Data Asset For Initialization
-    delete pData;
-
-    co_return ret;
+void UContext::Stop() {
 }
 
-int UContext::Shutdown(const bool bForce, int second, const std::function<void(UContext *)> &func) {
-    if (GetServer() == nullptr)
-        return -10;
-
-    // State Maybe WAITING While If Not Force To Shut Down
-    if (bForce ? mState >= EContextState::SHUTTING_DOWN : mState >= EContextState::WAITING)
-        return -1;
-
-    // Do Something While Shutdown
-    {
-        if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-            module->CancelTimer(GenerateHandle());
-            module->RemoveTicker(GenerateHandle());
-        }
-
-        if (auto *module = GetServer()->GetModule<UEventModule>()) {
-            module->RemoveListener(GenerateHandle());
-        }
-    }
-
-    // If Not Force To Shut Down, Turn To Waiting Current Schedule Node Execute Complete
-    if (!bForce && mState == EContextState::RUNNING) {
-        mState = EContextState::WAITING;
-
-        mShutdownTimer = make_unique<ASteadyTimer>(GetServer()->GetIOContext());
-        if (func != nullptr)
-            mShutdownCallback = func;
-
-        second = second <= 0 ? 5 : second;
-
-        // Spawn Coroutine For Waiting To Force Shut Down
-        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), second]() -> awaitable<void> {
-            self->mShutdownTimer->expires_after(std::chrono::seconds(second));
-            if (const auto [ec] = co_await self->mShutdownTimer->async_wait(); ec)
-                co_return;
-
-            if (self->GetState() == EContextState::WAITING) {
-                self->ForceShutdown();
-            }
-        }, detached);
-
-        return 0;
-    }
-
-    mState = EContextState::SHUTTING_DOWN;
-
-    if (mShutdownTimer)
-        mShutdownTimer->cancel();
-
-    mChannel->close();
-
-    const std::string name = GetServiceName();
-
-    if (mService && mService->GetState() != EServiceState::TERMINATED) {
-        mService->Stop();
-    }
-
-    if (!mLibrary.IsValid()) {
-        SPDLOG_ERROR("{:<20} - Library Node Is Null", __FUNCTION__);
-        mState = EContextState::STOPPED;
-        return -2;
-    }
-
-    auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
-    if (destroyer == nullptr) {
-        SPDLOG_ERROR("{:<20} - Can't Load Destroyer", __FUNCTION__);
-        mState = EContextState::STOPPED;
-        return -3;
-    }
-
-    std::invoke(destroyer, mService);
-
-    mService = nullptr;
-    mLibrary.Reset();
-
-    mState = EContextState::STOPPED;
-    SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",
-                 __FUNCTION__, static_cast<void *>(this), name);
-
-    if (mShutdownCallback) {
-        std::invoke(mShutdownCallback, this);
-    }
-
-    // Recycle The ServiceID And Make It Invalid
-    if (auto *module = GetServer()->GetModule<UServiceModule>()) {
-        module->RecycleServiceID(mServiceID);
-    }
-    mServiceID = INVALID_SERVICE_ID;
-
-    return 1;
-}
-
-int UContext::ForceShutdown() {
-    return Shutdown(true, 0, nullptr);
-}
 
 bool UContext::BootService() {
-    if (mState != EContextState::INITIALIZED || mService == nullptr || GetServer() == nullptr)
-        return false;
-
-    mState = EContextState::IDLE;
+    if (mServer == nullptr ||
+        !mLibrary.IsValid() ||
+        mService == nullptr ||
+        mPackagePool == nullptr ||
+        mChannel == nullptr)
+        throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
     if (const auto res = mService->Start(); !res) {
         SPDLOG_ERROR("{:<20} - Context[{:p}], Service[{} - {}] Failed To Boot.",
-                     __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
+            __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
-        mState = EContextState::INITIALIZED;
         return false;
     }
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
-                 __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
-
-    co_spawn(GetServer()->GetIOContext(), [self = shared_from_this()] -> awaitable<void> {
-        co_await self->ProcessChannel();
-    }, detached);
+        __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
     if (mService->bUpdatePerTick) {
         if (auto *module = GetServer()->GetModule<UTimerModule>()) {
@@ -327,13 +162,16 @@ bool UContext::BootService() {
         }
     }
 
+    co_spawn(mCtx, [self = shared_from_this()] -> awaitable<void> {
+        co_await self->ProcessChannel();
+    }, detached);
+
     return true;
 }
 
 std::string UContext::GetServiceName() const {
-    if (mState >= EContextState::INITIALIZED) {
+    if (mService)
         return mService->GetServiceName();
-    }
     return "UNKNOWN";
 }
 
@@ -342,12 +180,8 @@ FServiceHandle UContext::GetServiceID() const {
 }
 
 
-EContextState UContext::GetState() const {
-    return mState;
-}
-
 void UContext::PushPackage(const FPackageHandle &pkg) {
-    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+    if (mChannel == nullptr)
         return;
 
     if (pkg == nullptr)
@@ -373,7 +207,7 @@ void UContext::PushPackage(const FPackageHandle &pkg) {
 }
 
 void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
-    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+    if (mChannel == nullptr)
         return;
 
     if (task == nullptr)
@@ -400,7 +234,7 @@ void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
 }
 
 void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
-    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+    if (mChannel == nullptr)
         return;
 
     if (event == nullptr)
@@ -425,7 +259,7 @@ void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
 }
 
 void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
-    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
+    if (mChannel == nullptr)
         return;
 
     // SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
@@ -447,7 +281,7 @@ void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuratio
 }
 
 int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || task == nullptr)
+    if (mService == nullptr || mChannel == nullptr || mPackagePool == nullptr)
         return 0;
 
     auto *module = GetServer()->GetModule<UTimerModule>();
@@ -458,9 +292,6 @@ int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, c
 }
 
 void UContext::CancelTimer(const int64_t tid) const {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || tid <= 0)
-        return;
-
     auto *module = GetServer()->GetModule<UTimerModule>();
     if (module == nullptr)
         return;
@@ -469,16 +300,13 @@ void UContext::CancelTimer(const int64_t tid) const {
 }
 
 void UContext::CancelAllTimers() {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr)
-        return;
-
     if (auto *module = GetServer()->GetModule<UTimerModule>()) {
         module->CancelTimer(GenerateHandle());
     }
 }
 
 void UContext::ListenEvent(const int event) {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
+    if (mService == nullptr || mChannel == nullptr || mPackagePool == nullptr)
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();
@@ -489,9 +317,6 @@ void UContext::ListenEvent(const int event) {
 }
 
 void UContext::RemoveListener(const int event) {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
-        return;
-
     auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
@@ -500,7 +325,7 @@ void UContext::RemoveListener(const int event) {
 }
 
 void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
-    if (mState < EContextState::INITIALIZED || GetServer() == nullptr || param == nullptr)
+    if (mService == nullptr || mChannel == nullptr || mPackagePool == nullptr)
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();
@@ -535,40 +360,31 @@ FPackageHandle UContext::BuildPackage() const {
     return mPackagePool->Acquire<IPackage_Interface>();
 }
 
-IServiceBase *UContext::GetOwningService() const {
-    if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
-        return nullptr;
-
-    return mService;
-}
+// IServiceBase *UContext::GetOwningService() const {
+//     if (mService == nullptr)
+//         throw std::runtime_error(std::format("{} - Service Is Null Pointer", __FUNCTION__));
+//     return mService;
+// }
 
 awaitable<void> UContext::ProcessChannel() {
-    if (mState <= EContextState::INITIALIZED || mState >= EContextState::WAITING)
+    if (mChannel == nullptr || !mChannel->is_open())
         co_return;
 
-    while (mChannel->is_open()) {
-        try {
+    try {
+        while (mChannel->is_open()) {
             auto [ec, node] = co_await mChannel->async_receive();
-            if (ec)
-                co_return;
+            if (ec || !mChannel->is_open())
+                break;
 
             if (node == nullptr)
                 continue;
 
-            if (mState >= EContextState::WAITING)
-                co_return;
-
-            mState = EContextState::RUNNING;
             node->Execute(mService);
-
-            if (mState >= EContextState::WAITING) {
-                ForceShutdown();
-                co_return;
-            }
-
-            mState = EContextState::IDLE;
-        } catch (const std::exception &e) {
-            SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
         }
+    } catch (const std::exception &e) {
+        SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
     }
+}
+
+void UContext::Shutdown() {
 }

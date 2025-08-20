@@ -17,18 +17,6 @@ class IDataAsset_Interface;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using std::unique_ptr;
 
-
-enum class EContextState {
-    CREATED,
-    INITIALIZING,
-    INITIALIZED,
-    IDLE,
-    RUNNING,
-    WAITING,
-    SHUTTING_DOWN,
-    STOPPED
-};
-
 /**
  * The Context Between Services And The Server.
  * Used To Manage Independent Resources Of A Single Service,
@@ -127,19 +115,10 @@ public:
     [[nodiscard]] FContextHandle GenerateHandle();
 
     bool Initial(const IDataAsset_Interface *pData);
-    awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
-
-    int Shutdown(bool bForce, int second, const std::function<void(UContext *)> &func);
-
-    int ForceShutdown();
-
     bool BootService();
+    void Stop();
 
     [[nodiscard]] FPackageHandle BuildPackage() const;
-
-    [[nodiscard]] IServiceBase *GetOwningService() const;
-
-    [[nodiscard]] EContextState GetState() const;
 
 #pragma region Push
     void PushPackage(const FPackageHandle &pkg);
@@ -162,33 +141,17 @@ public:
 
 private:
     awaitable<void> ProcessChannel();
+    void Shutdown();
 
 private:
     io_context &mCtx;
     UServer *mServer;
 
-
     FServiceHandle mServiceID;
-
-
     IServiceBase *mService;
 
-
     unique_ptr<IRecyclerBase> mPackagePool;
-
-
     unique_ptr<AContextChannel> mChannel;
 
-
     FSharedLibrary mLibrary;
-
-
-    unique_ptr<ASteadyTimer> mShutdownTimer;
-
-
-    std::function<void(UContext *)> mShutdownCallback;
-
-protected:
-    /** Current Context State **/
-    std::atomic<EContextState> mState;
 };

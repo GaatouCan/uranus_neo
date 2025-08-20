@@ -7,6 +7,7 @@
 #include "base/CodecFactory.h"
 #include "base/PlayerFactory.h"
 #include "base/ContextHandle.h"
+#include "base/IdentAllocator.h"
 
 #include <typeindex>
 #include <shared_mutex>
@@ -100,6 +101,8 @@ public:
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
+    [[nodiscard]] shared_ptr<UContext> FindService(const FServiceHandle &sid) const;
+
 private:
     awaitable<void> WaitForClient(uint16_t port);
 
@@ -125,6 +128,8 @@ private:
     USingleIOContextPool mWorkerPool;
     AContextMap mContextMap;
     mutable std::shared_mutex mContextMutex;
+
+    TIdentAllocator<int64_t, true> mAllocator;
 #pragma endregion
 
 #pragma region Module Define
