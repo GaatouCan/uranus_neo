@@ -8,7 +8,7 @@
 #include <database/DataAccess.h>
 #include <service/ServiceModule.h>
 #include <gateway/Gateway.h>
-#include <network/Network.h>
+#include <gateway/Gateway.h>
 #include <internal/CodecFactory.h>
 #include <LoginHandlerImpl.h>
 
@@ -44,7 +44,7 @@ int main() {
     server->CreateModule<UServiceModule>();
     server->CreateModule<UGateway>();
 
-    if (auto *network = server->CreateModule<UNetwork>(); network != nullptr) {
+    if (auto *network = server->CreateModule<UGateway>(); network != nullptr) {
         network->SetCodecFactory<UCodecFactory>();
     }
 

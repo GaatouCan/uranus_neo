@@ -1,44 +1,50 @@
 #pragma once
 
 #include "Module.h"
+#include "base/Types.h"
+#include "base/MultiIOContextPool.h"
 
-#include <memory>
 #include <absl/container/flat_hash_map.h>
 #include <shared_mutex>
+#include <memory>
 
 
 class UAgent;
-using std::shared_ptr;
+class IPlayerBase;
 
+using std::shared_ptr;
+using std::make_shared;
 
 class BASE_API UGateway final : public IModuleBase {
 
     DECLARE_MODULE(UGateway)
 
-protected:
-    UGateway();
-
-    void Initial() override;
-    void Stop() override;
-
 public:
+    UGateway();
     ~UGateway() override;
 
-    constexpr const char *GetModuleName() const override {
-        return "Gateway Module";
+    [[nodiscard]] constexpr const char *GetModuleName() const override {
+        return "Network";
     }
 
-    [[nodiscard]] bool IsAgentExist(int64_t pid) const;
+    shared_ptr<UAgent> FindAgent(const std::string &key) const;
+    void RemoveAgent(const std::string &key);
 
-    [[nodiscard]] shared_ptr<UAgent> FindAgent(int64_t pid) const;
-    void RemoveAgent(int64_t pid);
-
-    void OnPlayerLogin(const std::string &key, int64_t pid);
-
-private:
-    shared_ptr<UAgent> CreateAgent(int64_t pid);
+protected:
+    void Start() override;
+    void Stop() override;
 
 private:
-    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mAgentMap;
-    mutable std::shared_mutex mMutex;
+    awaitable<void> WaitForClient(uint16_t port);
+
+private:
+    io_context mIOContext;
+    ATcpAcceptor mAcceptor;
+    UMultiIOContextPool mPool;
+
+    absl::flat_hash_map<std::string, shared_ptr<UAgent>> mConnMap;
+    mutable std::shared_mutex mConnMutex;
+
+    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mPlayerMap;
+    mutable std::shared_mutex mPlayerMutex;
 };

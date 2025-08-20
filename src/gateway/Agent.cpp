@@ -1,170 +1,279 @@
 #include "Agent.h"
 #include "Gateway.h"
-#include "network/Connection.h"
+#include "Server.h"
+#include "PlayerBase.h"
+#include "Utils.h"
+#include "login/LoginAuth.h"
+#include "base/PackageCodec.h"
 
-#include <format>
+#include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
 
-UAgent::UAgent()
-    : mGateway(nullptr),
-      mPlayerID(-1),
-      mPlayer(nullptr),
-      mState(EAgentState::CREATED) {
+
+using namespace asio::experimental::awaitable_operators;
+using namespace std::literals::chrono_literals;
+
+
+UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
+    : mPackageCodec(std::move(codec)),
+      mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
+      mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
+      mWatchdog(mPackageCodec->GetSocket().get_executor()),
+      mExpiration(std::chrono::seconds(30)) {
+
+    GetSocket().set_option(asio::ip::tcp::no_delay(true));
+    GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
+
+    mKey = fmt::format("{}-{}", mPackageCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
 }
 
 UAgent::~UAgent() {
+    Disconnect();
 }
 
-int64_t UAgent::GetPlayerID() const {
-    // TODO
-    return 0;
+bool UAgent::IsSocketOpen() const {
+    return GetSocket().is_open();
+}
+
+ATcpSocket &UAgent::GetSocket() const {
+    return mPackageCodec->GetSocket();
+}
+
+asio::ip::address UAgent::RemoteAddress() const {
+    if (IsSocketOpen()) {
+        return GetSocket().remote_endpoint().address();
+    }
+    return {};
+}
+
+const std::string &UAgent::GetKey() const {
+    return mKey;
+}
+
+void UAgent::SetUpModule(UGateway *network) {
+    mGateway = network;
+    mPackagePool = GetServer()->CreateUniquePackagePool();
+}
+
+void UAgent::SetExpireSecond(const int sec) {
+    mExpiration = std::chrono::seconds(sec);
 }
 
 UGateway *UAgent::GetGateway() const {
     return mGateway;
 }
 
-UServer *UAgent::GetUServer() const {
+UServer *UAgent::GetServer() const {
     if (!mGateway)
-        throw std::logic_error(std::format("{} - Gateway Is Null Pointer", __FUNCTION__));
+        throw std::runtime_error(std::format("{} - Network Is Null Pointer", __FUNCTION__));
 
     return mGateway->GetServer();
 }
 
-void UAgent::SetUpModule(UGateway *gateway) {
-    if (mState != EAgentState::CREATED)
-        throw std::logic_error(std::format("{} - Only Called In CREATED State", __FUNCTION__));
+FPackageHandle UAgent::BuildPackage() const {
+    if (!mPackagePool)
+        throw std::runtime_error(std::format("{} - Package Pool Is Null Pointer", __FUNCTION__));
 
-    mGateway = gateway;
+    return mPackagePool->Acquire<IPackage_Interface>();
 }
 
-void UAgent::SetUpConnection(const shared_ptr<UConnection> &conn) {
-    if (mState != EAgentState::CREATED)
-        throw std::logic_error(std::format("{} - Only Called In CREATED State", __FUNCTION__));
+void UAgent::ConnectToClient() {
+    mReceiveTime = std::chrono::steady_clock::now();
 
-    mConn = conn;
-}
+    co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+        if (const auto ret = co_await self->mPackageCodec->Initial(); !ret) {
+            self->Disconnect();
+            co_return;
+        }
 
-void UAgent::SetUpPlayerID(const int64_t pid) {
-    if (mState != EAgentState::CREATED)
-        throw std::logic_error(std::format("{} - Only Called In CREATED State", __FUNCTION__));
-
-    mPlayerID = pid;
-    mState = EAgentState::INITIALIZED;
-}
-
-void UAgent::Start() {
-    if (mState != EAgentState::INITIALIZED)
-        throw std::logic_error(std::format("{} - Only Called In INITIALIZED State", __FUNCTION__));
-
-    const auto conn = mConn.lock();
-    if (!conn || !conn->IsSocketOpen()) {
-
-        return;
-    }
-
-    co_spawn(conn->GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        co_await self->AsyncBoot();
+        co_await (
+            self->ReadPackage() ||
+            self->WritePackage() ||
+            self->Watchdog()
+        );
     }, detached);
 }
 
-void UAgent::OnRepeat() {
-    if (mState >= EAgentState::WAITING)
+void UAgent::Disconnect() {
+    if (!IsSocketOpen())
         return;
 
-    if (mChannel) {
-        mChannel->close();
-        mChannel.reset();
-    }
+    GetSocket().close();
+    mWatchdog.cancel();
+    mPackageChannel.close();
+    mScheduleChannel.close();
+    mPlayer.reset();
 
-    // Do Not Need To Remove Self From Gateway
-    // TODO: Send The Message To The Old Client And Then Disconnect It
+    // TODO: Do Logout Logic
+}
 
-    mPlayerID = -1;
-    mConn.reset();
+void UAgent::OnLogin(unique_ptr<IPlayerBase> &&plr) {
+    if (!IsSocketOpen())
+        return;
 
-    const bool bImmediate = mState.load() == EAgentState::IDLE;
-    mState = EAgentState::WAITING;
+    if (!mPlayer)
+        throw std::runtime_error(std::format("{} - Other Player Already Exists", __FUNCTION__));
 
-    if (const auto conn = mConn.lock(); conn && bImmediate) {
-        auto &executor = conn->GetSocket().get_executor();
-        co_spawn(executor, [self = shared_from_this()]() -> awaitable<void> {
-            self->Shutdown();
-            co_return;
+    mPlayer = std::move(plr);
+    co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
+
+        // TODO: Player Login Logic
+
+        co_await self->ProcessChannel();
+    }, detached);
+}
+
+unique_ptr<IPlayerBase> UAgent::ExtractPlayer() {
+    return std::move(mPlayer);
+}
+
+
+void UAgent::SendPackage(const FPackageHandle &pkg) {
+    if (pkg == nullptr)
+        return;
+
+    if (const bool ret = mPackageChannel.try_send_via_dispatch(std::error_code{}, pkg); !ret) {
+        co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
+            co_await self->mPackageChannel.async_send(std::error_code{}, pkg);
         }, detached);
     }
 }
 
-void UAgent::OnLogout() {
-    if (mState >= EAgentState::WAITING)
-        return;
 
-    if (mChannel) {
-        mChannel->close();
-        mChannel.reset();
-    }
-
-    mConn.reset();
-
-    const bool bImmediate = mState.load() == EAgentState::IDLE;
-    mState = EAgentState::WAITING;
-
-    if (bImmediate)
-        this->Shutdown();
-}
-
-awaitable<void> UAgent::AsyncBoot() {
-    if (mState != EAgentState::INITIALIZED)
-        throw std::logic_error(std::format("{} - Only Called In INITIALIZED State", __FUNCTION__));
-
-    auto executor = co_await asio::this_coro::executor;
-
-    mChannel = make_unique<AAgentChannel>(executor, 1024);
-    // TODO: Create Player Instance
-
-    mState = EAgentState::IDLE;
-    co_await ProcessChannel();
-}
-
-awaitable<void> UAgent::ProcessChannel() {
-    if (mState != EAgentState::IDLE)
-        throw std::logic_error(std::format("{} - Only Called In IDLE State", __FUNCTION__));
-
+awaitable<void> UAgent::WritePackage() {
     try {
-        while (mState < EAgentState::WAITING && mChannel->is_open()) {
-            const auto [ec, node] = co_await mChannel->async_receive();
+        while (IsSocketOpen() && mPackageChannel.is_open()) {
+            const auto [ec, pkg] = co_await mPackageChannel.async_receive();
+            if (ec) {
+                Disconnect();
+                break;
+            }
 
-            if (mState >= EAgentState::WAITING)
-                co_return;
-
-            if (ec || node == nullptr)
+            if (pkg == nullptr)
                 continue;
 
-            mState = EAgentState::RUNNING;
-            node->Execute(mPlayer);
+            if (const auto ret = co_await mPackageCodec->Encode(pkg.Get()); !ret) {
+                Disconnect();
+                break;
+            }
 
-            if (mState >= EAgentState::WAITING) {
-                this->Shutdown();
+            // Can Do Something Here
+        }
+    } catch (const std::exception &e) {
+        SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
+        Disconnect();
+    }
+}
+
+awaitable<void> UAgent::ReadPackage() {
+    try {
+        while (IsSocketOpen()) {
+            const auto pkg = BuildPackage();
+            if (pkg == nullptr)
+                co_return;
+
+            if (const auto ret = co_await mPackageCodec->Decode(pkg.Get()); !ret) {
+                Disconnect();
+                break;
+            }
+
+            const auto now = std::chrono::steady_clock::now();
+
+            // Run The Login Branch
+            // if (mPlayerID < 0) {
+            //     // Do Not Try Login Too Frequently
+            //     if (now - mReceiveTime > std::chrono::seconds(3)) {
+            //         --mPlayerID;
+            //
+            //         // Try Login Failed 3 Times Then Disconnect This
+            //         if (mPlayerID < -3) {
+            //             SPDLOG_WARN("{:<20} - Connection[{}] Try Login Too Many Times", __FUNCTION__, RemoteAddress().to_string());
+            //             Disconnect();
+            //             break;
+            //         }
+            //
+            //         // Handle Login Logic
+            //         if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
+            //             login->OnLoginRequest(mKey, pkg);
+            //         }
+            //     }
+            //
+            //     mReceiveTime = now;
+            //     continue;
+            // }
+
+            // Update Receive Time Point For Watchdog
+            mReceiveTime = now;
+
+            // const auto *gateway = GetServer()->GetModule<UGateway>();
+            // const auto *auth = GetServer()->GetModule<ULoginAuth>();
+            //
+            // if (gateway != nullptr && auth != nullptr) {
+            //     switch (pkg->GetPackageID()) {
+            //         case HEARTBEAT_PACKAGE_ID: {
+            //             gateway->OnHeartBeat(mPlayerID, pkg);
+            //         }
+            //             break;
+            //         case LOGIN_REQUEST_PACKAGE_ID: break;
+            //         case PLATFORM_PACKAGE_ID: {
+            //             auth->OnPlatformInfo(mPlayerID, pkg);
+            //         }
+            //             break;
+            //         default:
+            //             gateway->OnClientPackage(mPlayerID, pkg);
+            //     }
+            // }
+        }
+    } catch (const std::exception &e) {
+        SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
+        Disconnect();
+    }
+}
+
+awaitable<void> UAgent::Watchdog() {
+    if (mExpiration == ASteadyDuration::zero())
+        co_return;
+
+    try {
+        ASteadyTimePoint now;
+
+        do {
+            mWatchdog.expires_at(mReceiveTime + mExpiration);
+
+            if (auto [ec] = co_await mWatchdog.async_wait(); ec) {
+                SPDLOG_DEBUG("{:<20} - Timer Canceled.", __FUNCTION__);
                 co_return;
             }
 
-            mState = EAgentState::IDLE;
+            now = std::chrono::steady_clock::now();
+        } while (mReceiveTime + mExpiration > now);
+
+        if (IsSocketOpen()) {
+            SPDLOG_WARN("{:<20} - Watchdog Timeout", __FUNCTION__);
+            Disconnect();
         }
     } catch (const std::exception &e) {
-        SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+        SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
     }
 }
 
-void UAgent::Shutdown() {
-    if (mState == EAgentState::TERMINATED)
-        return;
+awaitable<void> UAgent::ProcessChannel() {
+    try {
+        while (IsSocketOpen() && mScheduleChannel.is_open() && mPlayer != nullptr) {
+            const auto [ec, node] = co_await mScheduleChannel.async_receive();
+            if (ec)
+                break;
 
-    mState = EAgentState::TERMINATED;
+            if (node == nullptr)
+                continue;
 
-    if (mPlayerID > 0) {
-        mGateway->RemoveAgent(mPlayerID);
-        mPlayerID = -1;
+            if (mPlayer == nullptr)
+                break;
+
+            node->Execute(mPlayer.get());
+        }
+    } catch (const std::exception &e) {
+        SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
     }
-
-    // TODO: Player Logout And Destroy It
 }

@@ -1,27 +1,24 @@
 #pragma once
 
-#include "Common.h"
 #include "base/Types.h"
+#include "base/Package.h"
+#include "base/Recycler.h"
 
-#include <memory>
-#include <atomic>
 
-
-class UServer;
+class IPackageCodec_Interface;
 class UGateway;
-class UConnection;
+class UServer;
 class IPlayerBase;
-class IRecyclerBase;
 
-using std::make_unique;
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
-using std::unique_ptr;
-
 
 enum class EAgentState {
     CREATED,
     INITIALIZED,
+    CONNECTED,
     IDLE,
     RUNNING,
     WAITING,
@@ -31,63 +28,68 @@ enum class EAgentState {
 
 class BASE_API UAgent final : public std::enable_shared_from_this<UAgent> {
 
-    friend class UGateway;
-    friend class UConnection;
-
-#pragma region Scheduler Node
-
+#pragma region Schedule Node
     class BASE_API ISchedule_Interface {
-
     public:
-        ISchedule_Interface() = default;
-        virtual ~ISchedule_Interface() = default;
-
-        DISABLE_COPY_MOVE(ISchedule_Interface)
+        ISchedule_Interface () = default;
+        virtual ~ISchedule_Interface () = default;
 
         virtual void Execute(IPlayerBase *pPlayer) const = 0;
     };
-
 #pragma endregion
 
-    using AAgentChannel = TConcurrentChannel<void(std::error_code, unique_ptr<ISchedule_Interface>)>;
+    using APackageChannel = TConcurrentChannel<void(std::error_code, FPackageHandle)>;
+    using AScheduleChannel = TConcurrentChannel<void(std::error_code, unique_ptr<ISchedule_Interface>)>;
 
 public:
-    UAgent();
+    UAgent() = delete;
+
+    explicit UAgent(unique_ptr<IPackageCodec_Interface> &&codec);
     ~UAgent();
 
-    DISABLE_COPY_MOVE(UAgent)
-
-    [[nodiscard]] int64_t GetPlayerID() const;
+    [[nodiscard]] ATcpSocket &GetSocket() const;
+    [[nodiscard]] bool IsSocketOpen() const;
+    [[nodiscard]] asio::ip::address RemoteAddress() const;
+    [[nodiscard]] const std::string &GetKey() const;
 
     [[nodiscard]] UGateway *GetGateway() const;
-    [[nodiscard]] UServer *GetUServer() const;
+    [[nodiscard]] UServer *GetServer() const;
 
-protected:
-    void SetUpModule(UGateway *gateway);
-    void SetUpConnection(const shared_ptr<UConnection> &conn);
-    void SetUpPlayerID(int64_t pid);
+    void SetUpModule(UGateway *network);
+    void SetExpireSecond(int sec);
 
-    void Start();
+    FPackageHandle BuildPackage() const;
 
-    void OnRepeat();
+    void ConnectToClient();
+    void Disconnect();
 
-    /** Called By Connection **/
-    void OnLogout();
+    void OnLogin(unique_ptr<IPlayerBase> &&plr);
+    [[nodiscard]] unique_ptr<IPlayerBase> ExtractPlayer();
+
+    void SendPackage(const FPackageHandle &pkg);
 
 private:
-    awaitable<void> AsyncBoot();
-    awaitable<void> ProcessChannel();
+    awaitable<void> WritePackage();
+    awaitable<void> ReadPackage();
+    awaitable<void> Watchdog();
 
-    void Shutdown();
+    awaitable<void> ProcessChannel();
 
 private:
     UGateway *mGateway;
 
-    weak_ptr<UConnection>       mConn;
-    unique_ptr<AAgentChannel>   mChannel;
+    unique_ptr<IPackageCodec_Interface> mPackageCodec;
+    unique_ptr<IRecyclerBase> mPackagePool;
 
-    int64_t         mPlayerID;
-    IPlayerBase *   mPlayer;
+    APackageChannel mPackageChannel;
+    AScheduleChannel mScheduleChannel;
 
-    std::atomic<EAgentState> mState;
+    ASteadyTimer mWatchdog;
+    ASteadyTimePoint mReceiveTime;
+    ASteadyDuration mExpiration;
+
+    unique_ptr<IPlayerBase> mPlayer;
+
+    std::string mKey;
 };
+

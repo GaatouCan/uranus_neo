@@ -7,7 +7,7 @@
 #include <string>
 
 
-class UConnection;
+class UAgent;
 class IPluginBase;
 
 
@@ -29,7 +29,7 @@ public:
         return "UMonitor";
     }
 
-    void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
+    void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
 
 private:
     std::unordered_map<std::string, std::unique_ptr<IPluginBase>> mPluginMap;

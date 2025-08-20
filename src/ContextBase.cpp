@@ -4,7 +4,7 @@
 #include "base/DataAsset.h"
 #include "base/Recycler.h"
 #include "service/ServiceModule.h"
-#include "network/Network.h"
+#include "gateway/Gateway.h"
 #include "event/EventModule.h"
 #include "timer/TimerModule.h"
 
@@ -117,7 +117,7 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     if (GetServer() == nullptr)
         throw std::runtime_error("GetServer is null");
 
-    const auto network = GetServer()->GetModule<UNetwork>();
+    const auto network = GetServer()->GetModule<UGateway>();
     if (network == nullptr) {
         SPDLOG_CRITICAL("Network Module Not Found");
         GetServer()->Shutdown();
@@ -176,7 +176,7 @@ awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     if (GetServer() == nullptr)
         co_return false;
 
-    const auto network = GetServer()->GetModule<UNetwork>();
+    const auto network = GetServer()->GetModule<UGateway>();
     if (network == nullptr) {
         SPDLOG_CRITICAL("Network Module Not Found");
         GetServer()->Shutdown();
