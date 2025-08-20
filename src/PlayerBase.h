@@ -5,6 +5,7 @@
 #include <cstdint>
 
 class IPackage_Interface;
+class IEventParam_Interface;
 
 class BASE_API IPlayerBase {
 
@@ -21,7 +22,8 @@ public:
 
     virtual void Save();
 
-    virtual void OnPackage(IPackage_Interface *pkg) const;
+    virtual void OnPackage(IPackage_Interface *pkg);
+    virtual void OnEvent(IEventParam_Interface *event);
 
 protected:
     virtual void OnRepeat();

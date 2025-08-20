@@ -3,7 +3,7 @@
 #include "PlayerBase.h"
 #include "Utils.h"
 #include "base/Recycler.h"
-#include "AgentHandler.h"
+#include "base/AgentHandler.h"
 #include "login/LoginAuth.h"
 #include "base/PackageCodec.h"
 
@@ -15,6 +15,36 @@
 using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
 
+
+void UAgent::UPackageNode::SetPackage(const FPackageHandle &package) {
+    mPackage = package;
+}
+
+void UAgent::UPackageNode::Execute(IPlayerBase *pPlayer) const {
+    if (pPlayer != nullptr && mPackage != nullptr) {
+        pPlayer->OnPackage(mPackage.Get());
+    }
+}
+
+void UAgent::UEventNode::SetEventParam(const std::shared_ptr<IEventParam_Interface> &event) {
+    mEvent = event;
+}
+
+void UAgent::UEventNode::Execute(IPlayerBase *pPlayer) const {
+    if (pPlayer != nullptr && mEvent != nullptr) {
+        pPlayer->OnEvent(mEvent.get());
+    }
+}
+
+void UAgent::UTaskNode::SetTask(const APlayerTask &task) {
+    mTask = task;
+}
+
+void UAgent::UTaskNode::Execute(IPlayerBase *pPlayer) const {
+    if (pPlayer != nullptr && mTask != nullptr) {
+        std::invoke(mTask, pPlayer);
+    }
+}
 
 UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
     : mPackageCodec(std::move(codec)),
@@ -136,6 +166,66 @@ void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
 
 unique_ptr<IPlayerBase> UAgent::ExtractPlayer() {
     return std::move(mPlayer);
+}
+
+void UAgent::PushPackage(const FPackageHandle &pkg) {
+    if (!mScheduleChannel.is_open())
+        return;
+
+    if (pkg == nullptr)
+        return;
+
+    auto node = make_unique<UPackageNode>();
+    node->SetPackage(pkg);
+
+    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+        auto temp = make_unique<UPackageNode>();
+        temp->SetPackage(pkg);
+
+        co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
+            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+        }, detached);
+    }
+}
+
+void UAgent::PushEvent(const std::shared_ptr<IEventParam_Interface> &event) {
+    if (!mScheduleChannel.is_open())
+        return;
+
+    if (event == nullptr)
+        return;
+
+    auto node = make_unique<UEventNode>();
+    node->SetEventParam(event);
+
+    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+        auto temp = make_unique<UEventNode>();
+        temp->SetEventParam(event);
+
+        co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
+            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+        }, detached);
+    }
+}
+
+void UAgent::PushTask(const APlayerTask &task) {
+    if (!mScheduleChannel.is_open())
+        return;
+
+    if (task == nullptr)
+        return;
+
+    auto node = make_unique<UTaskNode>();
+    node->SetTask(task);
+
+    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+        auto temp = make_unique<UTaskNode>();
+        temp->SetTask(task);
+
+        co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
+            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+        }, detached);
+    }
 }
 
 
