@@ -23,6 +23,7 @@ enum class EServerState {
 
 
 class UContext;
+class IDataAsset_Interface;
 
 class BASE_API UServer final {
 
@@ -102,6 +103,9 @@ public:
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
     [[nodiscard]] shared_ptr<UContext> FindService(const FServiceHandle &sid) const;
+
+    void BootService(const std::string &path, IDataAsset_Interface *pData);
+    void ShutdownService(const FServiceHandle &handle);
 
 private:
     awaitable<void> WaitForClient(uint16_t port);

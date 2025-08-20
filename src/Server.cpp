@@ -226,6 +226,19 @@ shared_ptr<UContext> UServer::FindService(const FServiceHandle &sid) const {
     return iter == mContextMap.end() ? nullptr : iter->second;
 }
 
+void UServer::BootService(const std::string &path, IDataAsset_Interface *pData) {
+    if (mState != EServerState::RUNNING)
+        return;
+
+    // TODO: Get Library
+}
+
+void UServer::ShutdownService(const FServiceHandle &handle) {
+    if (mState != EServerState::RUNNING)
+        return;
+
+}
+
 unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket &&socket) const {
     if (mCodecFactory == nullptr)
         return nullptr;
