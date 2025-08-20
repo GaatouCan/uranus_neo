@@ -8,13 +8,13 @@
 using std::shared_ptr;
 using std::weak_ptr;
 
-class UContextBase;
+class UContext;
 
 
 struct BASE_API FContextHandle {
 
     FServiceHandle          sid;
-    weak_ptr<UContextBase>  weakPtr;
+    weak_ptr<UContext>  weakPtr;
 
     FContextHandle() = default;
 
@@ -23,7 +23,7 @@ struct BASE_API FContextHandle {
         : sid(sid) {
     }
 
-    FContextHandle(const FServiceHandle sid, const weak_ptr<UContextBase> &ptr)
+    FContextHandle(const FServiceHandle sid, const weak_ptr<UContext> &ptr)
         : sid(sid), weakPtr(ptr) {
     }
 
@@ -44,7 +44,7 @@ struct BASE_API FContextHandle {
         return sid.IsValid() && !weakPtr.expired();
     }
 
-    [[nodiscard]] shared_ptr<UContextBase> Get() const {
+    [[nodiscard]] shared_ptr<UContext> Get() const {
         return weakPtr.lock();
     }
 

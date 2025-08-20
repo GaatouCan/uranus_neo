@@ -3,8 +3,10 @@
 #include "Module.h"
 #include "PlayerBase.h"
 #include "base/MultiIOContextPool.h"
+#include "base/SingleIOContextPool.h"
 #include "base/CodecFactory.h"
 #include "base/PlayerFactory.h"
+#include "base/ContextHandle.h"
 
 #include <typeindex>
 #include <shared_mutex>
@@ -19,12 +21,16 @@ enum class EServerState {
 };
 
 
+class UContext;
+
 class BASE_API UServer final {
 
     struct BASE_API FCachedNode {
         unique_ptr<IPlayerBase> player;
         ASteadyTimePoint timepoint;
     };
+
+    using AContextMap = absl::flat_hash_map<FContextHandle, shared_ptr<UContext>, FContextHandle::FHash, FContextHandle::FEqual>;
 
 public:
     UServer();
@@ -113,7 +119,12 @@ private:
 
     absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
     mutable std::shared_mutex mCacheMutex;
+#pragma endregion
 
+#pragma region Service Management
+    USingleIOContextPool mWorkerPool;
+    AContextMap mContextMap;
+    mutable std::shared_mutex mContextMutex;
 #pragma endregion
 
 #pragma region Module Define

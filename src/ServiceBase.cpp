@@ -1,5 +1,5 @@
 #include "ServiceBase.h"
-#include "ContextBase.h"
+#include "Context.h"
 #include "base/Recycler.h"
 #include "gateway/Gateway.h"
 #include "logger/LoggerModule.h"
@@ -9,13 +9,13 @@
 #include <spdlog/spdlog.h>
 
 
-void IServiceBase::SetUpContext(UContextBase *pContext) {
+void IServiceBase::SetUpContext(UContext *pContext) {
     if (mState != EServiceState::CREATED)
         return;
     mContext = pContext;
 }
 
-UContextBase *IServiceBase::GetContext() const {
+UContext *IServiceBase::GetContext() const {
     return mContext;
 }
 

@@ -7,7 +7,7 @@
 #include "base/EventParam.h"
 
 
-class UContextBase;
+class UContext;
 class IDataAsset_Interface;
 
 using std::shared_ptr;
@@ -23,11 +23,11 @@ enum class EServiceState {
 
 class BASE_API IServiceBase {
 
-    friend class UContextBase;
+    friend class UContext;
 
 protected:
-    void SetUpContext(UContextBase *pContext);
-    [[nodiscard]] UContextBase *GetContext() const;
+    void SetUpContext(UContext *pContext);
+    [[nodiscard]] UContext *GetContext() const;
 
 public:
     IServiceBase();
@@ -114,7 +114,7 @@ protected:
 #pragma endregion
 
 protected:
-    UContextBase *mContext;
+    UContext *mContext;
     std::atomic<EServiceState> mState;
 
     bool bUpdatePerTick;

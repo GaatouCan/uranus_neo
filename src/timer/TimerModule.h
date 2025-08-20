@@ -12,7 +12,7 @@
 
 
 class IServiceBase;
-class UContextBase;
+class UContext;
 
 
 class BASE_API UTimerModule final : public IModuleBase {

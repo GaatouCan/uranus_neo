@@ -29,6 +29,9 @@ void UServer::Initial() {
         pModule->Initial();
     }
 
+    mIOContextPool.Start(4);
+    mWorkerPool.Start(4);
+
     mState = EServerState::INITIALIZED;
 }
 
@@ -40,7 +43,9 @@ void UServer::Start() {
         pModule->Start();
     }
 
-    mIOContextPool.Start(4);
+    // TODO: Create Service
+
+
     co_spawn(mIOContext, WaitForClient(8080), detached);
 
     mState = EServerState::RUNNING;

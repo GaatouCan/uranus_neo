@@ -1,10 +1,8 @@
-#include "ContextBase.h"
+#include "Context.h"
 #include "ServiceBase.h"
 #include "Server.h"
 #include "base/DataAsset.h"
 #include "base/Recycler.h"
-#include "service/ServiceModule.h"
-#include "gateway/Gateway.h"
 #include "event/EventModule.h"
 #include "timer/TimerModule.h"
 
@@ -12,63 +10,65 @@
 
 
 typedef IServiceBase *(*AServiceCreator)();
+
 typedef void (*AServiceDestroyer)(IServiceBase *);
 
 using std::make_unique;
 
 
 #pragma region Schedule
-void UContextBase::UPackageNode::SetPackage(const FPackageHandle &pkg) {
+void UContext::UPackageNode::SetPackage(const FPackageHandle &pkg) {
     mPackage = pkg;
 }
 
-void UContextBase::UPackageNode::Execute(IServiceBase *pService) {
+void UContext::UPackageNode::Execute(IServiceBase *pService) {
     if (pService && mPackage.IsValid()) {
         pService->OnPackage(mPackage.Get());
     }
 }
 
-void UContextBase::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
+void UContext::UTaskNode::SetTask(const std::function<void(IServiceBase *)> &task) {
     mTask = task;
 }
 
-void UContextBase::UTaskNode::Execute(IServiceBase *pService) {
+void UContext::UTaskNode::Execute(IServiceBase *pService) {
     if (pService && mTask) {
         std::invoke(mTask, pService);
     }
 }
 
-void UContextBase::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
+void UContext::UEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
     mEvent = event;
 }
 
-void UContextBase::UEventNode::Execute(IServiceBase *pService) {
+void UContext::UEventNode::Execute(IServiceBase *pService) {
     if (pService && mEvent) {
         pService->OnEvent(mEvent.get());
     }
 }
 
-UContextBase::UTickerNode::UTickerNode()
+UContext::UTickerNode::UTickerNode()
     : mDeltaTime(0) {
 }
 
-void UContextBase::UTickerNode::SetCurrentTickTime(const ASteadyTimePoint timepoint) {
+void UContext::UTickerNode::SetCurrentTickTime(const ASteadyTimePoint timepoint) {
     mTickTime = timepoint;
 }
 
-void UContextBase::UTickerNode::SetDeltaTime(const ASteadyDuration delta) {
+void UContext::UTickerNode::SetDeltaTime(const ASteadyDuration delta) {
     mDeltaTime = delta;
 }
 
-void UContextBase::UTickerNode::Execute(IServiceBase *pService) {
+void UContext::UTickerNode::Execute(IServiceBase *pService) {
     if (pService) {
         pService->OnUpdate(mTickTime, mDeltaTime);
     }
 }
 #pragma endregion
 
-UContextBase::UContextBase()
-    : mModule(nullptr),
+UContext::UContext(asio::io_context &ctx)
+    : mCtx(ctx),
+      mServer(nullptr),
       mServiceID(INVALID_SERVICE_ID),
       mService(nullptr),
       mPackagePool(nullptr),
@@ -76,7 +76,7 @@ UContextBase::UContextBase()
       mShutdownTimer(nullptr) {
 }
 
-UContextBase::~UContextBase() {
+UContext::~UContext() {
     if (mShutdownTimer) {
         mShutdownTimer->cancel();
         ForceShutdown();
@@ -87,41 +87,33 @@ UContextBase::~UContextBase() {
     }
 }
 
-void UContextBase::SetUpModule(IModuleBase *pModule) {
+
+void UContext::SetUpServer(UServer *pServer) {
     if (mState != EContextState::CREATED)
-        return;
-    mModule = pModule;
+        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
+
+    mServer = pServer;
 }
 
-void UContextBase::SetUpServiceID(const FServiceHandle sid) {
+void UContext::SetUpServiceID(const FServiceHandle sid) {
     if (mState != EContextState::CREATED)
         return;
     mServiceID = sid;
 }
 
-void UContextBase::SetUpLibrary(const FSharedLibrary &library) {
+void UContext::SetUpLibrary(const FSharedLibrary &library) {
     if (mState != EContextState::CREATED)
         return;
     mLibrary = library;
 }
 
-bool UContextBase::Initial(const IDataAsset_Interface *pData) {
+bool UContext::Initial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
-        return false;
+        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
 
-    if (mModule == nullptr || !mLibrary.IsValid()) {
+    if (!mLibrary.IsValid()) {
         SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
         return false;
-    }
-
-    if (GetServer() == nullptr)
-        throw std::runtime_error("GetServer is null");
-
-    const auto network = GetServer()->GetModule<UGateway>();
-    if (network == nullptr) {
-        SPDLOG_CRITICAL("Network Module Not Found");
-        GetServer()->Shutdown();
-        exit(-1);
     }
 
     // Start To Create Service
@@ -143,10 +135,10 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     }
 
     // Create Node Channel
-    mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
+    mChannel = make_unique<AContextChannel>(mCtx, 1024);
 
     // Create Package Pool For Data Exchange
-    mPackagePool = network->CreatePackagePool();
+    mPackagePool = mServer->CreateUniquePackagePool();
     mPackagePool->Initial();
 
     // Initial Service
@@ -164,23 +156,13 @@ bool UContextBase::Initial(const IDataAsset_Interface *pData) {
     return ret;
 }
 
-awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
+awaitable<bool> UContext::AsyncInitial(const IDataAsset_Interface *pData) {
     if (mState != EContextState::CREATED)
-        co_return false;
+        throw std::logic_error(std::format("{} - Only Can Called In CREATED State", __FUNCTION__));
 
-    if (mModule == nullptr || !mLibrary.IsValid()) {
+    if (!mLibrary.IsValid()) {
         SPDLOG_ERROR("{:<20} - Owner Module Or Library Node Is Null", __FUNCTION__);
         co_return false;
-    }
-
-    if (GetServer() == nullptr)
-        co_return false;
-
-    const auto network = GetServer()->GetModule<UGateway>();
-    if (network == nullptr) {
-        SPDLOG_CRITICAL("Network Module Not Found");
-        GetServer()->Shutdown();
-        exit(-1);
     }
 
     // Start To Create Service
@@ -201,10 +183,10 @@ awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     }
 
     // Create Node Channel
-    mChannel = make_unique<AContextChannel>(GetServer()->GetIOContext(), 1024);
+    mChannel = make_unique<AContextChannel>(mCtx, 1024);
 
     // Create Package Pool For Data Exchange
-    mPackagePool = network->CreatePackagePool();
+    mPackagePool = mServer->CreateUniquePackagePool();
     mPackagePool->Initial();
 
     // Initial Service
@@ -214,7 +196,7 @@ awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     // Context And Service Initialized
     mState = EContextState::INITIALIZED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
-        __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+                 __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
     delete pData;
@@ -222,7 +204,7 @@ awaitable<bool> UContextBase::AsyncInitial(const IDataAsset_Interface *pData) {
     co_return ret;
 }
 
-int UContextBase::Shutdown(const bool bForce, int second, const std::function<void(UContextBase *)> &func) {
+int UContext::Shutdown(const bool bForce, int second, const std::function<void(UContext *)> &func) {
     if (GetServer() == nullptr)
         return -10;
 
@@ -299,7 +281,7 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
 
     mState = EContextState::STOPPED;
     SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Shut Down Successfully",
-        __FUNCTION__, static_cast<void *>(this), name);
+                 __FUNCTION__, static_cast<void *>(this), name);
 
     if (mShutdownCallback) {
         std::invoke(mShutdownCallback, this);
@@ -314,11 +296,11 @@ int UContextBase::Shutdown(const bool bForce, int second, const std::function<vo
     return 1;
 }
 
-int UContextBase::ForceShutdown() {
+int UContext::ForceShutdown() {
     return Shutdown(true, 0, nullptr);
 }
 
-bool UContextBase::BootService() {
+bool UContext::BootService() {
     if (mState != EContextState::INITIALIZED || mService == nullptr || GetServer() == nullptr)
         return false;
 
@@ -348,27 +330,27 @@ bool UContextBase::BootService() {
     return true;
 }
 
-std::string UContextBase::GetServiceName() const {
+std::string UContext::GetServiceName() const {
     if (mState >= EContextState::INITIALIZED) {
         return mService->GetServiceName();
     }
     return "UNKNOWN";
 }
 
-FServiceHandle UContextBase::GetServiceID() const {
+FServiceHandle UContext::GetServiceID() const {
     return mServiceID;
 }
 
 
-EContextState UContextBase::GetState() const {
+EContextState UContext::GetState() const {
     return mState;
 }
 
-void UContextBase::PushPackage(const FPackageHandle &pkg) {
+void UContext::PushPackage(const FPackageHandle &pkg) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
-    if (GetServer() == nullptr || pkg == nullptr)
+    if (pkg == nullptr)
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Package From {}",
@@ -383,17 +365,18 @@ void UContextBase::PushPackage(const FPackageHandle &pkg) {
 
         auto temp = make_unique<UPackageNode>();
         temp->SetPackage(pkg);
-        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
+
+        co_spawn(mCtx, [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
             co_await self->mChannel->async_send(std::error_code{}, std::move(temp));
         }, detached);
     }
 }
 
-void UContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
+void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
-    if (GetServer() == nullptr || task == nullptr)
+    if (task == nullptr)
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
@@ -410,17 +393,17 @@ void UContextBase::PushTask(const std::function<void(IServiceBase *)> &task) {
         auto temp = make_unique<UTaskNode>();
         temp->SetTask(task);
 
-        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
+        co_spawn(mCtx, [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
             co_await self->mChannel->async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
-void UContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
+void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return;
 
-    if (GetServer() == nullptr || event == nullptr)
+    if (event == nullptr)
         return;
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}] - Event Type {}",
@@ -435,17 +418,14 @@ void UContextBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
 
         auto temp = make_unique<UEventNode>();
         temp->SetEventParam(event);
-        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
+        co_spawn(mCtx, [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
             co_await self->mChannel->async_send(std::error_code{}, std::move(temp));
         }, detached);
     }
 }
 
-void UContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
+void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
-        return;
-
-    if (GetServer() == nullptr)
         return;
 
     // SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
@@ -460,13 +440,13 @@ void UContextBase::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDur
         temp->SetCurrentTickTime(timepoint);
         temp->SetDeltaTime(delta);
 
-        co_spawn(GetServer()->GetIOContext(), [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
+        co_spawn(mCtx, [self = shared_from_this(), temp = std::move(temp)]() mutable -> awaitable<void> {
             co_await self->mChannel->async_send(std::error_code{}, std::move(temp));
         }, detached);
     }
 }
 
-int64_t UContextBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
+int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || task == nullptr)
         return 0;
 
@@ -477,7 +457,7 @@ int64_t UContextBase::CreateTimer(const std::function<void(IServiceBase *)> &tas
     return module->CreateTimer(GenerateHandle(), task, delay, rate);
 }
 
-void UContextBase::CancelTimer(const int64_t tid) const {
+void UContext::CancelTimer(const int64_t tid) const {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || tid <= 0)
         return;
 
@@ -488,7 +468,7 @@ void UContextBase::CancelTimer(const int64_t tid) const {
     module->CancelTimer(tid);
 }
 
-void UContextBase::CancelAllTimers() {
+void UContext::CancelAllTimers() {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr)
         return;
 
@@ -497,7 +477,7 @@ void UContextBase::CancelAllTimers() {
     }
 }
 
-void UContextBase::ListenEvent(const int event) {
+void UContext::ListenEvent(const int event) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
         return;
 
@@ -508,7 +488,7 @@ void UContextBase::ListenEvent(const int event) {
     module->ListenEvent(GenerateHandle(), event);
 }
 
-void UContextBase::RemoveListener(const int event) {
+void UContext::RemoveListener(const int event) {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || event <= 0)
         return;
 
@@ -519,7 +499,7 @@ void UContextBase::RemoveListener(const int event) {
     module->RemoveListenEvent(GenerateHandle(), event);
 }
 
-void UContextBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
+void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
     if (mState < EContextState::INITIALIZED || GetServer() == nullptr || param == nullptr)
         return;
 
@@ -530,38 +510,39 @@ void UContextBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &param)
     module->Dispatch(param);
 }
 
-UServer *UContextBase::GetServer() const {
-    if (mModule == nullptr)
-        throw std::runtime_error(std::format("{} - Owner Module Is Still NULL Pointer", __FUNCTION__));
-    return mModule->GetServer();
+UServer *UContext::GetServer() const {
+    if (mServer == nullptr)
+        throw std::runtime_error(std::format("{} - Server Is Null Pointer", __FUNCTION__));
+    return mServer;
 }
 
-IModuleBase *UContextBase::GetOwnerModule() const {
-    return mModule;
+asio::io_context &UContext::GetIOContext() const {
+    return mCtx;
 }
 
-FContextHandle UContextBase::GenerateHandle() {
+
+FContextHandle UContext::GenerateHandle() {
     if (static_cast<int64_t>(mServiceID) == INVALID_SERVICE_ID)
         return {};
 
     return { mServiceID, weak_from_this() };
 }
 
-FPackageHandle UContextBase::BuildPackage() const {
-    if (mState != EContextState::IDLE || mState != EContextState::RUNNING)
-        throw std::runtime_error(std::format("{} - In Error State[{}]", __FUNCTION__, static_cast<int>(mState.load())));
+FPackageHandle UContext::BuildPackage() const {
+    if (mPackagePool == nullptr)
+        throw std::runtime_error(std::format("{} - Package Pool Is Null Pointer", __FUNCTION__));
 
     return mPackagePool->Acquire<IPackage_Interface>();
 }
 
-IServiceBase *UContextBase::GetOwningService() const {
+IServiceBase *UContext::GetOwningService() const {
     if (mState < EContextState::INITIALIZED || mState >= EContextState::WAITING)
         return nullptr;
 
     return mService;
 }
 
-awaitable<void> UContextBase::ProcessChannel() {
+awaitable<void> UContext::ProcessChannel() {
     if (mState <= EContextState::INITIALIZED || mState >= EContextState::WAITING)
         co_return;
 
