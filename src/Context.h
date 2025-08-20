@@ -127,17 +127,17 @@ public:
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
 #pragma endregion
 
-#pragma region Timer
-    int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
-    void CancelTimer(int64_t tid) const;
-    void CancelAllTimers();
-#pragma endregion
-
-#pragma region Event
-    void ListenEvent(int event);
-    void RemoveListener(int event);
-    void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
-#pragma endregion
+// #pragma region Timer
+//     int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
+//     void CancelTimer(int64_t tid) const;
+//     void CancelAllTimers();
+// #pragma endregion
+//
+// #pragma region Event
+//     void ListenEvent(int event);
+//     void RemoveListener(int event);
+//     void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
+// #pragma endregion
 
 private:
     awaitable<void> ProcessChannel();

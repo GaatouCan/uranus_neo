@@ -3,8 +3,8 @@
 #include "Server.h"
 #include "base/DataAsset.h"
 #include "base/Recycler.h"
-#include "event/EventModule.h"
-#include "timer/TimerModule.h"
+// #include "event/EventModule.h"
+// #include "timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -286,60 +286,60 @@ void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuratio
     }
 }
 
-int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
-    if (mService == nullptr || mPackagePool == nullptr)
-        return 0;
-
-    auto *module = GetServer()->GetModule<UTimerModule>();
-    if (module == nullptr)
-        return 0;
-
-    return module->CreateTimer(GenerateHandle(), task, delay, rate);
-}
-
-void UContext::CancelTimer(const int64_t tid) const {
-    auto *module = GetServer()->GetModule<UTimerModule>();
-    if (module == nullptr)
-        return;
-
-    module->CancelTimer(tid);
-}
-
-void UContext::CancelAllTimers() {
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-        module->CancelTimer(GenerateHandle());
-    }
-}
-
-void UContext::ListenEvent(const int event) {
-    if (mService == nullptr || mPackagePool == nullptr)
-        return;
-
-    auto *module = GetServer()->GetModule<UEventModule>();
-    if (module == nullptr)
-        return;
-
-    module->ListenEvent(GenerateHandle(), event);
-}
-
-void UContext::RemoveListener(const int event) {
-    auto *module = GetServer()->GetModule<UEventModule>();
-    if (module == nullptr)
-        return;
-
-    module->RemoveListenEvent(GenerateHandle(), event);
-}
-
-void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
-    if (mService == nullptr || mPackagePool == nullptr)
-        return;
-
-    auto *module = GetServer()->GetModule<UEventModule>();
-    if (module == nullptr)
-        return;
-
-    module->Dispatch(param);
-}
+// int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
+//     if (mService == nullptr || mPackagePool == nullptr)
+//         return 0;
+//
+//     auto *module = GetServer()->GetModule<UTimerModule>();
+//     if (module == nullptr)
+//         return 0;
+//
+//     return module->CreateTimer(GenerateHandle(), task, delay, rate);
+// }
+//
+// void UContext::CancelTimer(const int64_t tid) const {
+//     auto *module = GetServer()->GetModule<UTimerModule>();
+//     if (module == nullptr)
+//         return;
+//
+//     module->CancelTimer(tid);
+// }
+//
+// void UContext::CancelAllTimers() {
+//     if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+//         module->CancelTimer(GenerateHandle());
+//     }
+// }
+//
+// void UContext::ListenEvent(const int event) {
+//     if (mService == nullptr || mPackagePool == nullptr)
+//         return;
+//
+//     auto *module = GetServer()->GetModule<UEventModule>();
+//     if (module == nullptr)
+//         return;
+//
+//     module->ListenEvent(GenerateHandle(), event);
+// }
+//
+// void UContext::RemoveListener(const int event) {
+//     auto *module = GetServer()->GetModule<UEventModule>();
+//     if (module == nullptr)
+//         return;
+//
+//     module->RemoveListenEvent(GenerateHandle(), event);
+// }
+//
+// void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
+//     if (mService == nullptr || mPackagePool == nullptr)
+//         return;
+//
+//     auto *module = GetServer()->GetModule<UEventModule>();
+//     if (module == nullptr)
+//         return;
+//
+//     module->Dispatch(param);
+// }
 
 UServer *UContext::GetServer() const {
     if (mServer == nullptr)
