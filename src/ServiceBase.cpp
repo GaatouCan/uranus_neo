@@ -1,5 +1,6 @@
 #include "ServiceBase.h"
 #include "Context.h"
+#include "Agent.h"
 #include "Server.h"
 #include "base/Package.h"
 #include "logger/LoggerModule.h"
@@ -142,30 +143,31 @@ void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) co
     if (pkg == nullptr)
         return;
 
-    if (const auto *gateway = GetModule<UGateway>()) {
-        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
         __FUNCTION__, GetServiceID(), GetServiceName(), pid);
 
-        pkg->SetSource(GetServiceID());
-        pkg->SetTarget(AGENT_TARGET_ID);
+    pkg->SetSource(GetServiceID());
+    pkg->SetTarget(AGENT_TARGET_ID);
 
-        gateway->SendToPlayer(pid, pkg);
-    }
+    agent->PushPackage(pkg);
 }
 
-void IServiceBase::PostToPlayer(const int64_t pid, const std::function<void(IServiceBase *)> &task) const {
+void IServiceBase::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
     if (mState <= EServiceState::INITIALIZED)
         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
 
     if (task == nullptr)
         return;
 
-    if (const auto *gateway = GetModule<UGateway>()) {
-        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
-            __FUNCTION__, GetServiceID(), GetServiceName(), pid);
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
 
-        gateway->PostToPlayer(pid, task);
-    }
+    agent->PushTask(task);
 }
 
 void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
@@ -175,15 +177,17 @@ void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) co
     if (pkg == nullptr)
         return;
 
-    if (const auto *gateway = GetModule<UGateway>()) {
-        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
         __FUNCTION__, GetServiceID(), GetServiceName(), pid);
 
-        pkg->SetSource(GetServiceID());
-        pkg->SetTarget(CLIENT_TARGET_ID);
+    pkg->SetSource(GetServiceID());
+    pkg->SetTarget(CLIENT_TARGET_ID);
 
-        gateway->SendToClient(pid, pkg);
-    }
+    agent->SendPackage(pkg);
 }
 
 void IServiceBase::ListenEvent(const int event) const {

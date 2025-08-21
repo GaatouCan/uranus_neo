@@ -6,6 +6,7 @@
 
 class UServer;
 class UContext;
+class IPlayerBase;
 class IPackage_Interface;
 class IDataAsset_Interface;
 class IEventParam_Interface;
@@ -15,7 +16,7 @@ using std::unique_ptr;
 using std::make_shared;
 using std::make_unique;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-
+using APlayerTask = std::function<void(IPlayerBase *)>;
 
 enum class EServiceState {
     CREATED,
@@ -80,11 +81,7 @@ protected:
 
 #pragma region To Player
     virtual void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    virtual void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
-
-    template<class Type, class Callback, class... Args>
-    requires std::derived_from<Type, IServiceBase>
-    void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
+    virtual void PostToPlayer(int64_t pid, const APlayerTask &task) const;
 #pragma endregion
 
     virtual void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
@@ -140,16 +137,4 @@ inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Ar
         std::invoke(func, pService, args...);
     };
     this->PostTask(name, task);
-}
-
-template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
-inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...args) {
-    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-        auto *pService = dynamic_cast<Type *>(ser);
-        if (pService == nullptr)
-            return;
-
-        std::invoke(func, pService, std::forward<Args>(args)...);
-    };
-    this->PostToPlayer(pid, task);
 }
