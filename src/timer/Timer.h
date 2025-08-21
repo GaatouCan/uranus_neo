@@ -47,9 +47,11 @@ public:
 
 private:
     void SetUpID(int64_t id);
+    void CleanUpManager();
 
 private:
-    UTimerManager *const mManager;
+    UTimerManager *mManager;
+    asio::io_context &mCtx;
 
     int64_t mID;
     ASteadyTimer mInnerTimer;

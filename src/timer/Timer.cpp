@@ -6,8 +6,9 @@
 
 UTimer::UTimer(UTimerManager *manager)
     : mManager(manager),
+      mCtx(manager->GetIOContext()),
       mID(-1),
-      mInnerTimer(mManager->GetIOContext()),
+      mInnerTimer(mCtx),
       mDelay(-1),
       mRate(-1) {
 }
@@ -28,7 +29,7 @@ FTimerHandle UTimer::GetTimerHandle() {
 }
 
 void UTimer::Start() {
-    co_spawn(GetIOContext(), [self = shared_from_this()]() mutable -> awaitable<void> {
+    co_spawn(mCtx, [self = shared_from_this()]() mutable -> awaitable<void> {
         try {
             auto point = std::chrono::steady_clock::now();
             ASteadyDuration delta;
@@ -62,6 +63,10 @@ void UTimer::Start() {
         } catch (const std::exception &e) {
             SPDLOG_ERROR("{:<20} - Exception: {}", "UTimerModule::CreateTimer", e.what());
         }
+
+        if (self->mManager) {
+            self->mManager->RemoveTimer(self->mID);
+        }
     }, detached);
 }
 
@@ -71,6 +76,10 @@ void UTimer::Cancel() {
 
 void UTimer::SetUpID(const int64_t id) {
     mID = id;
+}
+
+void UTimer::CleanUpManager() {
+    mManager = nullptr;
 }
 
 void UTimer::SetDelay(const int delay) {
