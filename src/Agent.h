@@ -126,6 +126,12 @@ public:
     void CancelAllTimers();
 #pragma endregion
 
+#pragma region Event
+    void ListenEvent(int event) const;
+    void RemoveListener(int event) const;
+    void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
+#pragma endregion
+
     void SendPackage(const FPackageHandle &pkg);
 
     void OnLoginFailed(const std::string &desc);
@@ -161,4 +167,3 @@ private:
     std::string mKey;
     bool bCachable;
 };
-

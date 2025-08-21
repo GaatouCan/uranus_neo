@@ -6,6 +6,7 @@
 #include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
+#include "event/EventModule.h"
 
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
@@ -315,6 +316,35 @@ void UAgent::CancelAllTimers() {
     mTimerManager.CancelAll();
 }
 
+void UAgent::ListenEvent(const int event) const {
+    if (mPlayer == nullptr || !mChannel.is_open())
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->PlayerListenEvent(GetPlayerID(), event);
+}
+
+void UAgent::RemoveListener(const int event) const {
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->RemovePlayerListenerByEvent(GetPlayerID(), event);
+}
+
+void UAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
+    if (mPlayer == nullptr || !mChannel.is_open())
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->Dispatch(param);
+}
 
 void UAgent::SendPackage(const FPackageHandle &pkg) {
     if (pkg == nullptr)
