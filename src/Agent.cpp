@@ -408,7 +408,12 @@ awaitable<void> UAgent::ReadPackage() {
                     bCachable = false;
                 } break;
                 default: {
-                    mPlayer->OnPackage(pkg.Get());
+                    if (const auto target = pkg->GetTarget(); target == PLAYER_TARGET_ID) {
+                        mPlayer->OnPackage(pkg.Get());
+                    } else if (target > 0) {
+                        // Post Package To Service
+                        PostPackage(pkg);
+                    }
                 }
             }
         }
