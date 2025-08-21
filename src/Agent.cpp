@@ -1,5 +1,6 @@
 #include "Agent.h"
 #include "Server.h"
+#include "Context.h"
 #include "PlayerBase.h"
 #include "Utils.h"
 #include "base/AgentHandler.h"
@@ -219,6 +220,75 @@ void UAgent::PushTask(const APlayerTask &task) {
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
             co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
+    }
+}
+
+void UAgent::PostPackage(const FPackageHandle &pkg) const {
+    if (pkg == nullptr)
+        return;
+
+    const auto target = pkg->GetTarget();
+    if (target <= 0)
+        return;
+
+    if (const auto context = GetServer()->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(), target, context->GetServiceName());
+
+        pkg->SetSource(PLAYER_TARGET_ID);
+        context->PushPackage(pkg);
+    }
+}
+
+void UAgent::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+    if (pkg == nullptr)
+        return;
+
+    if (const auto context = GetServer()->FindService(name)) {
+        const auto target = context->GetServiceID();
+
+        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
+            static_cast<int>(target), context->GetServiceName());
+
+        pkg->SetSource(PLAYER_TARGET_ID);
+        pkg->SetTarget(target);
+
+        context->PushPackage(pkg);
+    }
+}
+
+void UAgent::PostTask(const int64_t target, const AServiceTask &task) const {
+    if (task == nullptr)
+        return;
+
+    if (target <= 0)
+        return;
+
+    if (const auto context = GetServer()->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
+            target, context->GetServiceName());
+
+        context->PushTask(task);
+    }
+}
+
+void UAgent::PostTask(const std::string &name, const AServiceTask &task) const {
+    if (task == nullptr)
+        return;
+
+    if (name.empty())
+        return;
+
+    if (const auto context = GetServer()->FindService(name)) {
+        const auto target = context->GetServiceID();
+
+        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
+            static_cast<int>(target), context->GetServiceName());
+
+        context->PushTask(task);
     }
 }
 

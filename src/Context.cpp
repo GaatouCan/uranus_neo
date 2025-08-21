@@ -1,10 +1,11 @@
 #include "Context.h"
 #include "ServiceBase.h"
 #include "Server.h"
+#include "Agent.h"
 #include "base/Package.h"
 #include "base/DataAsset.h"
 
-// #include "event/EventModule.h"
+#include "event/EventModule.h"
 // #include "timer/TimerModule.h"
 
 #include <spdlog/spdlog.h>
@@ -203,7 +204,7 @@ void UContext::PushPackage(const FPackageHandle &pkg) {
     }
 }
 
-void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
+void UContext::PushTask(const AServiceTask &task) {
     if (mService == nullptr || !mChannel.is_open())
         return;
 
@@ -275,6 +276,129 @@ void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuratio
             co_await self->mChannel.async_send(std::error_code{}, std::move(temp));
         }, detached);
     }
+}
+
+void UContext::PostPackage(const FPackageHandle &pkg) const {
+    if (pkg == nullptr)
+        return;
+
+    const int32_t target = pkg->GetTarget();
+    if (target < 0 || target == mServiceID)
+        return;
+
+    if (const auto context = GetServer()->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, static_cast<int>(mServiceID), GetServiceName(), target, context->GetServiceName());
+
+        pkg->SetSource(mServiceID);
+        context->PushPackage(pkg);
+    }
+}
+
+void UContext::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+    if (mService == nullptr)
+        return;
+
+    if (name.empty())
+        return;
+
+    const auto selfName = GetServiceName();
+    if (selfName.empty() || selfName == "UNKNOWN")
+        return;
+
+    if (selfName == name)
+        return;
+
+    if (const auto target = GetServer()->FindService(name)) {
+        const auto targetID = target->GetServiceID();
+
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, static_cast<int>(mServiceID), selfName, static_cast<int>(targetID), target->GetServiceName());
+
+        pkg->SetSource(mServiceID);
+        pkg->SetTarget(targetID);
+
+        target->PushPackage(pkg);
+    }
+}
+
+void UContext::PostTask(const int64_t target, const AServiceTask &task) const {
+    if (task == nullptr)
+        return;
+
+    if (target < 0 || target == static_cast<int64_t>(mServiceID))
+        return;
+
+    if (const auto context = GetServer()->FindService(target)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, static_cast<int>(mServiceID), GetServiceName(), target, context->GetServiceName());
+
+        context->PushTask(task);
+    }
+}
+
+void UContext::PostTask(const std::string &name, const AServiceTask &task) const {
+    if (mService == nullptr)
+        return;
+
+    const auto selfName = GetServiceName();
+    if (selfName.empty() || selfName == "UNKNOWN")
+        return;
+
+    if (selfName == name)
+        return;
+
+    if (const auto target = GetServer()->FindService(name)) {
+        SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
+            __FUNCTION__, static_cast<int>(mServiceID), GetServiceName(), static_cast<int>(target->GetServiceID()), target->GetServiceName());
+
+        target->PushTask(task);
+    }
+}
+
+void UContext::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
+    if (pid <= 0 || pkg == nullptr)
+        return;
+
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+        __FUNCTION__, static_cast<int>(mServiceID), GetServiceName(), pid);
+
+    pkg->SetSource(mServiceID);
+    pkg->SetTarget(PLAYER_TARGET_ID);
+
+    agent->PushPackage(pkg);
+}
+
+void UContext::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
+    if (pid <= 0 || pkg == nullptr)
+        return;
+
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
+
+    SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Player[{}]",
+        __FUNCTION__, static_cast<int>(mServiceID), GetServiceName(), pid);
+
+    pkg->SetSource(mServiceID);
+    pkg->SetTarget(CLIENT_TARGET_ID);
+
+    agent->SendPackage(pkg);
+}
+
+void UContext::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
+    if (pid <= 0 || task == nullptr)
+        return;
+
+    const auto agent = GetServer()->FindPlayer(pid);
+    if (agent == nullptr)
+        return;
+
+    agent->PushTask(task);
 }
 
 // int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {

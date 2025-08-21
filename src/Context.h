@@ -8,6 +8,7 @@
 
 class UServer;
 class IServiceBase;
+class IPlayerBase;
 class IModuleBase;
 class IRecyclerBase;
 class IPackage_Interface;
@@ -15,6 +16,8 @@ class IEventParam_Interface;
 class IDataAsset_Interface;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using APlayerTask = std::function<void(IPlayerBase *)>;
+using AServiceTask = std::function<void(IServiceBase *)>;
 using std::unique_ptr;
 
 /**
@@ -122,9 +125,22 @@ public:
 
 #pragma region Push
     void PushPackage(const FPackageHandle &pkg);
-    void PushTask(const std::function<void(IServiceBase *)> &task);
+    void PushTask(const AServiceTask &task);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
+#pragma endregion
+
+#pragma region Post
+    void PostPackage(const FPackageHandle &pkg) const;
+    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+
+    void PostTask(int64_t target, const AServiceTask &task) const;
+    void PostTask(const std::string &name, const AServiceTask &task) const;
+
+    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
+    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+
+    void PostToPlayer(int64_t pid, const APlayerTask &task) const;
 #pragma endregion
 
 // #pragma region Timer

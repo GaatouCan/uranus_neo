@@ -18,6 +18,7 @@ using std::make_unique;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using APlayerTask = std::function<void(IPlayerBase *)>;
 
+
 enum class EServiceState {
     CREATED,
     INITIALIZED,
@@ -80,24 +81,28 @@ protected:
 #pragma endregion
 
 #pragma region To Player
-    virtual void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    virtual void PostToPlayer(int64_t pid, const APlayerTask &task) const;
+    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
+    void PostToPlayer(int64_t pid, const APlayerTask &task) const;
+
+    template<class Type, class Callback, class... Args>
+    requires std::derived_from<Type, IPlayerBase>
+    void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
 #pragma endregion
 
-    virtual void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
 
-#pragma region Event
-    virtual void ListenEvent(int event) const;
-    virtual void RemoveListener(int event) const;
-
-    void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
-#pragma endregion
-
-#pragma region Timer
-    [[nodiscard]] int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1) const;
-    void CancelTimer(int64_t tid) const;
-    void CancelAllTimers() const;
-#pragma endregion
+// #pragma region Event
+//     virtual void ListenEvent(int event) const;
+//     virtual void RemoveListener(int event) const;
+//
+//     void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
+// #pragma endregion
+//
+// #pragma region Timer
+//     [[nodiscard]] int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1) const;
+//     void CancelTimer(int64_t tid) const;
+//     void CancelAllTimers() const;
+// #pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
 
@@ -115,7 +120,8 @@ protected:
 };
 
 
-template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
         auto *ptr = dynamic_cast<Type *>(ser);
@@ -127,7 +133,8 @@ inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args 
     this->PostTask(target, task);
 }
 
-template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
         auto *pService = dynamic_cast<Type *>(ser);
@@ -137,4 +144,17 @@ inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Ar
         std::invoke(func, pService, args...);
     };
     this->PostTask(name, task);
+}
+
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IPlayerBase>
+void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...args) {
+    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IPlayerBase *plr) {
+        auto *pPlayer = dynamic_cast<Type *>(plr);
+        if (pPlayer == nullptr)
+            return;
+
+        std::invoke(func, pPlayer, args...);
+    };
+    this->PostToPlayer(pid, task);
 }

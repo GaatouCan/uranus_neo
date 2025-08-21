@@ -4,15 +4,17 @@
 #include "base/Recycler.h"
 
 
-class IPackageCodec_Interface;
-class IPackage_Interface;
-class IEventParam_Interface;
+class UServer;
 class IAgentHandler;
 class IPlayerBase;
-class UServer;
+class IServiceBase;
+class IPackageCodec_Interface;
+class IEventParam_Interface;
+class IPackage_Interface;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using APlayerTask = std::function<void(IPlayerBase *)>;
+using AServiceTask = std::function<void(IServiceBase *)>;
 using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
@@ -106,6 +108,14 @@ public:
     void PushPackage(const FPackageHandle &pkg);
     void PushEvent(const std::shared_ptr<IEventParam_Interface> &event);
     void PushTask(const APlayerTask &task);
+#pragma endregion
+
+#pragma region Post
+    void PostPackage(const FPackageHandle &pkg) const;
+    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+
+    void PostTask(int64_t target, const AServiceTask &task) const;
+    void PostTask(const std::string &name, const AServiceTask &task) const;
 #pragma endregion
 
     void SendPackage(const FPackageHandle &pkg);
