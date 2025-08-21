@@ -12,6 +12,7 @@
 
 #include <typeindex>
 #include <shared_mutex>
+#include <yaml-cpp/yaml.h>
 #include <absl/container/flat_hash_map.h>
 
 
@@ -100,6 +101,8 @@ public:
 
         mServiceFactory = make_unique<T>(std::forward<Args>(args)...);
     }
+
+    [[nodiscard]] const YAML::Node &GetServerConfig() const;
 
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool() const;

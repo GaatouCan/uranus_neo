@@ -4,6 +4,7 @@
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "base/AgentHandler.h"
+#include "config/Config.h"
 #include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
@@ -34,11 +35,13 @@ void UServer::Initial() {
         pModule->Initial();
     }
 
+    const auto &cfg = GetServerConfig();
+
     mPlayerFactory->Initial();
     mServiceFactory->LoadService();
 
-    // FIXME: Create Core Service From Config
-    for (const auto &path : { "gameworld" }) {
+    for (const auto &val : cfg["services"]["core"]) {
+        const auto path = val["path"].as<std::string>();
         const auto library = mServiceFactory->FindService(path);
         if (!library.IsValid()) {
             SPDLOG_CRITICAL("Failed To Find Service[{}]", path);
@@ -85,6 +88,8 @@ void UServer::Start() {
     if (mState != EServerState::INITIALIZED)
         throw std::logic_error(std::format("{} - Server Not In INITIALIZED State", __FUNCTION__));
 
+    const auto &cfg = GetServerConfig();
+
     for (const auto &pModule: mModuleOrder) {
         SPDLOG_INFO("Start Server Module[{}]", pModule->GetModuleName());
         pModule->Start();
@@ -95,7 +100,9 @@ void UServer::Start() {
         context->BootService();
     }
 
-    co_spawn(mIOContext, WaitForClient(8080), detached);
+    const auto port = cfg["server"]["port"].as<uint16_t>();
+
+    co_spawn(mIOContext, WaitForClient(port), detached);
     co_spawn(mIOContext, CollectCachedPlayer(), detached);
 
     mState = EServerState::RUNNING;
@@ -432,6 +439,14 @@ void UServer::ShutdownService(const std::string &name) {
     context->Stop();
 }
 
+const YAML::Node &UServer::GetServerConfig() const {
+    const auto *config = GetModule<UConfig>();
+    if (config == nullptr)
+        throw std::runtime_error("Fail To Get Config");
+
+    return config->GetServerConfig();
+}
+
 unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket &&socket) const {
     if (mCodecFactory == nullptr)
         return nullptr;
@@ -515,8 +530,13 @@ awaitable<void> UServer::WaitForClient(const uint16_t port) {
 
 awaitable<void> UServer::CollectCachedPlayer() {
     try {
-        // TODO: Read From Config
-        constexpr auto duration = std::chrono::seconds(10);
+        const auto &cfg = GetServerConfig();
+
+        const auto gap = cfg["server"]["cache"]["collect_gap"].as<int>();
+        const auto keepSec = cfg["server"]["cache"]["keep_alive"].as<int>();
+        const auto maxSize = cfg["server"]["cache"]["max_size"].as<int>();
+
+        const auto duration = std::chrono::seconds(gap);
         auto point = std::chrono::steady_clock::now();
 
         while (mState != EServerState::TERMINATED) {
@@ -529,12 +549,12 @@ awaitable<void> UServer::CollectCachedPlayer() {
             }
 
             std::unique_lock lock(mCacheMutex);
-            absl::erase_if(mCachedMap, [point](decltype(mCachedMap)::value_type &pair) {
-                return point - pair.second.timepoint > std::chrono::seconds(5 * 60);
+            absl::erase_if(mCachedMap, [point, keepSec](decltype(mCachedMap)::value_type &pair) {
+                return point - pair.second.timepoint > std::chrono::seconds(keepSec);
             });
 
-            if (mCachedMap.size() > 512) {
-                size_t del = mCachedMap.size() - 512;
+            if (mCachedMap.size() > maxSize) {
+                size_t del = mCachedMap.size() - maxSize;
                 for (auto iter = mCachedMap.begin(); iter != mCachedMap.end() && del > 0;) {
                     mCachedMap.erase(iter++);
                     --del;
