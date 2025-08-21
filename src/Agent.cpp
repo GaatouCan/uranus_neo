@@ -104,7 +104,7 @@ UServer *UAgent::GetServer() const {
 void UAgent::SetUpAgent(UServer *pServer) {
     mServer = pServer;
 
-    mPool = mServer->CreateUniquePackagePool();
+    mPool = mServer->CreateUniquePackagePool(static_cast<asio::io_context &>(mCodec->GetExecutor().context()));
     mPool->Initial();
 
     mHandler = mServer->CreateAgentHandler();

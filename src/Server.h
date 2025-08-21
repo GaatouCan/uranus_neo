@@ -105,7 +105,7 @@ public:
     [[nodiscard]] const YAML::Node &GetServerConfig() const;
 
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
-    unique_ptr<IRecyclerBase> CreateUniquePackagePool() const;
+    unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
 
     unique_ptr<IPlayerBase> CreatePlayer() const;
     unique_ptr<IAgentHandler> CreateAgentHandler() const;

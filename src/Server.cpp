@@ -470,11 +470,11 @@ unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket
     return mCodecFactory->CreateUniquePackageCodec(std::move(socket));
 }
 
-unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool() const {
+unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool(asio::io_context &ctx) const {
     if (mCodecFactory == nullptr)
         return nullptr;
 
-    return mCodecFactory->CreateUniquePackagePool();
+    return mCodecFactory->CreateUniquePackagePool(ctx);
 }
 
 unique_ptr<IPlayerBase> UServer::CreatePlayer() const {

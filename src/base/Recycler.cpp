@@ -111,8 +111,13 @@ namespace detail {
     }
 }
 
-IRecyclerBase::IRecyclerBase()
-    : mUsage(-1) {
+IRecyclerBase::IRecyclerBase(asio::io_context &ctx)
+    : mCtx(ctx),
+      mUsage(-1),
+      mShrinkCount(RECYCLER_SHRINK_COUNT),
+      mShrinkDelay(RECYCLER_SHRINK_DELAY),
+      mShrinkThreshold(RECYCLER_EXPAND_THRESHOLD),
+      mShrinkRate(RECYCLER_SHRINK_RATE){
     mControl = new detail::FControlBlock(this);
     SPDLOG_DEBUG("Create Recycler");
 }
@@ -149,6 +154,22 @@ void IRecyclerBase::Initial(const size_t capacity) {
 
     mUsage = 0;
     SPDLOG_TRACE("{} - Recycler Initial", __FUNCTION__);
+}
+
+void IRecyclerBase::SetShrinkCount(const int count) {
+    mShrinkCount = count;
+}
+
+void IRecyclerBase::SetShrinkDelay(const int sec) {
+    mShrinkDelay = sec;
+}
+
+void IRecyclerBase::SetShrinkThreshold(const float threshold) {
+    mShrinkThreshold = threshold;
+}
+
+void IRecyclerBase::SetShrinkRate(const float rate) {
+    mShrinkRate = rate;
 }
 
 detail::IElementNodeBase *IRecyclerBase::AcquireNode() {
@@ -238,9 +259,12 @@ void IRecyclerBase::Shrink() {
         const size_t usage = mUsage.load();
         const size_t total = mQueue.size() + usage;
 
+        if (total < mShrinkCount)
+            return;
+
         // Usage Less Than Shrink Threshold
-        if (static_cast<float>(usage) < std::ceil(static_cast<float>(total) * RECYCLER_SHRINK_THRESHOLD)) {
-            num = static_cast<size_t>(std::floor(static_cast<float>(total) * RECYCLER_SHRINK_RATE));
+        if (static_cast<float>(usage) < std::ceil(static_cast<float>(total) * mShrinkThreshold)) {
+            num = static_cast<size_t>(std::floor(static_cast<float>(total) * mShrinkRate));
 
             const auto rest = total - num;
             if (rest <= 0)

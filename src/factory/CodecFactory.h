@@ -23,8 +23,8 @@ public:
     DISABLE_COPY_MOVE(ICodecFactory_Interface)
 
     virtual unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket socket) = 0;
-    virtual unique_ptr<IRecyclerBase> CreateUniquePackagePool() = 0;
+    virtual unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) = 0;
 
     virtual IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) = 0;
-    virtual IRecyclerBase *CreatePackagePool() = 0;
+    virtual IRecyclerBase *CreatePackagePool(asio::io_context &ctx) = 0;
 };

@@ -6,6 +6,7 @@
 #include <atomic>
 #include <memory>
 #include <shared_mutex>
+#include <asio/io_context.hpp>
 
 
 namespace detail {
@@ -222,26 +223,33 @@ class BASE_API IRecyclerBase {
     static constexpr float RECYCLER_EXPAND_RATE = 1.f;
 
     static constexpr int RECYCLER_SHRINK_DELAY = 1;
+    static constexpr int RECYCLER_SHRINK_COUNT = 512;
     static constexpr float RECYCLER_SHRINK_THRESHOLD = 0.3f;
     static constexpr float RECYCLER_SHRINK_RATE = 0.5f;
     static constexpr int RECYCLER_MINIMUM_CAPACITY = 64;
 
 protected:
-    IRecyclerBase();
+    explicit IRecyclerBase(asio::io_context &ctx);
 
     virtual detail::IElementNodeBase *CreateNode() const = 0;
 
 public:
+    IRecyclerBase() = delete;
     virtual ~IRecyclerBase();
 
     DISABLE_COPY_MOVE(IRecyclerBase)
 
-    void Initial(size_t capacity = 64);
+    void Initial(size_t capacity = RECYCLER_MINIMUM_CAPACITY);
 
     template<class Type = IRecycle_Interface>
     FRecycleHandle<Type> Acquire() {
         return FRecycleHandle<Type>{ AcquireNode() };
     }
+
+    void SetShrinkCount(int count);
+    void SetShrinkDelay(int sec);
+    void SetShrinkThreshold(float threshold);
+    void SetShrinkRate(float rate);
 
     void Shrink();
 
@@ -253,23 +261,29 @@ public:
         CRecycleType Type,
         class Allocator = std::allocator<Type>,
         class Deleter = std::default_delete<Type> >
-    static IRecyclerBase *Create(Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
+    static IRecyclerBase *Create(asio::io_context &ctx, Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
 
     template<
         CRecycleType Type,
         class Allocator = std::allocator<Type>,
         class Deleter = std::default_delete<Type> >
-    static std::unique_ptr<IRecyclerBase> CreateUnique(Allocator &&allocator = Allocator{},
-                                                       Deleter &&deleter = Deleter{});
+    static std::unique_ptr<IRecyclerBase> CreateUnique(asio::io_context &ctx, Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
 
 private:
     detail::IElementNodeBase *AcquireNode();
     void Recycle(detail::IElementNodeBase *pNode);
 
 private:
+    asio::io_context &mCtx;
+
     std::queue<detail::IElementNodeBase *> mQueue;
     mutable std::shared_mutex mMutex;
     std::atomic_int64_t mUsage;
+
+    int mShrinkCount;
+    int mShrinkDelay;
+    float mShrinkThreshold;
+    float mShrinkRate;
 
 protected:
     detail::FControlBlock *mControl;
@@ -464,8 +478,9 @@ template<
 class TRecycler final : public IRecyclerBase {
 public:
     template<typename A = Allocator, typename D = Deleter>
-    explicit TRecycler(A &&alloc = Allocator{}, D &&deleter = Deleter{})
-        : mAllocator(std::forward<A>(alloc)),
+    explicit TRecycler(asio::io_context &ctx, A &&alloc = Allocator{}, D &&deleter = Deleter{})
+        : IRecyclerBase(ctx),
+          mAllocator(std::forward<A>(alloc)),
           mDeleter(std::forward<D>(deleter)) {
     }
 
@@ -485,8 +500,8 @@ template<
     CRecycleType Type,
     class Allocator,
     class Deleter>
-inline IRecyclerBase *IRecyclerBase::Create(Allocator &&allocator, Deleter &&deleter) {
-    return IRecyclerBase::CreateUnique<Type, Allocator, Deleter>(
+inline IRecyclerBase *IRecyclerBase::Create(asio::io_context &ctx, Allocator &&allocator, Deleter &&deleter) {
+    return IRecyclerBase::CreateUnique<Type, Allocator, Deleter>(ctx,
                 std::forward<Allocator>(allocator),
                 std::forward<Deleter>(deleter))
             .release();
@@ -496,8 +511,8 @@ template<
     CRecycleType Type,
     class Allocator,
     class Deleter>
-std::unique_ptr<IRecyclerBase> IRecyclerBase::CreateUnique(Allocator &&allocator, Deleter &&deleter) {
-    return std::make_unique<TRecycler<Type, Allocator, Deleter> >(
+std::unique_ptr<IRecyclerBase> IRecyclerBase::CreateUnique(asio::io_context &ctx, Allocator &&allocator, Deleter &&deleter) {
+    return std::make_unique<TRecycler<Type, Allocator, Deleter> >(ctx,
         std::forward<Allocator>(allocator),
         std::forward<Deleter>(deleter));
 }

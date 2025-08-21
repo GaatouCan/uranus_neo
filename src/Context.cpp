@@ -116,7 +116,7 @@ bool UContext::Initial(const IDataAsset_Interface *pData) {
     }
 
     // Create Package Pool For Data Exchange
-    mPool = mServer->CreateUniquePackagePool();
+    mPool = mServer->CreateUniquePackagePool(mCtx);
     mPool->Initial();
 
     // Initial Service

@@ -15,8 +15,8 @@ public:
     UCodecFactory();
 
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket socket) override;
-    unique_ptr<IRecyclerBase> CreateUniquePackagePool() override;
+    unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) override;
 
     IPackageCodec_Interface *CreatePackageCodec(ATcpSocket socket) override;
-    IRecyclerBase *CreatePackagePool() override;
+    IRecyclerBase *CreatePackagePool(asio::io_context &ctx) override;
 };
