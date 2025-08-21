@@ -65,7 +65,7 @@ void UTickerModule::AddTicker(const FContextHandle &handle) {
 }
 
 void UTickerModule::RemoveTicker(const FContextHandle &handle) {
-    if (mState != EModuleState::RUNNING)
+    if (mState != EModuleState::RUNNING || GetServer()->GetState() == EServerState::TERMINATED)
         return;
 
     if (handle < 0)

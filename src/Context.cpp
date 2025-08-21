@@ -415,35 +415,35 @@ void UContext::CancelAllTimers() {
     mTimerManager.CancelAll();
 }
 
-// void UContext::ListenEvent(const int event) {
-//     if (mService == nullptr || mPackagePool == nullptr)
-//         return;
-//
-//     auto *module = GetServer()->GetModule<UEventModule>();
-//     if (module == nullptr)
-//         return;
-//
-//     module->ListenEvent(GenerateHandle(), event);
-// }
-//
-// void UContext::RemoveListener(const int event) {
-//     auto *module = GetServer()->GetModule<UEventModule>();
-//     if (module == nullptr)
-//         return;
-//
-//     module->RemoveListenEvent(GenerateHandle(), event);
-// }
-//
-// void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
-//     if (mService == nullptr || mPackagePool == nullptr)
-//         return;
-//
-//     auto *module = GetServer()->GetModule<UEventModule>();
-//     if (module == nullptr)
-//         return;
-//
-//     module->Dispatch(param);
-// }
+void UContext::ListenEvent(const int event) {
+    if (mService == nullptr || !mChannel.is_open())
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->ServiceListenEvent(GenerateHandle(), event);
+}
+
+void UContext::RemoveListener(const int event) {
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->RemoveServiceListenerByEvent(GenerateHandle(), event);
+}
+
+void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
+    if (mService == nullptr || !mChannel.is_open())
+        return;
+
+    auto *module = GetServer()->GetModule<UEventModule>();
+    if (module == nullptr)
+        return;
+
+    module->Dispatch(param);
+}
 
 UServer *UContext::GetServer() const {
     if (mServer == nullptr)
@@ -469,12 +469,6 @@ FPackageHandle UContext::BuildPackage() const {
 
     return mPool->Acquire<IPackage_Interface>();
 }
-
-// IServiceBase *UContext::GetOwningService() const {
-//     if (mService == nullptr)
-//         throw std::runtime_error(std::format("{} - Service Is Null Pointer", __FUNCTION__));
-//     return mService;
-// }
 
 awaitable<void> UContext::ProcessChannel() {
     try {
@@ -510,6 +504,14 @@ void UContext::CleanUp() {
 
     mService = nullptr;
     mLibrary.Reset();
+
+    if (auto *module = GetServer()->GetModule<UEventModule>()) {
+        module->RemoveServiceListener(mServiceID);
+    }
+
+    if (auto *module = GetServer()->GetModule<UTickerModule>()) {
+        module->RemoveTicker(mServiceID);
+    }
 
     mServiceID = INVALID_SERVICE_ID;
 }

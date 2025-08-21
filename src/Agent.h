@@ -91,6 +91,8 @@ public:
     [[nodiscard]] asio::ip::address RemoteAddress() const;
     [[nodiscard]] const std::string &GetKey() const;
 
+    [[nodiscard]] int64_t GetPlayerID() const;
+
     [[nodiscard]] UServer *GetServer() const;
 
     void SetUpAgent(UServer *pServer);

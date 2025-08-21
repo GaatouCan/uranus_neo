@@ -14,7 +14,7 @@
 #include <shared_mutex>
 #include <yaml-cpp/yaml.h>
 #include <absl/container/flat_hash_map.h>
-
+#include <vector>
 
 enum class EServerState {
     CREATED,
@@ -112,6 +112,8 @@ public:
 
     [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
+
+    [[nodiscard]] std::vector<shared_ptr<UAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
 
     void RemovePlayer(int64_t pid);
     void RecyclePlayer(unique_ptr<IPlayerBase> &&player);

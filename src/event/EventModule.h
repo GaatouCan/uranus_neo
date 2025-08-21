@@ -4,8 +4,8 @@
 #include "base/EventParam.h"
 #include "base/ContextHandle.h"
 
-#include <unordered_map>
-#include <unordered_set>
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <shared_mutex>
 
 
@@ -13,7 +13,8 @@ class BASE_API UEventModule final : public IModuleBase {
 
     DECLARE_MODULE(UEventModule)
 
-    using AListenerMap = std::unordered_map<int, std::unordered_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
+    using AServiceListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
+    using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<int64_t>>;
 
 protected:
     UEventModule();
@@ -33,14 +34,22 @@ public:
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
 
-    void ListenEvent(const FContextHandle &handle, int event);
+    void ServiceListenEvent(const FContextHandle &handle, int event);
 
-    void RemoveListenEvent(const FContextHandle &handle, int event);
-    void RemoveListener(const FContextHandle &handle);
+    void RemoveServiceListenerByEvent(const FContextHandle &handle, int event);
+    void RemoveServiceListener(const FContextHandle &handle);
+
+    void PlayerListenEvent(int64_t pid, int event);
+
+    void RemovePlayerListenerByEvent(int64_t pid, int event);
+    void RemovePlayerListener(int64_t pid);
 
 private:
-    AListenerMap mListenerMap;
-    mutable std::shared_mutex mListenerMutex;
+    AServiceListenerMap mServiceListenerMap;
+    mutable std::shared_mutex mServiceListenerMutex;
+
+    APlayerListenerMap mPlayerListenerMap;
+    mutable std::shared_mutex mPlayerListenerMutex;
 };
 
 template<CEventType Type>

@@ -172,6 +172,22 @@ shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
     return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
+std::vector<shared_ptr<UAgent>> UServer::GetPlayerList(const std::vector<int64_t> &list) const {
+    if (mState != EServerState::RUNNING)
+        return {};
+
+    std::vector<shared_ptr<UAgent>> result;
+    std::shared_lock lock(mPlayerMutex);
+    for (const auto &pid : list) {
+        const auto iter = mPlayerMap.find(pid);
+        if (iter != mPlayerMap.end()) {
+            result.push_back(iter->second);
+        }
+    }
+
+    return result;
+}
+
 void UServer::RemovePlayer(const int64_t pid) {
     if (mState != EServerState::RUNNING)
         return;

@@ -85,6 +85,13 @@ const std::string &UAgent::GetKey() const {
     return mKey;
 }
 
+int64_t UAgent::GetPlayerID() const {
+    if (mPlayer == nullptr)
+        return -1;
+
+    return mPlayer->GetPlayerID();
+}
+
 void UAgent::SetExpireSecond(const int sec) {
     mExpiration = std::chrono::seconds(sec);
 }
