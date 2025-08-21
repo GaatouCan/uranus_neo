@@ -115,9 +115,12 @@ public:
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
     [[nodiscard]] shared_ptr<UContext> FindService(const FServiceHandle &sid) const;
+    [[nodiscard]] shared_ptr<UContext> FindService(const std::string &name) const;
 
     void BootService(const std::string &path, const IDataAsset_Interface *pData);
+
     void ShutdownService(const FServiceHandle &handle);
+    void ShutdownService(const std::string &name);
 
 private:
     awaitable<void> WaitForClient(uint16_t port);
@@ -142,8 +145,11 @@ private:
 
 #pragma region Service Management
     USingleIOContextPool mWorkerPool;
-    AContextMap mContextMap;
-    mutable std::shared_mutex mContextMutex;
+    AContextMap mServiceMap;
+    mutable std::shared_mutex mServiceMutex;
+
+    absl::flat_hash_map<std::string, FServiceHandle> mServiceNameMap;
+    mutable std::shared_mutex mServiceNameMutex;
 
     TIdentAllocator<int64_t, true> mAllocator;
 #pragma endregion

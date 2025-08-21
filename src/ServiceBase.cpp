@@ -1,6 +1,7 @@
 #include "ServiceBase.h"
 #include "Context.h"
-#include "base/Recycler.h"
+#include "Server.h"
+#include "base/Package.h"
 #include "logger/LoggerModule.h"
 
 
@@ -73,11 +74,8 @@ void IServiceBase::PostPackage(const FPackageHandle &pkg) const {
     if (target <= 0 || target == GetServiceID())
         return;
 
-    const auto *module = GetModule<UServiceModule>();
-    if (module == nullptr)
-        return;
 
-    if (const auto context = module->FindService(target)) {
+    if (const auto context = GetServer()->FindService(target)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
         __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
 
@@ -94,11 +92,7 @@ void IServiceBase::PostPackage(const std::string &name, const FPackageHandle &pk
     if (pkg == nullptr || name == GetServiceName())
         return;
 
-    const auto *module = GetModule<UServiceModule>();
-    if (module == nullptr)
-        return;
-
-    if (const auto target = module->FindService(name)) {
+    if (const auto target = GetServer()->FindService(name)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
             __FUNCTION__, GetServiceID(), GetServiceName(), static_cast<int>(target->GetServiceID()), target->GetServiceName());
 
@@ -117,11 +111,7 @@ void IServiceBase::PostTask(const int64_t target, const std::function<void(IServ
     if (target < 0 || target == GetServiceID())
         return;
 
-    const auto *module = GetModule<UServiceModule>();
-    if (module == nullptr)
-        return;
-
-    if (const auto context = module->FindService(target)) {
+    if (const auto context = GetServer()->FindService(target)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
             __FUNCTION__, GetServiceID(), GetServiceName(), target, context->GetServiceName());
 
@@ -137,11 +127,7 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
     if (name == GetServiceName())
         return;
 
-    const auto *module = GetModule<UServiceModule>();
-    if (module == nullptr)
-        return;
-
-    if (const auto target = module->FindService(name)) {
+    if (const auto target = GetServer()->FindService(name)) {
         SPDLOG_TRACE("{:<20} - From Service[ID: {}, Name: {}] To Service[ID: {}, Name: {}]",
             __FUNCTION__, GetServiceID(), GetServiceName(), static_cast<int>(target->GetServiceID()), target->GetServiceName());
 
@@ -207,14 +193,14 @@ void IServiceBase::ListenEvent(const int event) const {
     if (mContext == nullptr)
         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
-    mContext->ListenEvent(event);
+    //mContext->ListenEvent(event);
 }
 
 void IServiceBase::RemoveListener(const int event) const {
     if (mContext == nullptr)
         return;
 
-    mContext->RemoveListener(event);
+    //mContext->RemoveListener(event);
 }
 
 void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const {
@@ -224,7 +210,7 @@ void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event)
     if (mContext == nullptr)
         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
-    mContext->DispatchEvent(event);
+    //mContext->DispatchEvent(event);
 }
 
 int64_t IServiceBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
@@ -234,28 +220,28 @@ int64_t IServiceBase::CreateTimer(const std::function<void(IServiceBase *)> &tas
     if (mContext == nullptr)
         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
 
-    return mContext->CreateTimer(task, delay, rate);
+    //return mContext->CreateTimer(task, delay, rate);
 }
 
 void IServiceBase::CancelTimer(const int64_t tid) const {
     if (mContext == nullptr)
         return;
 
-    mContext->CancelTimer(tid);
+    //mContext->CancelTimer(tid);
 }
 
 void IServiceBase::CancelAllTimers() const {
     if (mContext == nullptr)
         return;
 
-    mContext->CancelAllTimers();
+    //mContext->CancelAllTimers();
 }
 
 void IServiceBase::TryCreateLogger(const std::string &name) const {
     if (mState == EServiceState::CREATED || mState >= EServiceState::TERMINATED)
         throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
 
-    auto *module = GetModule<ULoggerModule>();
+    auto *module = GetServer()->GetModule<ULoggerModule>();
     if (module == nullptr)
         return;
 
