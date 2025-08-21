@@ -117,7 +117,9 @@ IRecyclerBase::IRecyclerBase(asio::io_context &ctx)
       mShrinkCount(RECYCLER_SHRINK_COUNT),
       mShrinkDelay(RECYCLER_SHRINK_DELAY),
       mShrinkThreshold(RECYCLER_EXPAND_THRESHOLD),
-      mShrinkRate(RECYCLER_SHRINK_RATE){
+      mShrinkRate(RECYCLER_SHRINK_RATE),
+      mShrinkTimer(mCtx),
+      bShrinking(false) {
     mControl = new detail::FControlBlock(this);
     SPDLOG_DEBUG("Create Recycler");
 }
@@ -334,4 +336,30 @@ void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
 
     SPDLOG_TRACE("{} - Recycle Node, Usage[{}], Idle[{}]",
         __FUNCTION__, mUsage.load(), mQueue.size());
+
+    if (bShrinking)
+        return;
+
+    {
+        std::shared_lock localLock(mMutex);
+        const auto total = mQueue.size() + mUsage;
+        if (total < mShrinkCount)
+            return;
+    }
+
+    bShrinking = true;
+    co_spawn(mCtx, [this]() mutable -> awaitable<void> {
+        try {
+            mShrinkTimer.expires_after(std::chrono::seconds(mShrinkDelay));
+
+            if (auto [ec] = co_await mShrinkTimer.async_wait(); ec)
+                co_return;
+
+            Shrink();
+            bShrinking = false;
+
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR("{:<20} - Recycler Exception [{}]", __FUNCTION__, e.what());
+        }
+    }, detached);
 }

@@ -1,12 +1,12 @@
 #pragma once
 
+#include "base/Types.h"
 #include "Recycle.h"
 
 #include <queue>
 #include <atomic>
 #include <memory>
 #include <shared_mutex>
-#include <asio/io_context.hpp>
 
 
 namespace detail {
@@ -284,6 +284,9 @@ private:
     int mShrinkDelay;
     float mShrinkThreshold;
     float mShrinkRate;
+
+    ASteadyTimer mShrinkTimer;
+    std::atomic_bool bShrinking;
 
 protected:
     detail::FControlBlock *mControl;
