@@ -47,7 +47,8 @@ void UAgent::UTaskNode::Execute(IPlayerBase *pPlayer) const {
 }
 
 UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
-    : mPackageCodec(std::move(codec)),
+    : mServer(nullptr),
+      mPackageCodec(std::move(codec)),
       mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
       mWatchdog(mPackageCodec->GetSocket().get_executor()),
@@ -129,11 +130,9 @@ void UAgent::Disconnect() {
     if (!IsSocketOpen())
         return;
 
-    GetSocket().close();
-    co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        self->Destroy();
-        co_return;
-    }, detached);
+    mWatchdog.cancel();
+    mPackageChannel.close();
+    mScheduleChannel.close();
 }
 
 void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
@@ -330,7 +329,7 @@ awaitable<void> UAgent::ReadPackage() {
             mReceiveTime = now;
 
             switch (pkg->GetPackageID()) {
-                case LOGIN_REQUEST_PACKAGE_ID: break;
+                case LOGIN_REQUEST_PACKAGE_ID:
                 case HEARTBEAT_PACKAGE_ID: break;
                 case PLATFORM_PACKAGE_ID: {
                     // TODO: Parse Platform Info
@@ -395,17 +394,20 @@ awaitable<void> UAgent::ProcessChannel() {
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
     }
+
+    this->CleanUp();
 }
 
-void UAgent::Destroy() {
-    mWatchdog.cancel();
-    mPackageChannel.close();
-    mScheduleChannel.close();
-
+void UAgent::CleanUp() {
     if (mPlayer != nullptr) {
         mPlayer->OnLogout();
         mPlayer->Save();
-        mServer->RemovePlayer(mPlayer->GetPlayerID(), bCached);
+
+        if (bCached) {
+            mServer->RecyclePlayer(std::move(mPlayer));
+        } else {
+            mServer->RemovePlayer(mPlayer->GetPlayerID());
+        }
     }
 
     mServer->RemoveAgent(mKey);

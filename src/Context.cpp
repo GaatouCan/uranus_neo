@@ -136,12 +136,6 @@ void UContext::Stop() {
         return;
 
     mChannel.close();
-
-    // Run In The Coroutine
-    co_spawn(mCtx, [self = shared_from_this()]() -> awaitable<void> {
-        self->Shutdown();
-        co_return;
-    }, detached);
 }
 
 
@@ -162,11 +156,11 @@ bool UContext::BootService() {
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
         __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
-    if (mService->bUpdatePerTick) {
-        if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-            module->AddTicker(GenerateHandle());
-        }
-    }
+    // if (mService->bUpdatePerTick) {
+    //     if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+    //         module->AddTicker(GenerateHandle());
+    //     }
+    // }
 
     co_spawn(mCtx, [self = shared_from_this()] -> awaitable<void> {
         co_await self->ProcessChannel();
@@ -390,9 +384,11 @@ awaitable<void> UContext::ProcessChannel() {
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
     }
+
+    this->CleanUp();
 }
 
-void UContext::Shutdown() {
+void UContext::CleanUp() {
     if (!mLibrary.IsValid())
         return;
 

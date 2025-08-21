@@ -17,6 +17,7 @@ UServer::UServer()
 }
 
 UServer::~UServer() {
+    Shutdown();
 }
 
 EServerState UServer::GetState() const {
@@ -120,31 +121,27 @@ shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
     return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
-void UServer::RemovePlayer(const int64_t pid, const bool bCache) {
+void UServer::RemovePlayer(const int64_t pid) {
     if (mState != EServerState::RUNNING)
         return;
 
-    shared_ptr<UAgent> agent;
+    std::unique_lock lock(mPlayerMutex);
+    mPlayerMap.erase(pid);
+}
 
-    {
-        std::unique_lock lock(mPlayerMutex);
-        if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
-            agent = iter->second;
-            mPlayerMap.erase(iter);
-        }
-    }
-
-    if (!bCache)
+void UServer::RecyclePlayer(unique_ptr<IPlayerBase> &&player) {
+    if (mState != EServerState::RUNNING)
         return;
 
-    if (!agent)
-        return;
-
-    auto player = agent->ExtractPlayer();
     if (player == nullptr)
         return;
 
-    // Push To Cached Map
+    const auto pid = player->GetPlayerID();
+    if (pid <= 0)
+        return;
+
+    this->RemovePlayer(pid);
+
     std::unique_lock lock(mCacheMutex);
     mCachedMap.insert_or_assign(pid, FCachedNode{
         std::move(player),

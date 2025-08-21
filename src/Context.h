@@ -141,7 +141,7 @@ public:
 
 private:
     awaitable<void> ProcessChannel();
-    void Shutdown();
+    void CleanUp();
 
 private:
     io_context &mCtx;

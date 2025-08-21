@@ -97,7 +97,9 @@ public:
     [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
 
-    void RemovePlayer(int64_t pid, bool bCache = true);
+    void RemovePlayer(int64_t pid);
+    void RecyclePlayer(unique_ptr<IPlayerBase> &&player);
+
     void RemoveAgent(const std::string &key);
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
