@@ -99,7 +99,7 @@ class BASE_API UContext final : public std::enable_shared_from_this<UContext> {
 public:
     UContext() = delete;
 
-    explicit UContext(io_context &ctx);
+    explicit UContext(asio::io_context &ctx);
     ~UContext();
 
     DISABLE_COPY_MOVE(UContext)
@@ -109,7 +109,7 @@ public:
     void SetUpLibrary(const FSharedLibrary &library);
 
     [[nodiscard]] UServer *GetServer() const;
-    [[nodiscard]] io_context &GetIOContext() const;
+    [[nodiscard]] asio::io_context &GetIOContext() const;
 
     [[nodiscard]] FServiceHandle GetServiceID() const;
     [[nodiscard]] std::string GetServiceName() const;
@@ -160,7 +160,7 @@ private:
     void CleanUp();
 
 private:
-    io_context &mCtx;
+    asio::io_context &mCtx;
     UServer *mServer;
 
     FServiceHandle mServiceID;

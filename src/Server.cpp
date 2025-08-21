@@ -135,6 +135,14 @@ void UServer::Shutdown() {
     SPDLOG_INFO("Shutdown The Server Successfully");
 }
 
+asio::io_context &UServer::GetIOContext() {
+    return mIOContext;
+}
+
+asio::io_context &UServer::GetWorkerContext() {
+    return mWorkerPool.GetIOContext();
+}
+
 shared_ptr<UAgent> UServer::FindPlayer(const int64_t pid) const {
     if (mState != EServerState::RUNNING)
         return nullptr;

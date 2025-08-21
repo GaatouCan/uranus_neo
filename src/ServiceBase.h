@@ -45,7 +45,7 @@ public:
 
     [[nodiscard]] EServiceState GetState() const;
 
-    [[nodiscard]] io_context &GetIOContext() const;
+    [[nodiscard]] asio::io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
     [[nodiscard]] FPackageHandle BuildPackage() const;

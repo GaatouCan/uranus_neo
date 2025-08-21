@@ -36,7 +36,7 @@ int32_t IServiceBase::GetServiceID() const {
     return mContext->GetServiceID();
 }
 
-io_context &IServiceBase::GetIOContext() const {
+asio::io_context &IServiceBase::GetIOContext() const {
     return mContext->GetIOContext();
 }
 

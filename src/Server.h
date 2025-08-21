@@ -47,6 +47,9 @@ public:
     void Start();
     void Shutdown();
 
+    [[nodiscard]] asio::io_context& GetIOContext();
+    [[nodiscard]] asio::io_context& GetWorkerContext();
+
     template<class T>
     requires std::derived_from<T, IModuleBase>
     T *CreateModule() {
@@ -127,7 +130,7 @@ private:
 
 private:
 #pragma region IO Management
-    io_context              mIOContext;
+    asio::io_context        mIOContext;
     ATcpAcceptor            mAcceptor;
     UMultiIOContextPool     mIOContextPool;
 #pragma endregion IO Manage
