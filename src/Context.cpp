@@ -1,8 +1,9 @@
 #include "Context.h"
 #include "ServiceBase.h"
 #include "Server.h"
+#include "base/Package.h"
 #include "base/DataAsset.h"
-#include "base/Recycler.h"
+
 // #include "event/EventModule.h"
 // #include "timer/TimerModule.h"
 
@@ -71,7 +72,7 @@ UContext::UContext(asio::io_context &ctx)
       mServiceID(INVALID_SERVICE_ID),
       mService(nullptr),
       mChannel(mCtx, 1024),
-      mPackagePool(nullptr) {
+      mPool(nullptr) {
 }
 
 UContext::~UContext() {
@@ -114,8 +115,8 @@ bool UContext::Initial(const IDataAsset_Interface *pData) {
     }
 
     // Create Package Pool For Data Exchange
-    mPackagePool = mServer->CreateUniquePackagePool();
-    mPackagePool->Initial();
+    mPool = mServer->CreateUniquePackagePool();
+    mPool->Initial();
 
     // Initial Service
     mService->SetUpContext(this);
@@ -140,10 +141,7 @@ void UContext::Stop() {
 
 
 bool UContext::BootService() {
-    if (mServer == nullptr ||
-        !mLibrary.IsValid() ||
-        mService == nullptr ||
-        mPackagePool == nullptr)
+    if (mServer == nullptr || !mLibrary.IsValid() || mService == nullptr || mPool == nullptr)
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
     if (const auto res = mService->Start(); !res) {
@@ -181,7 +179,7 @@ FServiceHandle UContext::GetServiceID() const {
 
 
 void UContext::PushPackage(const FPackageHandle &pkg) {
-    if (mService == nullptr)
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     if (pkg == nullptr)
@@ -193,7 +191,7 @@ void UContext::PushPackage(const FPackageHandle &pkg) {
     auto node = make_unique<UPackageNode>();
     node->SetPackage(pkg);
 
-    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel.is_open()) {
         SPDLOG_WARN("{:<20} - Context[{:p}], Service[{}] Channel Buffer Is Full, Consider Make It Larger",
             __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
@@ -207,7 +205,7 @@ void UContext::PushPackage(const FPackageHandle &pkg) {
 }
 
 void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
-    if (mService == nullptr)
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     if (task == nullptr)
@@ -219,7 +217,7 @@ void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
     auto node = make_unique<UTaskNode>();
     node->SetTask(task);
 
-    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel.is_open()) {
         SPDLOG_WARN("{:<20} - Context[{:p}], Service[{}] Channel Buffer Is Full, Consider Make It Larger",
             __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
@@ -234,7 +232,7 @@ void UContext::PushTask(const std::function<void(IServiceBase *)> &task) {
 }
 
 void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
-    if (mService == nullptr)
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     if (event == nullptr)
@@ -246,7 +244,7 @@ void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
 
-    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel.is_open()) {
         SPDLOG_WARN("{:<20} - Context[{:p}], Service[{}] Channel Buffer Is Full, Consider Make It Larger",
             __FUNCTION__, static_cast<const void *>(this), GetServiceName());
 
@@ -259,7 +257,7 @@ void UContext::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
 }
 
 void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
-    if (mService == nullptr)
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     // SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
@@ -269,7 +267,7 @@ void UContext::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuratio
     node->SetCurrentTickTime(timepoint);
     node->SetDeltaTime(delta);
 
-    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel.is_open()) {
         auto temp = make_unique<UTickerNode>();
         temp->SetCurrentTickTime(timepoint);
         temp->SetDeltaTime(delta);
@@ -354,10 +352,10 @@ FContextHandle UContext::GenerateHandle() {
 }
 
 FPackageHandle UContext::BuildPackage() const {
-    if (mPackagePool == nullptr)
+    if (mPool == nullptr)
         throw std::runtime_error(std::format("{} - Package Pool Is Null Pointer", __FUNCTION__));
 
-    return mPackagePool->Acquire<IPackage_Interface>();
+    return mPool->Acquire<IPackage_Interface>();
 }
 
 // IServiceBase *UContext::GetOwningService() const {
@@ -367,9 +365,6 @@ FPackageHandle UContext::BuildPackage() const {
 // }
 
 awaitable<void> UContext::ProcessChannel() {
-    if (!mChannel.is_open())
-        co_return;
-
     try {
         while (mChannel.is_open()) {
             auto [ec, node] = co_await mChannel.async_receive();
@@ -385,7 +380,7 @@ awaitable<void> UContext::ProcessChannel() {
         SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
     }
 
-    this->CleanUp();
+    CleanUp();
 }
 
 void UContext::CleanUp() {

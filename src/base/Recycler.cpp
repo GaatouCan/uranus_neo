@@ -1,5 +1,6 @@
 #include "Recycler.h"
 
+#include <cassert>
 #include <spdlog/spdlog.h>
 
 
@@ -49,9 +50,11 @@ namespace detail {
     IElementNodeBase::IElementNodeBase(FControlBlock *pCtrl)
         : mRefCount(RECYCLED_REFERENCE_COUNT),
           mControl(pCtrl) {
-        assert(mControl);
-        mControl->IncRefCount();
+        // If Control Block Is Null, Throw The Exception
+        if (!mControl) [[unlikely]]
+            throw std::invalid_argument("Control Block Is Null");
 
+        mControl->IncRefCount();
         SPDLOG_DEBUG("Create Element Node");
     }
 
@@ -83,6 +86,7 @@ namespace detail {
         int64_t cur = mRefCount.load(std::memory_order_acquire);
         for (;;) {
             // Don't Increase The Node In Recycler's Queue
+            assert(cur >= 0);
             if (cur < 0)
                 throw std::runtime_error("Increase While Recycled");
 
@@ -134,7 +138,7 @@ IRecyclerBase::~IRecyclerBase() {
 
 void IRecyclerBase::Initial(const size_t capacity) {
     if (mUsage >= 0)
-        throw std::runtime_error("Recycler Is Already Initialized");
+        throw std::runtime_error("Recycler Has Already Initialized");
 
     for (size_t count = 0; count < capacity; count++) {
         auto pElem = CreateNode();
@@ -149,7 +153,7 @@ void IRecyclerBase::Initial(const size_t capacity) {
 
 detail::IElementNodeBase *IRecyclerBase::AcquireNode() {
     if (mUsage < 0)
-        throw std::runtime_error("Recycler Not Initialized");
+        throw std::runtime_error("Recycler Not Initialize");
 
     {
         std::unique_lock lock(mMutex);
@@ -222,7 +226,7 @@ detail::IElementNodeBase *IRecyclerBase::AcquireNode() {
 
 void IRecyclerBase::Shrink() {
     if (mUsage < 0)
-        throw std::runtime_error("Recycler Not Initialized");
+        throw std::runtime_error("Recycler Not Initialize");
 
     size_t num = 0;
 
@@ -293,10 +297,10 @@ size_t IRecyclerBase::GetCapacity() const {
 
 void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
     if (mUsage < 0)
-        throw std::runtime_error("Recycler Not Initialized");
+        throw std::runtime_error("Recycler Not Initialize");
 
-    if (pNode == nullptr)
-        throw std::runtime_error("Recycle A Null Pointer");
+    if (pNode == nullptr) [[unlikely]]
+        return;
 
     pNode->OnRecycle();
     mUsage.fetch_sub(1, std::memory_order_relaxed);

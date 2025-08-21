@@ -1,16 +1,16 @@
 #pragma once
 
 #include "base/Types.h"
-#include "base/Package.h"
+#include "base/Recycler.h"
 #include "base/SharedLibrary.h"
 #include "base/ContextHandle.h"
-#include "base/RecycleHandle.h"
 
 
 class UServer;
 class IServiceBase;
 class IModuleBase;
 class IRecyclerBase;
+class IPackage_Interface;
 class IEventParam_Interface;
 class IDataAsset_Interface;
 
@@ -151,7 +151,7 @@ private:
     IServiceBase *mService;
 
     AContextChannel mChannel;
-    unique_ptr<IRecyclerBase> mPackagePool;
+    unique_ptr<IRecyclerBase> mPool;
 
     FSharedLibrary mLibrary;
 };

@@ -2,7 +2,6 @@
 #include "Server.h"
 #include "PlayerBase.h"
 #include "Utils.h"
-#include "base/Recycler.h"
 #include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
@@ -48,17 +47,17 @@ void UAgent::UTaskNode::Execute(IPlayerBase *pPlayer) const {
 
 UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
     : mServer(nullptr),
-      mPackageCodec(std::move(codec)),
-      mPackageChannel(mPackageCodec->GetSocket().get_executor(), 1024),
-      mScheduleChannel(mPackageCodec->GetSocket().get_executor(), 1024),
-      mWatchdog(mPackageCodec->GetSocket().get_executor()),
+      mCodec(std::move(codec)),
+      mOutput(mCodec->GetExecutor(), 1024),
+      mChannel(mCodec->GetExecutor(), 1024),
+      mWatchdog(mCodec->GetExecutor()),
       mExpiration(std::chrono::seconds(30)),
-      bCached(true) {
+      bCachable(true) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 
-    mKey = fmt::format("{}-{}", mPackageCodec->GetSocket().remote_endpoint().address().to_string(), utils::UnixTime());
+    mKey = fmt::format("{}-{}", RemoteAddress().to_string(), utils::UnixTime());
 }
 
 UAgent::~UAgent() {
@@ -70,7 +69,7 @@ bool UAgent::IsSocketOpen() const {
 }
 
 ATcpSocket &UAgent::GetSocket() const {
-    return mPackageCodec->GetSocket();
+    return mCodec->GetSocket();
 }
 
 asio::ip::address UAgent::RemoteAddress() const {
@@ -95,25 +94,25 @@ UServer *UAgent::GetServer() const {
 void UAgent::SetUpAgent(UServer *pServer) {
     mServer = pServer;
 
-    mPackagePool = mServer->CreateUniquePackagePool();
-    mPackagePool->Initial();
+    mPool = mServer->CreateUniquePackagePool();
+    mPool->Initial();
 
     mHandler = mServer->CreateAgentHandler();
     mHandler->SetUpAgent(this);
 }
 
 FPackageHandle UAgent::BuildPackage() const {
-    if (!mPackagePool)
+    if (!mPool)
         throw std::runtime_error(std::format("{} - Package Pool Is Null Pointer", __FUNCTION__));
 
-    return mPackagePool->Acquire<IPackage_Interface>();
+    return mPool->Acquire<IPackage_Interface>();
 }
 
 void UAgent::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        if (const auto ret = co_await self->mPackageCodec->Initial(); !ret) {
+        if (const auto ret = co_await self->mCodec->Initial(); !ret) {
             self->Disconnect();
             co_return;
         }
@@ -131,8 +130,8 @@ void UAgent::Disconnect() {
         return;
 
     mWatchdog.cancel();
-    mPackageChannel.close();
-    mScheduleChannel.close();
+    mOutput.close();
+    mChannel.close();
 }
 
 void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
@@ -164,7 +163,7 @@ unique_ptr<IPlayerBase> UAgent::ExtractPlayer() {
 }
 
 void UAgent::PushPackage(const FPackageHandle &pkg) {
-    if (!mScheduleChannel.is_open())
+    if (!mChannel.is_open())
         return;
 
     if (pkg == nullptr)
@@ -173,18 +172,18 @@ void UAgent::PushPackage(const FPackageHandle &pkg) {
     auto node = make_unique<UPackageNode>();
     node->SetPackage(pkg);
 
-    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UPackageNode>();
         temp->SetPackage(pkg);
 
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
 void UAgent::PushEvent(const std::shared_ptr<IEventParam_Interface> &event) {
-    if (!mScheduleChannel.is_open())
+    if (!mChannel.is_open())
         return;
 
     if (event == nullptr)
@@ -193,18 +192,18 @@ void UAgent::PushEvent(const std::shared_ptr<IEventParam_Interface> &event) {
     auto node = make_unique<UEventNode>();
     node->SetEventParam(event);
 
-    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UEventNode>();
         temp->SetEventParam(event);
 
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
 void UAgent::PushTask(const APlayerTask &task) {
-    if (!mScheduleChannel.is_open())
+    if (!mChannel.is_open())
         return;
 
     if (task == nullptr)
@@ -213,12 +212,12 @@ void UAgent::PushTask(const APlayerTask &task) {
     auto node = make_unique<UTaskNode>();
     node->SetTask(task);
 
-    if (const auto ret = mScheduleChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UTaskNode>();
         temp->SetTask(task);
 
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mScheduleChannel.async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
@@ -228,9 +227,9 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
     if (pkg == nullptr)
         return;
 
-    if (const bool ret = mPackageChannel.try_send_via_dispatch(std::error_code{}, pkg); !ret) {
+    if (const bool ret = mOutput.try_send_via_dispatch(std::error_code{}, pkg); !ret) {
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
-            co_await self->mPackageChannel.async_send(std::error_code{}, pkg);
+            co_await self->mOutput.async_send(std::error_code{}, pkg);
         }, detached);
     }
 }
@@ -239,11 +238,11 @@ void UAgent::OnLoginFailed(const std::string &desc) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
-    bCached = false;
+    bCachable = false;
 
     const auto pkg = mHandler->OnLoginFailure(desc);
     if (pkg == nullptr) {
-        this->Disconnect();
+        Disconnect();
         return;
     }
 
@@ -251,7 +250,7 @@ void UAgent::OnLoginFailed(const std::string &desc) {
     pkg->SetSource(SERVER_SOURCE_ID);
     pkg->SetTarget(CLIENT_TARGET_ID);
 
-    this->SendPackage(pkg);
+    SendPackage(pkg);
 }
 
 void UAgent::OnRepeated(const std::string &addr) {
@@ -260,7 +259,7 @@ void UAgent::OnRepeated(const std::string &addr) {
 
     const auto pkg = mHandler->OnRepeated(addr);
     if (pkg == nullptr) {
-        this->Disconnect();
+        Disconnect();
         return;
     }
 
@@ -268,14 +267,14 @@ void UAgent::OnRepeated(const std::string &addr) {
     pkg->SetSource(SERVER_SOURCE_ID);
     pkg->SetTarget(CLIENT_TARGET_ID);
 
-    this->SendPackage(pkg);
+    SendPackage(pkg);
 }
 
 
 awaitable<void> UAgent::WritePackage() {
     try {
-        while (IsSocketOpen() && mPackageChannel.is_open()) {
-            const auto [ec, pkg] = co_await mPackageChannel.async_receive();
+        while (IsSocketOpen() && mOutput.is_open()) {
+            const auto [ec, pkg] = co_await mOutput.async_receive();
             if (ec) {
                 Disconnect();
                 break;
@@ -284,7 +283,7 @@ awaitable<void> UAgent::WritePackage() {
             if (pkg == nullptr)
                 continue;
 
-            if (const auto ret = co_await mPackageCodec->Encode(pkg.Get()); !ret) {
+            if (const auto ret = co_await mCodec->Encode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }
@@ -292,7 +291,7 @@ awaitable<void> UAgent::WritePackage() {
             // Can Do Something Here
             if (pkg->GetPackageID() == LOGIN_FAILED_PACKAGE_ID ||
                 pkg->GetPackageID() == LOGIN_REPEATED_PACKAGE_ID) {
-                this->Disconnect();
+                Disconnect();
                 break;
             }
         }
@@ -309,7 +308,7 @@ awaitable<void> UAgent::ReadPackage() {
             if (pkg == nullptr)
                 co_return;
 
-            if (const auto ret = co_await mPackageCodec->Decode(pkg.Get()); !ret) {
+            if (const auto ret = co_await mCodec->Decode(pkg.Get()); !ret) {
                 Disconnect();
                 break;
             }
@@ -336,7 +335,7 @@ awaitable<void> UAgent::ReadPackage() {
                 } break;
                 case LOGOUT_REQUEST_PACKAGE_ID: {
                     // TODO: Parse Logout Request
-                    bCached = false;
+                    bCachable = false;
                 } break;
                 default: {
                     mPlayer->OnPackage(pkg.Get());
@@ -378,9 +377,9 @@ awaitable<void> UAgent::Watchdog() {
 
 awaitable<void> UAgent::ProcessChannel() {
     try {
-        while (IsSocketOpen() && mScheduleChannel.is_open() && mPlayer != nullptr) {
-            const auto [ec, node] = co_await mScheduleChannel.async_receive();
-            if (ec || !mScheduleChannel.is_open())
+        while (IsSocketOpen() && mChannel.is_open() && mPlayer != nullptr) {
+            const auto [ec, node] = co_await mChannel.async_receive();
+            if (ec || !mChannel.is_open())
                 break;
 
             if (node == nullptr)
@@ -395,7 +394,7 @@ awaitable<void> UAgent::ProcessChannel() {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());
     }
 
-    this->CleanUp();
+    CleanUp();
 }
 
 void UAgent::CleanUp() {
@@ -403,7 +402,7 @@ void UAgent::CleanUp() {
         mPlayer->OnLogout();
         mPlayer->Save();
 
-        if (bCached) {
+        if (bCachable) {
             mServer->RecyclePlayer(std::move(mPlayer));
         } else {
             mServer->RemovePlayer(mPlayer->GetPlayerID());

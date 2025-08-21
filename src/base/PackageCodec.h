@@ -18,6 +18,10 @@ public:
     virtual awaitable<bool> Decode(IPackage_Interface *pkg) = 0;
 
     virtual ATcpSocket &GetSocket() = 0;
+
+    const ATcpSocket::executor_type &GetExecutor() {
+        return GetSocket().get_executor();
+    }
 };
 
 

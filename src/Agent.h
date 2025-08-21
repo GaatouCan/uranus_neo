@@ -1,22 +1,21 @@
 #pragma once
 
 #include "base/Types.h"
-#include "base/Package.h"
-#include "base/RecycleHandle.h"
+#include "base/Recycler.h"
 
 
 class IPackageCodec_Interface;
+class IPackage_Interface;
 class IEventParam_Interface;
 class IAgentHandler;
-class UServer;
 class IPlayerBase;
+class UServer;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using APlayerTask = std::function<void(IPlayerBase *)>;
 using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
-
-using APlayerTask = std::function<void(IPlayerBase *)>;
 
 
 enum class EAgentState {
@@ -125,13 +124,13 @@ private:
 private:
     UServer *mServer;
 
-    unique_ptr<IPackageCodec_Interface> mPackageCodec;
+    unique_ptr<IPackageCodec_Interface> mCodec;
 
     unique_ptr<IAgentHandler> mHandler;
-    unique_ptr<IRecyclerBase> mPackagePool;
+    unique_ptr<IRecyclerBase> mPool;
 
-    APackageChannel mPackageChannel;
-    AScheduleChannel mScheduleChannel;
+    APackageChannel mOutput;
+    AScheduleChannel mChannel;
 
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;
@@ -140,6 +139,6 @@ private:
     unique_ptr<IPlayerBase> mPlayer;
 
     std::string mKey;
-    bool bCached;
+    bool bCachable;
 };
 

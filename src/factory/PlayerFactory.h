@@ -4,11 +4,13 @@
 
 #include <memory>
 
-class IPlayerBase;
+
 class UAgent;
 class IAgentHandler;
+class IPlayerBase;
 
 using std::unique_ptr;
+
 
 class BASE_API IPlayerFactory_Interface {
 
