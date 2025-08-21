@@ -139,7 +139,6 @@ void UContext::Stop() {
     mChannel.close();
 }
 
-
 bool UContext::BootService() {
     if (mServer == nullptr || !mLibrary.IsValid() || mService == nullptr || mPool == nullptr)
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
