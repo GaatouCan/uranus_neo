@@ -1,16 +1,19 @@
 #pragma once
 
-#include "Server.h"
 #include "base/Types.h"
-#include "base/Package.h"
-#include "base/RecycleHandle.h"
-#include "base/EventParam.h"
+#include "base/Recycler.h"
 
 
+class UServer;
 class UContext;
+class IPackage_Interface;
 class IDataAsset_Interface;
+class IEventParam_Interface;
 
 using std::shared_ptr;
+using std::unique_ptr;
+using std::make_shared;
+using std::make_unique;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 
@@ -42,9 +45,6 @@ public:
 
     [[nodiscard]] io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
-
-    template<CModuleType Module>
-    Module *GetModule() const;
 
     [[nodiscard]] FPackageHandle BuildPackage() const;
 
@@ -94,9 +94,6 @@ protected:
     virtual void RemoveListener(int event) const;
 
     void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
-
-    template<CEventType Type, class ... Args>
-    void DispatchEventT(Args && ... args) const;
 #pragma endregion
 
 #pragma region Timer
@@ -120,10 +117,6 @@ protected:
     bool bUpdatePerTick;
 };
 
-template<CModuleType Module>
-inline Module *IServiceBase::GetModule() const {
-    return GetServer()->GetModule<Module>();
-}
 
 template<class Type, class Callback, class ... Args> requires std::derived_from<Type, IServiceBase>
 inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
@@ -159,10 +152,4 @@ inline void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...
         std::invoke(func, pService, std::forward<Args>(args)...);
     };
     this->PostToPlayer(pid, task);
-}
-
-template<CEventType Type, class ... Args>
-inline void IServiceBase::DispatchEventT(Args &&...args) const {
-    auto event = std::make_shared<Type>(std::forward<Args>(args)...);
-    this->DispatchEvent(event);
 }

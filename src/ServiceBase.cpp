@@ -1,10 +1,8 @@
 #include "ServiceBase.h"
 #include "Context.h"
 #include "base/Recycler.h"
-#include "gateway/Gateway.h"
 #include "logger/LoggerModule.h"
-#include "service/ServiceModule.h"
-#include "service/ServiceContext.h"
+
 
 #include <spdlog/spdlog.h>
 
@@ -39,7 +37,7 @@ int32_t IServiceBase::GetServiceID() const {
 }
 
 io_context &IServiceBase::GetIOContext() const {
-    return mContext->GetServer()->GetIOContext();
+    return mContext->GetIOContext();
 }
 
 UServer *IServiceBase::GetServer() const {
