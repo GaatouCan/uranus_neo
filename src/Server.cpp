@@ -37,13 +37,18 @@ void UServer::Initial() {
 
     // FIXME: Create Core Service From Config
     for (const auto &path : { "gameworld" }) {
+        const auto library = mServiceFactory->FindService(path);
+        if (!library.IsValid()) {
+            SPDLOG_ERROR("Failed To Find Service[{}]", path);
+            continue;
+        }
+
         const FServiceHandle sid = mAllocator.Allocate();
 
         const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
         context->SetUpServer(this);
         context->SetUpServiceID(sid);
-
-        // TODO: Get Library Handle;
+        context->SetUpLibrary(library);
 
         if (context->Initial(nullptr)) {
             mContextMap.insert_or_assign(sid, context);
