@@ -18,7 +18,6 @@ using std::make_unique;
 class BASE_API ICodecFactory_Interface {
 public:
     ICodecFactory_Interface() = default;
-
     virtual ~ICodecFactory_Interface() = default;
 
     DISABLE_COPY_MOVE(ICodecFactory_Interface)

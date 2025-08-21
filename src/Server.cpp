@@ -32,6 +32,9 @@ void UServer::Initial() {
         pModule->Initial();
     }
 
+    mPlayerFactory->Initial();
+    mServiceFactory->LoadService();
+
     // FIXME: Create Core Service From Config
     for (const auto &path : { "gameworld" }) {
         const FServiceHandle sid = mAllocator.Allocate();

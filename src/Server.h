@@ -4,10 +4,11 @@
 #include "PlayerBase.h"
 #include "base/MultiIOContextPool.h"
 #include "base/SingleIOContextPool.h"
-#include "factory/CodecFactory.h"
-#include "factory/PlayerFactory.h"
 #include "base/ContextHandle.h"
 #include "base/IdentAllocator.h"
+#include "factory/CodecFactory.h"
+#include "factory/PlayerFactory.h"
+#include "factory/ServiceFactory.h"
 
 #include <typeindex>
 #include <shared_mutex>
@@ -88,6 +89,15 @@ public:
         mPlayerFactory = make_unique<T>(std::forward<Args>(args)...);
     }
 
+    template<class T, class... Args>
+    requires std::derived_from<T, IServiceFactory_Interface>
+    void SetServiceFactory(Args && ... args) {
+        if (mState != EServerState::CREATED)
+            throw std::logic_error("Only can set ServiceFactory in CREATED state");
+
+        mServiceFactory = make_unique<T>(std::forward<Args>(args)...);
+    }
+
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool() const;
 
@@ -145,6 +155,7 @@ private:
 
     unique_ptr<ICodecFactory_Interface> mCodecFactory;
     unique_ptr<IPlayerFactory_Interface> mPlayerFactory;
+    unique_ptr<IServiceFactory_Interface> mServiceFactory;
 
     EServerState mState;
 };
