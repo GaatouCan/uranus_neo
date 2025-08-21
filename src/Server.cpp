@@ -13,6 +13,7 @@
 
 UServer::UServer()
     : mAcceptor(mIOContext),
+      mCacheTimer(mIOContext),
       mState(EServerState::CREATED) {
 }
 
@@ -95,6 +96,7 @@ void UServer::Start() {
     }
 
     co_spawn(mIOContext, WaitForClient(8080), detached);
+    co_spawn(mIOContext, CollectCachedPlayer(), detached);
 
     mState = EServerState::RUNNING;
 
@@ -113,6 +115,8 @@ void UServer::Shutdown() {
 
     mState = EServerState::TERMINATED;
     SPDLOG_INFO("Server Is Shutting Down");
+
+    mCacheTimer.cancel();
 
     if (mIOContext.stopped()) {
         mIOContext.stop();
@@ -505,6 +509,40 @@ awaitable<void> UServer::WaitForClient(const uint16_t port) {
             }
         }
     } catch (const std::exception &e) {
+        SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+    }
+}
+
+awaitable<void> UServer::CollectCachedPlayer() {
+    try {
+        // TODO: Read From Config
+        constexpr auto duration = std::chrono::seconds(10);
+        auto point = std::chrono::steady_clock::now();
+
+        while (mState != EServerState::TERMINATED) {
+            point += duration;
+            mCacheTimer.expires_at(point);
+            auto [ec] = co_await mCacheTimer.async_wait();
+            if (ec) {
+                SPDLOG_ERROR("{} - {}", __FUNCTION__, ec.message());
+                break;
+            }
+
+            std::unique_lock lock(mCacheMutex);
+            absl::erase_if(mCachedMap, [point](decltype(mCachedMap)::value_type &pair) {
+                return point - pair.second.timepoint > std::chrono::seconds(5 * 60);
+            });
+
+            if (mCachedMap.size() > 512) {
+                size_t del = mCachedMap.size() - 512;
+                for (auto iter = mCachedMap.begin(); iter != mCachedMap.end() && del > 0;) {
+                    mCachedMap.erase(iter++);
+                    --del;
+                }
+            }
+        }
+
+    } catch (std::exception &e) {
         SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
     }
 }

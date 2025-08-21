@@ -127,6 +127,7 @@ public:
 
 private:
     awaitable<void> WaitForClient(uint16_t port);
+    awaitable<void> CollectCachedPlayer();
 
 private:
 #pragma region IO Management
@@ -144,6 +145,8 @@ private:
 
     absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
     mutable std::shared_mutex mCacheMutex;
+
+    ASteadyTimer mCacheTimer;
 #pragma endregion
 
 #pragma region Service Management
