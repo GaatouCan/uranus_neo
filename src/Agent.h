@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base/Types.h"
 #include "base/Recycler.h"
+#include "timer/TimerManager.h"
 
 
 class UServer;
@@ -118,6 +118,12 @@ public:
     void PostTask(const std::string &name, const AServiceTask &task) const;
 #pragma endregion
 
+#pragma region Timer
+    FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1);
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers();
+#pragma endregion
+
     void SendPackage(const FPackageHandle &pkg);
 
     void OnLoginFailed(const std::string &desc);
@@ -145,6 +151,8 @@ private:
     ASteadyTimer mWatchdog;
     ASteadyTimePoint mReceiveTime;
     ASteadyDuration mExpiration;
+
+    UTimerManager mTimerManager;
 
     unique_ptr<IPlayerBase> mPlayer;
 

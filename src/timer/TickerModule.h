@@ -8,21 +8,21 @@
 #include <shared_mutex>
 
 
-class BASE_API UTimerModule final : public IModuleBase {
+class BASE_API UTickerModule final : public IModuleBase {
 
-    DECLARE_MODULE(UTimerModule)
+    DECLARE_MODULE(UTickerModule)
 
     using ATickerSet = absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>;
 
 protected:
-    UTimerModule();
+    UTickerModule();
 
     void Initial() override;
     void Start() override;
     void Stop() override;
 
 public:
-    ~UTimerModule() override;
+    ~UTickerModule() override;
 
     constexpr const char *GetModuleName() const override {
         return "Timer Module";

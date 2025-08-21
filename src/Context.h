@@ -1,9 +1,9 @@
 #pragma once
 
-#include "base/Types.h"
 #include "base/Recycler.h"
 #include "base/SharedLibrary.h"
 #include "base/ContextHandle.h"
+#include "timer/TimerManager.h"
 
 
 class UServer;
@@ -143,12 +143,12 @@ public:
     void PostToPlayer(int64_t pid, const APlayerTask &task) const;
 #pragma endregion
 
-// #pragma region Timer
-//     int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
-//     void CancelTimer(int64_t tid) const;
-//     void CancelAllTimers();
-// #pragma endregion
-//
+#pragma region Timer
+    FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1);
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers();
+#pragma endregion
+
 // #pragma region Event
 //     void ListenEvent(int event);
 //     void RemoveListener(int event);
@@ -170,4 +170,5 @@ private:
     unique_ptr<IRecyclerBase> mPool;
 
     FSharedLibrary mLibrary;
+    UTimerManager mTimerManager;
 };

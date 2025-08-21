@@ -63,6 +63,14 @@ void UTimerManager::CancelTimer(const int64_t tid) const {
     }
 }
 
+void UTimerManager::CancelAll() {
+    std::unique_lock lock(mMutex);
+    for (const auto &timer : mTimerMap | std::views::values) {
+        timer->CleanUpManager();
+        timer->Cancel();
+    }
+}
+
 void UTimerManager::RemoveTimer(const int64_t tid) {
     std::unique_lock lock(mMutex);
     if (const auto it = mTimerMap.find(tid); it != mTimerMap.end()) {

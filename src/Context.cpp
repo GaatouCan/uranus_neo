@@ -5,7 +5,7 @@
 #include "base/Package.h"
 #include "base/DataAsset.h"
 #include "event/EventModule.h"
-#include "timer/TimerModule.h"
+#include "timer/TickerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -72,7 +72,8 @@ UContext::UContext(asio::io_context &ctx)
       mServiceID(INVALID_SERVICE_ID),
       mService(nullptr),
       mChannel(mCtx, 1024),
-      mPool(nullptr) {
+      mPool(nullptr),
+      mTimerManager(mCtx) {
 }
 
 UContext::~UContext() {
@@ -154,7 +155,7 @@ bool UContext::BootService() {
         __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
 
     if (mService->bUpdatePerTick) {
-        if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+        if (auto *module = GetServer()->GetModule<UTickerModule>()) {
             module->AddTicker(GenerateHandle());
         }
     }
@@ -399,30 +400,20 @@ void UContext::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
     agent->PushTask(task);
 }
 
-// int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
-//     if (mService == nullptr || mPool == nullptr)
-//         return 0;
-//
-//     auto *module = GetServer()->GetModule<UTimerModule>();
-//     if (module == nullptr)
-//         return 0;
-//
-//     return module->CreateTimer(GenerateHandle(), task, delay, rate);
-// }
-//
-// void UContext::CancelTimer(const int64_t tid) const {
-//     auto *module = GetServer()->GetModule<UTimerModule>();
-//     if (module == nullptr)
-//         return;
-//
-//     module->CancelTimer(tid);
-// }
-//
-// void UContext::CancelAllTimers() {
-//     if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-//         module->CancelTimer(GenerateHandle());
-//     }
-// }
+FTimerHandle UContext::CreateTimer(const ATimerTask &task, const int delay, const int rate) {
+    if (mService == nullptr || !mChannel.is_open())
+        return {};
+
+    return mTimerManager.CreateTimer(task, delay, rate);
+}
+
+void UContext::CancelTimer(const int64_t tid) const {
+    mTimerManager.CancelTimer(tid);
+}
+
+void UContext::CancelAllTimers() {
+    mTimerManager.CancelAll();
+}
 
 // void UContext::ListenEvent(const int event) {
 //     if (mService == nullptr || mPackagePool == nullptr)

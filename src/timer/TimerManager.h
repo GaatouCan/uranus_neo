@@ -33,6 +33,7 @@ public:
     [[nodiscard]] FTimerHandle FindTimer(int64_t tid) const;
 
     void CancelTimer(int64_t tid) const;
+    void CancelAll();
 
 private:
     void RemoveTimer(int64_t tid);

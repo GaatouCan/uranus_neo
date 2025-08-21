@@ -53,6 +53,7 @@ UAgent::UAgent(unique_ptr<IPackageCodec_Interface> &&codec)
       mChannel(mCodec->GetExecutor(), 1024),
       mWatchdog(mCodec->GetExecutor()),
       mExpiration(std::chrono::seconds(30)),
+      mTimerManager(static_cast<asio::io_context &>(mCodec->GetExecutor().context())),
       bCachable(true) {
 
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
@@ -292,12 +293,27 @@ void UAgent::PostTask(const std::string &name, const AServiceTask &task) const {
     }
 }
 
+FTimerHandle UAgent::CreateTimer(const ATimerTask &task, const int delay, const int rate) {
+    if (mPlayer == nullptr || !mChannel.is_open())
+        return {};
+
+    return mTimerManager.CreateTimer(task, delay, rate);
+}
+
+void UAgent::CancelTimer(const int64_t tid) const {
+    mTimerManager.CancelTimer(tid);
+}
+
+void UAgent::CancelAllTimers() {
+    mTimerManager.CancelAll();
+}
+
 
 void UAgent::SendPackage(const FPackageHandle &pkg) {
     if (pkg == nullptr)
         return;
 
-    if (const bool ret = mOutput.try_send_via_dispatch(std::error_code{}, pkg); !ret) {
+    if (const bool ret = mOutput.try_send_via_dispatch(std::error_code{}, pkg); !ret && mOutput.is_open()) {
         co_spawn(GetSocket().get_executor(), [self = shared_from_this(), pkg]() -> awaitable<void> {
             co_await self->mOutput.async_send(std::error_code{}, pkg);
         }, detached);

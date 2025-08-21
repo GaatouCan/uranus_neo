@@ -1,14 +1,14 @@
-#include "TimerModule.h"
+#include "TickerModule.h"
 #include "Server.h"
 #include "Context.h"
 
 #include <spdlog/spdlog.h>
 
 
-UTimerModule::UTimerModule() {
+UTickerModule::UTickerModule() {
 }
 
-void UTimerModule::Initial() {
+void UTickerModule::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
@@ -17,7 +17,7 @@ void UTimerModule::Initial() {
     mState = EModuleState::INITIALIZED;
 }
 
-void UTimerModule::Start() {
+void UTickerModule::Start() {
     if (mState != EModuleState::INITIALIZED)
         return;
 
@@ -49,11 +49,11 @@ void UTimerModule::Start() {
     mState = EModuleState::RUNNING;
 }
 
-UTimerModule::~UTimerModule() {
+UTickerModule::~UTickerModule() {
     Stop();
 }
 
-void UTimerModule::AddTicker(const FContextHandle &handle) {
+void UTickerModule::AddTicker(const FContextHandle &handle) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -64,7 +64,7 @@ void UTimerModule::AddTicker(const FContextHandle &handle) {
     mTickers.insert(handle);
 }
 
-void UTimerModule::RemoveTicker(const FContextHandle &handle) {
+void UTickerModule::RemoveTicker(const FContextHandle &handle) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -75,7 +75,7 @@ void UTimerModule::RemoveTicker(const FContextHandle &handle) {
     mTickers.erase(handle);
 }
 
-void UTimerModule::Stop() {
+void UTickerModule::Stop() {
     if (mState == EModuleState::STOPPED)
         return;
 

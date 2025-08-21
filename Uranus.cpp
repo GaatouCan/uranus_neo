@@ -2,7 +2,7 @@
 #include <config/Config.h>
 #include <login/LoginAuth.h>
 #include <event/EventModule.h>
-#include <timer/TimerModule.h>
+#include <timer/TickerModule.h>
 #include <logger/LoggerModule.h>
 #include <monitor/Monitor.h>
 #include <database/DataAccess.h>
@@ -33,7 +33,7 @@ int main() {
     }
 
     server->CreateModule<UEventModule>();
-    server->CreateModule<UTimerModule>();
+    server->CreateModule<UTickerModule>();
     server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
 
