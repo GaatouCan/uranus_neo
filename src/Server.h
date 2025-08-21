@@ -4,7 +4,7 @@
 #include "PlayerBase.h"
 #include "base/MultiIOContextPool.h"
 #include "base/SingleIOContextPool.h"
-#include "base/CodecFactory.h"
+#include "factory/CodecFactory.h"
 #include "base/PlayerFactory.h"
 #include "base/ContextHandle.h"
 #include "base/IdentAllocator.h"

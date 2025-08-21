@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/CodecFactory.h"
+#include "../factory/CodecFactory.h"
 
 #include <asio/ssl/stream.hpp>
 #include <asio/ssl/context.hpp>
