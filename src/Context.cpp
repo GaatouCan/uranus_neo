@@ -399,30 +399,30 @@ void UContext::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
     agent->PushTask(task);
 }
 
-int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
-    if (mService == nullptr || mPool == nullptr)
-        return 0;
-
-    auto *module = GetServer()->GetModule<UTimerModule>();
-    if (module == nullptr)
-        return 0;
-
-    return module->CreateTimer(GenerateHandle(), task, delay, rate);
-}
-
-void UContext::CancelTimer(const int64_t tid) const {
-    auto *module = GetServer()->GetModule<UTimerModule>();
-    if (module == nullptr)
-        return;
-
-    module->CancelTimer(tid);
-}
-
-void UContext::CancelAllTimers() {
-    if (auto *module = GetServer()->GetModule<UTimerModule>()) {
-        module->CancelTimer(GenerateHandle());
-    }
-}
+// int64_t UContext::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) {
+//     if (mService == nullptr || mPool == nullptr)
+//         return 0;
+//
+//     auto *module = GetServer()->GetModule<UTimerModule>();
+//     if (module == nullptr)
+//         return 0;
+//
+//     return module->CreateTimer(GenerateHandle(), task, delay, rate);
+// }
+//
+// void UContext::CancelTimer(const int64_t tid) const {
+//     auto *module = GetServer()->GetModule<UTimerModule>();
+//     if (module == nullptr)
+//         return;
+//
+//     module->CancelTimer(tid);
+// }
+//
+// void UContext::CancelAllTimers() {
+//     if (auto *module = GetServer()->GetModule<UTimerModule>()) {
+//         module->CancelTimer(GenerateHandle());
+//     }
+// }
 
 // void UContext::ListenEvent(const int event) {
 //     if (mService == nullptr || mPackagePool == nullptr)
