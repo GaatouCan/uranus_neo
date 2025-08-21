@@ -20,6 +20,11 @@ struct BASE_API FServiceHandle {
         return id;
     }
 
+    // NOLINT(google-explicit-constructor)
+    operator int() const {
+        return static_cast<int>(id);
+    }
+
     bool operator<(const FServiceHandle &other) const {
         return id < other.id;
     }

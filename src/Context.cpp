@@ -176,7 +176,6 @@ FServiceHandle UContext::GetServiceID() const {
     return mServiceID;
 }
 
-
 void UContext::PushPackage(const FPackageHandle &pkg) {
     if (mService == nullptr || !mChannel.is_open())
         return;

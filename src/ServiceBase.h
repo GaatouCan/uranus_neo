@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/Types.h"
+#include "base/ServiceHandle.h"
 #include "base/Recycler.h"
 
 
@@ -41,7 +42,7 @@ public:
     DISABLE_COPY_MOVE(IServiceBase)
 
     [[nodiscard]] virtual std::string GetServiceName() const;
-    [[nodiscard]] int32_t GetServiceID() const;
+    [[nodiscard]] FServiceHandle GetServiceID() const;
 
     [[nodiscard]] EServiceState GetState() const;
 
