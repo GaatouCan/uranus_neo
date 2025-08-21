@@ -1,12 +1,11 @@
 #pragma once
 
-#include "base/Package.h"
-#include "base/RecycleHandle.h"
+#include "base/Recycler.h"
 #include "base/PlatformInfo.h"
 
 
 class UServer;
-
+class IPackage_Interface;;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 

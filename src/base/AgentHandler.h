@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Package.h"
-#include "RecycleHandle.h"
+#include "Recycler.h"
 
 #include <string>
 
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+
+class IPackage_Interface;
 class UAgent;
 class UServer;
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 class BASE_API IAgentHandler {
 

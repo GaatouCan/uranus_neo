@@ -29,7 +29,7 @@ public:
         return "UMonitor";
     }
 
-    void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
+    // void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
 
 private:
     std::unordered_map<std::string, std::unique_ptr<IPluginBase>> mPluginMap;

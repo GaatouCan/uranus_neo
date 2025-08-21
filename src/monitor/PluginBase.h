@@ -23,7 +23,7 @@ public:
     [[nodiscard]] UMonitor *GetMonitor() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    virtual void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
+    // virtual void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
 
 private:
     void SetUpModule(UMonitor *owner);
