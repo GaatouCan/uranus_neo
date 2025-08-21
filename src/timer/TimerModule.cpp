@@ -13,7 +13,7 @@ void UTimerModule::Initial() {
     if (mState != EModuleState::CREATED)
         return;
 
-    mTickTimer = std::make_unique<ASteadyTimer>(GetServer()->Get);
+    mTickTimer = std::make_unique<ASteadyTimer>(GetServer()->GetWorkerContext());
 
     mState = EModuleState::INITIALIZED;
 }

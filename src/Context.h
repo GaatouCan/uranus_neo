@@ -143,11 +143,11 @@ public:
     void PostToPlayer(int64_t pid, const APlayerTask &task) const;
 #pragma endregion
 
-// #pragma region Timer
-//     int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
-//     void CancelTimer(int64_t tid) const;
-//     void CancelAllTimers();
-// #pragma endregion
+#pragma region Timer
+    int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1);
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers();
+#pragma endregion
 //
 // #pragma region Event
 //     void ListenEvent(int event);
