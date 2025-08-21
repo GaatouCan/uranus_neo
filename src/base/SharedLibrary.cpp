@@ -72,6 +72,10 @@ bool FSharedLibrary::IsValid() const noexcept {
     return mControl != nullptr;
 }
 
+FSharedLibrary::operator bool() const noexcept {
+    return IsValid();
+}
+
 void FSharedLibrary::Swap(FSharedLibrary &rhs) {
     std::swap(mControl, rhs.mControl);
 }

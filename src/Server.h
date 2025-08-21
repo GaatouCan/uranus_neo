@@ -116,7 +116,7 @@ public:
 
     [[nodiscard]] shared_ptr<UContext> FindService(const FServiceHandle &sid) const;
 
-    void BootService(const std::string &path, IDataAsset_Interface *pData);
+    void BootService(const std::string &path, const IDataAsset_Interface *pData);
     void ShutdownService(const FServiceHandle &handle);
 
 private:

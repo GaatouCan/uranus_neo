@@ -231,17 +231,62 @@ shared_ptr<UContext> UServer::FindService(const FServiceHandle &sid) const {
     return iter == mContextMap.end() ? nullptr : iter->second;
 }
 
-void UServer::BootService(const std::string &path, IDataAsset_Interface *pData) {
-    if (mState != EServerState::RUNNING)
+void UServer::BootService(const std::string &path, const IDataAsset_Interface *pData) {
+    if (mState != EServerState::RUNNING || mServiceFactory == nullptr)
         return;
 
-    // TODO: Get Library
+    const auto library = mServiceFactory->FindService(path);
+    if (!library.IsValid())
+        return;
+
+    const FServiceHandle sid = mAllocator.AllocateTS();
+    const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
+
+    {
+        std::unique_lock lock(mContextMutex);
+        if (mContextMap.contains(sid)) {
+            SPDLOG_CRITICAL("{} - Sservice Handle Repeated", __FUNCTION__);
+            return;
+        }
+
+        mContextMap.insert_or_assign(sid, context);
+    }
+
+    context->SetUpServer(this);
+    context->SetUpServiceID(sid);
+    context->SetUpLibrary(library);
+
+    if (!context->Initial(pData)) {
+        context->Stop();
+        {
+            std::unique_lock lock(mContextMutex);
+            mContextMap.erase(sid);
+        }
+        mAllocator.RecycleTS(sid);
+    }
+
+    context->BootService();
 }
 
 void UServer::ShutdownService(const FServiceHandle &handle) {
     if (mState != EServerState::RUNNING)
         return;
 
+    shared_ptr<UContext> context;
+
+    {
+        std::unique_lock lock(mContextMutex);
+        if (const auto iter = mContextMap.find(handle); iter != mContextMap.end()) {
+            context = iter->second;
+            mContextMap.erase(iter);
+        }
+    }
+
+    if (context == nullptr)
+        return;
+
+    mAllocator.RecycleTS(handle);
+    context->Stop();
 }
 
 unique_ptr<IPackageCodec_Interface> UServer::CreateUniquePackageCodec(ATcpSocket &&socket) const {

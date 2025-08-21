@@ -43,6 +43,8 @@ public:
     [[nodiscard]] size_t    GetUseCount()   const noexcept;
     [[nodiscard]] bool      IsValid()       const noexcept;
 
+    explicit operator bool() const noexcept;
+
     void Swap(FSharedLibrary &rhs);
     void Reset();
 
