@@ -5,8 +5,9 @@
 #include <timer/TickerModule.h>
 #include <logger/LoggerModule.h>
 #include <monitor/Monitor.h>
-#include <database/DataAccess.h>
 #include <internal/CodecFactory.h>
+#include <internal/PlayerFactory.h>
+#include <internal/ServiceFactory.h>
 #include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
@@ -37,6 +38,10 @@ int main() {
     // if (auto *dataAccess = server->CreateModule<UDataAccess>(); dataAccess != nullptr) {
     //     dataAccess->SetDatabaseAdapter<UMongoAdapter>();
     // }
+
+    server->SetCodecFactory<UCodecFactory>();
+    server->SetPlayerFactory<UPlayerFactory>();
+    server->SetServiceFactory<UServiceFactory>();
 
     server->Initial();
     server->Start();
