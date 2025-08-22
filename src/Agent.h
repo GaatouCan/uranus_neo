@@ -2,6 +2,7 @@
 
 #include "base/Recycler.h"
 #include "base/AgentHandle.h"
+#include "factory/PlayerHandle.h"
 #include "timer/TimerManager.h"
 
 
@@ -19,7 +20,6 @@ using std::weak_ptr;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using APlayerTask = std::function<void(IPlayerBase *)>;
 using AServiceTask = std::function<void(IServiceBase *)>;
-using APlayerHandle = unique_ptr<IPlayerBase, std::function<void(IPlayerBase*)>>;
 
 
 enum class EAgentState {
@@ -105,8 +105,8 @@ public:
     void ConnectToClient();
     void Disconnect();
 
-    void SetUpPlayer(APlayerHandle &&plr);
-    [[nodiscard]] APlayerHandle ExtractPlayer();
+    void SetUpPlayer(FPlayerHandle &&plr);
+    [[nodiscard]] FPlayerHandle ExtractPlayer();
 
 #pragma region Schedule Node
     void PushPackage(const FPackageHandle &pkg);
@@ -166,7 +166,7 @@ private:
 
     UTimerManager mTimerManager;
 
-    APlayerHandle mPlayer;
+    FPlayerHandle mPlayer;
 
     std::string mKey;
     bool bCachable;

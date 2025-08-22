@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common.h"
+#include "PlayerHandle.h"
 
 #include <memory>
 
@@ -9,8 +9,6 @@ class UAgent;
 class IAgentWorker;
 class IPlayerBase;
 
-using std::unique_ptr;
-using APlayerHandle = unique_ptr<IPlayerBase, std::function<void(IPlayerBase*)>>;
 
 class BASE_API IPlayerFactory_Interface {
 
@@ -22,6 +20,8 @@ public:
 
     virtual void Initial() = 0;
 
-    [[nodiscard]] virtual APlayerHandle CreatePlayer() const = 0;
+    [[nodiscard]] virtual FPlayerHandle CreatePlayer() const = 0;
     [[nodiscard]] virtual unique_ptr<IAgentWorker> CreateAgentWorker() const = 0;
+
+    virtual void DestroyPlayer(IPlayerBase *) const = 0;
 };

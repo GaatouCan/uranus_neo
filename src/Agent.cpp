@@ -144,7 +144,7 @@ void UAgent::Disconnect() {
     mChannel.close();
 }
 
-void UAgent::SetUpPlayer(APlayerHandle &&plr) {
+void UAgent::SetUpPlayer(FPlayerHandle &&plr) {
     if (!IsSocketOpen())
         return;
 
@@ -168,7 +168,7 @@ void UAgent::SetUpPlayer(APlayerHandle &&plr) {
     }, detached);
 }
 
-APlayerHandle UAgent::ExtractPlayer() {
+FPlayerHandle UAgent::ExtractPlayer() {
     return std::move(mPlayer);
 }
 
@@ -523,7 +523,7 @@ awaitable<void> UAgent::ProcessChannel() {
             if (mPlayer == nullptr)
                 break;
 
-            node->Execute(mPlayer.get());
+            node->Execute(mPlayer.Get());
         }
     } catch (const std::exception &e) {
         SPDLOG_ERROR("{:<20} - {}", __FUNCTION__, e.what());

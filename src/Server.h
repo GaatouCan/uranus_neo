@@ -31,7 +31,7 @@ class IDataAsset_Interface;
 class BASE_API UServer final {
 
     struct BASE_API FCachedNode {
-        APlayerHandle player;
+        FPlayerHandle player;
         ASteadyTimePoint timepoint;
     };
 
@@ -108,7 +108,7 @@ public:
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
 
-    APlayerHandle CreatePlayer() const;
+    FPlayerHandle CreatePlayer() const;
     unique_ptr<IAgentWorker> CreateAgentWorker() const;
 
     [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
@@ -117,7 +117,7 @@ public:
     [[nodiscard]] std::vector<shared_ptr<UAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
 
     void RemovePlayer(int64_t pid);
-    void RecyclePlayer(APlayerHandle &&player);
+    void RecyclePlayer(FPlayerHandle &&player);
 
     void RemoveAgent(const std::string &key);
 

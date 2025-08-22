@@ -195,7 +195,7 @@ void UServer::RemovePlayer(const int64_t pid) {
     mPlayerMap.erase(pid);
 }
 
-void UServer::RecyclePlayer(APlayerHandle &&player) {
+void UServer::RecyclePlayer(FPlayerHandle &&player) {
     if (mState != EServerState::RUNNING)
         return;
 
@@ -227,7 +227,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     if (mState != EServerState::RUNNING)
         return;
 
-    APlayerHandle player;
+    FPlayerHandle player;
 
     shared_ptr<UAgent> agent;
     shared_ptr<UAgent> existed;
@@ -476,9 +476,9 @@ unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool(asio::io_context &ctx
     return mCodecFactory->CreateUniquePackagePool(ctx);
 }
 
-APlayerHandle UServer::CreatePlayer() const {
+FPlayerHandle UServer::CreatePlayer() const {
     if (mPlayerFactory == nullptr)
-        return nullptr;
+        return {};
 
     return mPlayerFactory->CreatePlayer();
 }
