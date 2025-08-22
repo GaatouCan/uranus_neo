@@ -1,5 +1,6 @@
 #include "AgentBase.h"
 #include "Server.h"
+#include "base/Package.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
@@ -52,7 +53,21 @@ UServer *IAgentBase::GetServer() const {
     return mServer;
 }
 
-void IAgentBase::Start() const {
+void IAgentBase::Initial(UServer *pServer) {
+    mServer = pServer;
+
+    // Create The Channel
+    mChannel = make_unique<AChannel>(mContext, 1024);
+
+    // Create The Package Pool
+    mPackagePool = mServer->CreateUniquePackagePool(mContext);
+    mPackagePool->Initial();
+}
+
+void IAgentBase::CleanUp() {
+}
+
+void IAgentBase::Start() {
     if (mServer == nullptr || mChannel == nullptr || mPackagePool == nullptr)
         throw std::runtime_error(fmt::format("{} - AgentBase[{:p}] Not Initialized",
             __FUNCTION__, static_cast<const void *>(this)));
@@ -60,7 +75,7 @@ void IAgentBase::Start() const {
     co_spawn(mContext, ProcessChannel(), detached);
 }
 
-void IAgentBase::Stop() const {
+void IAgentBase::Stop() {
     if (mChannel && mChannel->is_open()) {
         mChannel->close();
     }
@@ -124,6 +139,14 @@ void IAgentBase::PushTask(const std::function<void(IActorBase *)> &task) {
             co_await self->mChannel->async_send(std::error_code{}, std::move(node));
         }, detached);
     }
+}
+
+FPackageHandle IAgentBase::BuildPackage() const {
+    if (mServer == nullptr || mChannel == nullptr || mPackagePool == nullptr)
+        throw std::runtime_error(fmt::format("{} - AgentBase[{:p}] Not Initialized",
+            __FUNCTION__, static_cast<const void *>(this)));
+
+    return mPackagePool->Acquire<IPackage_Interface>();
 }
 
 FTimerHandle IAgentBase::CreateTimer(const ATimerTask &task, const int delay, const int rate) {

@@ -73,15 +73,17 @@ public:
     [[nodiscard]] asio::io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    virtual void Initial(UServer *pServer) = 0;
-    virtual void CleanUp() = 0;
+    virtual void Initial(UServer *pServer);
+    virtual void CleanUp();
 
-    void Start() const;
-    void Stop() const;
+    virtual void Start();
+    virtual void Stop();
 
     void PushPackage(const FPackageHandle &pkg);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
     void PushTask(const std::function<void(IActorBase *)> &task);
+
+    FPackageHandle BuildPackage() const;
 
 #pragma region Timer
     FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1);
