@@ -12,13 +12,12 @@ class BASE_API ULoginAuth final : public IModuleBase {
     DECLARE_MODULE(ULoginAuth)
 
 protected:
-    ULoginAuth();
-
     void Initial() override;
     void Start() override;
     void Stop() override;
 
 public:
+    ULoginAuth();
     ~ULoginAuth() override;
 
     constexpr const char *GetModuleName() const override {

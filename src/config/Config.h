@@ -15,11 +15,10 @@ class BASE_API UConfig final : public IModuleBase {
     DECLARE_MODULE(UConfig)
 
 protected:
-    UConfig();
-
     void Initial() override;
 
 public:
+    UConfig();
     ~UConfig() override;
 
     [[nodiscard]] constexpr const char *GetModuleName() const override {

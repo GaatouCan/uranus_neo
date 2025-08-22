@@ -6,9 +6,6 @@
 #include <logger/LoggerModule.h>
 #include <monitor/Monitor.h>
 #include <database/DataAccess.h>
-#include <service/ServiceModule.h>
-#include <gateway/Gateway.h>
-#include <gateway/Gateway.h>
 #include <internal/CodecFactory.h>
 #include <LoginHandlerImpl.h>
 
@@ -41,15 +38,8 @@ int main() {
     //     dataAccess->SetDatabaseAdapter<UMongoAdapter>();
     // }
 
-    server->CreateModule<UServiceModule>();
-    server->CreateModule<UGateway>();
-
-    if (auto *network = server->CreateModule<UGateway>(); network != nullptr) {
-        network->SetCodecFactory<UCodecFactory>();
-    }
-
     server->Initial();
-    server->Run();
+    server->Start();
     server->Shutdown();
 
     delete server;

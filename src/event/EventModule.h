@@ -17,10 +17,8 @@ class BASE_API UEventModule final : public IModuleBase {
     using AServiceListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
     using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<FAgentHandle, FAgentHandle::FHash, FAgentHandle::FEqual>>;
 
-protected:
-    UEventModule();
-
 public:
+    UEventModule();
     ~UEventModule() override = default;
 
     constexpr const char *GetModuleName() const override {

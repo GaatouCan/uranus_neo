@@ -15,13 +15,12 @@ class BASE_API UTickerModule final : public IModuleBase {
     using ATickerSet = absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>;
 
 protected:
-    UTickerModule();
-
     void Initial() override;
     void Start() override;
     void Stop() override;
 
 public:
+    UTickerModule();
     ~UTickerModule() override;
 
     constexpr const char *GetModuleName() const override {
