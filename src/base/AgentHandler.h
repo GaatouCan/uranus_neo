@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Recycler.h"
+#include "PlatformInfo.h"
 
 #include <string>
 
@@ -25,9 +26,10 @@ public:
     [[nodiscard]] UServer* GetServer() const;
 
     virtual FPackageHandle OnLoginSuccess(int64_t pid) = 0;
-    virtual FPackageHandle OnLoginFailure(const std::string &desc) = 0;
-
+    virtual FPackageHandle OnLoginFailure(int code, const std::string &desc) = 0;
     virtual FPackageHandle OnRepeated(const std::string &addr) = 0;
+
+    virtual FPlatformInfo ParsePlatformInfo(const FPackageHandle &pkg) = 0;
 
 private:
     UAgent* mAgent;

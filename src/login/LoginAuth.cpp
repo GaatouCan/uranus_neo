@@ -59,7 +59,7 @@ void ULoginAuth::OnLoginRequest(const std::string &key, const FPackageHandle &pk
         SPDLOG_WARN("{:<20} - fd[{}] Parse Login Request Failed.", __FUNCTION__, key);
 
         if (const auto agent = GetServer()->FindAgent(key)) {
-            agent->OnLoginFailed("Fail To Parse Token");
+            agent->OnLoginFailed(1, "Fail To Parse Token");
         }
 
         return;

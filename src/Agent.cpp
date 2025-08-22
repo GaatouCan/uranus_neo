@@ -357,13 +357,13 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
     }
 }
 
-void UAgent::OnLoginFailed(const std::string &desc) {
+void UAgent::OnLoginFailed(const int code, const std::string &desc) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
     bCachable = false;
 
-    const auto pkg = mHandler->OnLoginFailure(desc);
+    const auto pkg = mHandler->OnLoginFailure(code, desc);
     if (pkg == nullptr) {
         Disconnect();
         return;

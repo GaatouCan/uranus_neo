@@ -135,7 +135,7 @@ public:
 
     void SendPackage(const FPackageHandle &pkg);
 
-    void OnLoginFailed(const std::string &desc);
+    void OnLoginFailed(int code, const std::string &desc);
     void OnRepeated(const std::string &addr);
 
 private:

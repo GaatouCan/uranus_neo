@@ -143,6 +143,39 @@ public:
         return *this;
     }
 
+    template<class T>
+    FRecycleHandle(const FRecycleHandle<T> &rhs) {
+        if (rhs.mNode) {
+            rhs.mNode->IncRefCount();
+        }
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+    }
+
+    template<class T>
+    FRecycleHandle &operator=(const FRecycleHandle<T> &rhs) {
+        if (this != &rhs) {
+            FRecycleHandle(rhs).Swap(*this);
+        }
+        return *this;
+    }
+
+    template<class T>
+    FRecycleHandle(FRecycleHandle<T> &&rhs) noexcept {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        rhs.mNode = nullptr;
+        rhs.mElement = nullptr;
+    }
+
+    template<class T>
+    FRecycleHandle &operator=(FRecycleHandle<T> &&rhs) noexcept {
+        if (this != &rhs) {
+            FRecycleHandle(std::move(rhs)).Swap(*this);
+        }
+        return *this;
+    }
+
     ElementType *operator->() const noexcept {
         return mElement;
     }
