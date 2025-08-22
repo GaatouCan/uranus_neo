@@ -2,6 +2,7 @@
 
 #include "base/Types.h"
 #include "base/Recycler.h"
+#include "timer/TimerHandle.h"
 
 
 class UServer;
@@ -17,6 +18,7 @@ using std::make_shared;
 using std::make_unique;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using APlayerTask = std::function<void(IPlayerBase *)>;
+using ATimerTask = std::function<void(ASteadyTimePoint, ASteadyDuration)>;
 
 
 enum class EServiceState {
@@ -91,18 +93,18 @@ protected:
 
     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
 
-// #pragma region Event
-//     virtual void ListenEvent(int event) const;
-//     virtual void RemoveListener(int event) const;
-//
-//     void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
-// #pragma endregion
-//
-// #pragma region Timer
-//     [[nodiscard]] int64_t CreateTimer(const std::function<void(IServiceBase *)> &task, int delay, int rate = -1) const;
-//     void CancelTimer(int64_t tid) const;
-//     void CancelAllTimers() const;
-// #pragma endregion
+#pragma region Event
+    virtual void ListenEvent(int event) const;
+    virtual void RemoveListener(int event) const;
+
+    void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
+#pragma endregion
+
+#pragma region Timer
+    [[nodiscard]] FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1) const;
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers() const;
+#pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
 

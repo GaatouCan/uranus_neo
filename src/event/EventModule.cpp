@@ -3,8 +3,28 @@
 #include "Agent.h"
 #include "Server.h"
 
+#include <spdlog/spdlog.h>
 #include <ranges>
 
+
+void UEventModule::Initial() {
+    if (mState != EModuleState::CREATED)
+        throw std::logic_error(std::format("{} - Module[{}] Not In CREATED State", __FUNCTION__, GetModuleName()));
+
+    mServiceTimer = std::make_unique<ASteadyTimer>(GetServer()->GetIOContext());
+    mPlayerTimer = std::make_unique<ASteadyTimer>(GetServer()->GetIOContext());
+
+    mState = EModuleState::INITIALIZED;
+}
+
+void UEventModule::Stop() {
+    if (mState == EModuleState::STOPPED)
+        return;
+    mState = EModuleState::STOPPED;
+
+    mServiceTimer->cancel();
+    mPlayerTimer->cancel();
+}
 
 UEventModule::UEventModule()
     : bServiceWaiting(false),
@@ -39,6 +59,9 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
             }
         }
     }
+
+    RemoveExpiredServices();
+    RemoveExpiredPlayers();
 }
 
 void UEventModule::ServiceListenEvent(const int64_t sid, const weak_ptr<UContext> &weakPtr, const int event) {
@@ -48,8 +71,12 @@ void UEventModule::ServiceListenEvent(const int64_t sid, const weak_ptr<UContext
     if (sid < 0 || event < 0)
         return;
 
-    std::unique_lock lock(mServiceListenerMutex);
-    mServiceListenerMap[event].insert_or_assign(sid, weakPtr);
+    {
+        std::unique_lock lock(mServiceListenerMutex);
+        mServiceListenerMap[event].insert_or_assign(sid, weakPtr);
+    }
+
+    RemoveExpiredServices();
 }
 
 void UEventModule::RemoveServiceListenerByEvent(const int64_t sid, const int event) {
@@ -59,15 +86,19 @@ void UEventModule::RemoveServiceListenerByEvent(const int64_t sid, const int eve
     if (sid < 0 || event < 0)
         return;
 
-    std::unique_lock lock(mServiceListenerMutex);
-    const auto iter = mServiceListenerMap.find(event);
-    if (iter == mServiceListenerMap.end())
-        return;
+    {
+        std::unique_lock lock(mServiceListenerMutex);
+        const auto iter = mServiceListenerMap.find(event);
+        if (iter == mServiceListenerMap.end())
+            return;
 
-    iter->second.erase(sid);
+        iter->second.erase(sid);
 
-    if (iter->second.empty())
-        mServiceListenerMap.erase(iter);
+        if (iter->second.empty())
+            mServiceListenerMap.erase(iter);
+    }
+
+    RemoveExpiredServices();
 }
 
 void UEventModule::RemoveServiceListener(const int64_t sid) {
@@ -77,10 +108,14 @@ void UEventModule::RemoveServiceListener(const int64_t sid) {
     if (sid < 0)
         return;
 
-    std::unique_lock lock(mServiceListenerMutex);
-    for (auto &val: mServiceListenerMap | std::views::values) {
-        val.erase(sid);
+    {
+        std::unique_lock lock(mServiceListenerMutex);
+        for (auto &val: mServiceListenerMap | std::views::values) {
+            val.erase(sid);
+        }
     }
+
+    RemoveExpiredServices();
 }
 
 void UEventModule::PlayerListenEvent(const int64_t pid, const weak_ptr<UAgent> &weakPtr, const int event) {
@@ -90,8 +125,12 @@ void UEventModule::PlayerListenEvent(const int64_t pid, const weak_ptr<UAgent> &
     if (pid <= 0 || event < 0)
         return;
 
-    std::unique_lock lock(mPlayerListenerMutex);
-    mPlayerListenerMap[event].insert_or_assign(pid, weakPtr);
+    {
+        std::unique_lock lock(mPlayerListenerMutex);
+        mPlayerListenerMap[event].insert_or_assign(pid, weakPtr);
+    }
+
+    RemoveExpiredPlayers();
 }
 
 void UEventModule::RemovePlayerListenerByEvent(const int64_t pid, const int event) {
@@ -101,15 +140,19 @@ void UEventModule::RemovePlayerListenerByEvent(const int64_t pid, const int even
     if (pid <= 0 || event < 0)
         return;
 
-    std::unique_lock lock(mPlayerListenerMutex);
-    const auto iter = mPlayerListenerMap.find(event);
-    if (iter == mPlayerListenerMap.end())
-        return;
+    {
+        std::unique_lock lock(mPlayerListenerMutex);
+        const auto iter = mPlayerListenerMap.find(event);
+        if (iter == mPlayerListenerMap.end())
+            return;
 
-    iter->second.erase(pid);
+        iter->second.erase(pid);
 
-    if (iter->second.empty())
-        mPlayerListenerMap.erase(iter);
+        if (iter->second.empty())
+            mPlayerListenerMap.erase(iter);
+    }
+
+    RemoveExpiredPlayers();
 }
 
 void UEventModule::RemovePlayerListener(const int64_t pid) {
@@ -119,8 +162,72 @@ void UEventModule::RemovePlayerListener(const int64_t pid) {
     if (pid <= 0)
         return;
 
-    std::unique_lock lock(mPlayerListenerMutex);
-    for (auto &val: mPlayerListenerMap | std::views::values) {
-        val.erase(pid);
+    {
+        std::unique_lock lock(mPlayerListenerMutex);
+        for (auto &val: mPlayerListenerMap | std::views::values) {
+            val.erase(pid);
+        }
     }
+
+    RemoveExpiredPlayers();
+}
+
+void UEventModule::RemoveExpiredServices() {
+    if (bServiceWaiting)
+        return;
+
+    bServiceWaiting = true;
+    co_spawn(GetServer()->GetIOContext(), [this]() mutable -> awaitable<void> {
+        try {
+            mServiceTimer->expires_after(std::chrono::seconds(1));
+            auto [ec] = co_await mServiceTimer->async_wait();
+            if (ec)
+                co_return;
+
+            std::unique_lock lock(mServiceListenerMutex);
+            for (auto &type : mServiceListenerMap | std::views::values) {
+                for (auto iter = type.begin(); iter != type.end();) {
+                    if (iter->second.expired()) {
+                        type.erase(iter++);
+                        continue;
+                    }
+                    ++iter;
+                }
+            }
+
+            bServiceWaiting = false;
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+        }
+    }, detached);
+}
+
+void UEventModule::RemoveExpiredPlayers() {
+    if (bPlayerWaiting)
+        return;
+
+    bPlayerWaiting = true;
+    co_spawn(GetServer()->GetIOContext(), [this]() mutable -> awaitable<void> {
+        try {
+            mPlayerTimer->expires_after(std::chrono::seconds(1));
+            auto [ec] = co_await mPlayerTimer->async_wait();
+            if (ec)
+                co_return;
+
+            std::unique_lock lock(mPlayerListenerMutex);
+            for (auto &type : mPlayerListenerMap | std::views::values) {
+                for (auto iter = type.begin(); iter != type.end();) {
+                    if (iter->second.expired()) {
+                        type.erase(iter++);
+                        continue;
+                    }
+                    ++iter;
+                }
+            }
+
+            bPlayerWaiting = false;
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+        }
+    }, detached);
 }

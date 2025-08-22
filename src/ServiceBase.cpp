@@ -110,56 +110,56 @@ void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) co
     mContext->SendToClient(pid, pkg);
 }
 
-// void IServiceBase::ListenEvent(const int event) const {
-//     if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
-//         throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
-//
-//     if (mContext == nullptr)
-//         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
-//
-//     //mContext->ListenEvent(event);
-// }
-//
-// void IServiceBase::RemoveListener(const int event) const {
-//     if (mContext == nullptr)
-//         return;
-//
-//     //mContext->RemoveListener(event);
-// }
-//
-// void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const {
-//     if (mState <= EServiceState::INITIALIZED)
-//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-//
-//     if (mContext == nullptr)
-//         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
-//
-//     //mContext->DispatchEvent(event);
-// }
-//
-// int64_t IServiceBase::CreateTimer(const std::function<void(IServiceBase *)> &task, const int delay, const int rate) const {
-//     if (mState <= EServiceState::INITIALIZED || mState == EServiceState::TERMINATED)
-//         throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
-//
-//     if (mContext == nullptr)
-//         throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
-//
-//     //return mContext->CreateTimer(task, delay, rate);
-// }
-//
-// void IServiceBase::CancelTimer(const int64_t tid) const {
-//     if (mContext == nullptr)
-//         return;
-//
-//     //mContext->CancelTimer(tid);
-// }
-//
-// void IServiceBase::CancelAllTimers() const {
-//     if (mContext == nullptr)
-//         return;
-//
-//     //mContext->CancelAllTimers();
-// }
+void IServiceBase::ListenEvent(const int event) const {
+    if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
+
+    if (mContext == nullptr)
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
+
+    mContext->ListenEvent(event);
+}
+
+void IServiceBase::RemoveListener(const int event) const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->RemoveListener(event);
+}
+
+void IServiceBase::DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const {
+    if (mState <= EServiceState::INITIALIZED)
+        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+
+    if (mContext == nullptr)
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
+
+    mContext->DispatchEvent(event);
+}
+
+FTimerHandle IServiceBase::CreateTimer(const ATimerTask &task, const int delay, const int rate) const {
+    if (mState <= EServiceState::INITIALIZED || mState == EServiceState::TERMINATED)
+        throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
+
+    if (mContext == nullptr)
+        throw std::runtime_error(std::format("{} - Service 's Context Is NULL", __FUNCTION__));
+
+    return mContext->CreateTimer(task, delay, rate);
+}
+
+void IServiceBase::CancelTimer(const int64_t tid) const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->CancelTimer(tid);
+}
+
+void IServiceBase::CancelAllTimers() const {
+    if (mContext == nullptr)
+        return;
+
+    mContext->CancelAllTimers();
+}
 
 void IServiceBase::TryCreateLogger(const std::string &name) const {
     if (mState == EServiceState::CREATED || mState >= EServiceState::TERMINATED)

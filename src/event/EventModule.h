@@ -21,6 +21,10 @@ class BASE_API UEventModule final : public IModuleBase {
     using AServiceListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<UContext>>>;
     using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<UAgent>>>;
 
+protected:
+    void Initial() override;
+    void Stop() override;
+
 public:
     UEventModule();
     ~UEventModule() override = default;
@@ -46,6 +50,10 @@ public:
 
     void RemovePlayerListenerByEvent(int64_t pid, int event);
     void RemovePlayerListener(int64_t pid);
+
+private:
+    void RemoveExpiredServices();
+    void RemoveExpiredPlayers();
 
 private:
     AServiceListenerMap mServiceListenerMap;
