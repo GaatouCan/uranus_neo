@@ -12,21 +12,6 @@ UPlayerFactory::~UPlayerFactory() {
 }
 
 void UPlayerFactory::Initial() {
-    //     for (const auto &entry : std::filesystem::directory_iterator(CORE_SERVICE_DIRECTORY)) {
-    // #if defined(_WIN32) || defined(_WIN64)
-    //         if (entry.is_regular_file() && entry.path().extension() == ".dll") {
-    //             const auto filename = entry.path().stem().string();
-    // #elif
-    //         if (entry.is_regular_file() && entry.path().extension() == ".so") {
-    //             auto filename = entry.path().stem().string();
-    //             if (filename.compare(0, strlen(LINUX_LIBRARY_PREFIX), LINUX_LIBRARY_PREFIX) == 0) {
-    //                 filename.erase(0, strlen(LINUX_LIBRARY_PREFIX));
-    //             }
-    // #endif
-    //             mCoreMap[filename] = FSharedLibrary{ entry.path() };
-    //         }
-    //     }
-
     std::string agent = PLAYER_AGENT_DIRECTORY;
 
 #if defined(_WIN32) || defined(_WIN64)
