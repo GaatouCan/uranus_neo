@@ -3,6 +3,7 @@
 #include "Module.h"
 #include "base/EventParam.h"
 #include "base/ContextHandle.h"
+#include "base/AgentHandle.h"
 
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
@@ -14,7 +15,7 @@ class BASE_API UEventModule final : public IModuleBase {
     DECLARE_MODULE(UEventModule)
 
     using AServiceListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
-    using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<int64_t>>;
+    using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_set<FAgentHandle, FAgentHandle::FHash, FAgentHandle::FEqual>>;
 
 protected:
     UEventModule();
@@ -39,10 +40,10 @@ public:
     void RemoveServiceListenerByEvent(const FContextHandle &handle, int event);
     void RemoveServiceListener(const FContextHandle &handle);
 
-    void PlayerListenEvent(int64_t pid, int event);
+    void PlayerListenEvent(const FAgentHandle &handle, int event);
 
-    void RemovePlayerListenerByEvent(int64_t pid, int event);
-    void RemovePlayerListener(int64_t pid);
+    void RemovePlayerListenerByEvent(const FAgentHandle &handle, int event);
+    void RemovePlayerListener(const FAgentHandle &handle);
 
 private:
     AServiceListenerMap mServiceListenerMap;

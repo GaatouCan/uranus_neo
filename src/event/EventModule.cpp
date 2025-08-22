@@ -34,31 +34,23 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
         }
     }
 
-    std::vector<int64_t> players;
-    absl::flat_hash_set<int64_t> del;
-
     {
         std::shared_lock lock(mPlayerListenerMutex);
         const auto iter = mPlayerListenerMap.find(event->GetEventType());
         if (iter != mPlayerListenerMap.end()) {
-            for (const auto &pid : iter->second) {
-                players.push_back(pid);
-                del.insert(pid);
+            // for (const auto &pid : iter->second) {
+            //     players.push_back(pid);
+            //     del.insert(pid);
+            // }
+            for (auto it = iter->second.begin(); it != iter->second.end();) {
+                if (it->IsValid()) {
+                    it->Get()->PushEvent(event);
+                    ++it;
+                    continue;
+                }
+
+                iter->second.erase(it++);
             }
-        }
-    }
-
-    for (const auto &player : GetServer()->GetPlayerList(players)) {
-        if (player) {
-            player->PushEvent(event);
-            del.erase(player->GetPlayerID());
-        }
-    }
-
-    std::unique_lock lock(mPlayerListenerMutex);
-    for (auto &val: mPlayerListenerMap | std::views::values) {
-        for (const auto &pid : del) {
-            val.erase(pid);
         }
     }
 }
@@ -105,22 +97,22 @@ void UEventModule::RemoveServiceListener(const FContextHandle &handle) {
     }
 }
 
-void UEventModule::PlayerListenEvent(const int64_t pid, int event) {
+void UEventModule::PlayerListenEvent(const FAgentHandle &handle, int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
-    if (pid <= 0 || event < 0)
+    if (handle <= 0 || event < 0)
         return;
 
     std::unique_lock lock(mPlayerListenerMutex);
-    mPlayerListenerMap[event].emplace(pid);
+    mPlayerListenerMap[event].emplace(handle);
 }
 
-void UEventModule::RemovePlayerListenerByEvent(const int64_t pid, int event) {
+void UEventModule::RemovePlayerListenerByEvent(const FAgentHandle &handle, int event) {
     if (mState < EModuleState::INITIALIZED || GetServer()->GetState() == EServerState::TERMINATED)
         return;
 
-    if (pid <= 0 || event < 0)
+    if (handle <= 0 || event < 0)
         return;
 
     std::unique_lock lock(mPlayerListenerMutex);
@@ -128,21 +120,21 @@ void UEventModule::RemovePlayerListenerByEvent(const int64_t pid, int event) {
     if (iter == mPlayerListenerMap.end())
         return;
 
-    iter->second.erase(pid);
+    iter->second.erase(handle);
 
     if (iter->second.empty())
         mPlayerListenerMap.erase(iter);
 }
 
-void UEventModule::RemovePlayerListener(const int64_t pid) {
+void UEventModule::RemovePlayerListener(const FAgentHandle &handle) {
     if (mState < EModuleState::INITIALIZED || GetServer()->GetState() == EServerState::TERMINATED)
         return;
 
-    if (pid <= 0)
+    if (handle <= 0)
         return;
 
     std::unique_lock lock(mPlayerListenerMutex);
     for (auto &val: mPlayerListenerMap | std::views::values) {
-        val.erase(pid);
+        val.erase(handle);
     }
 }

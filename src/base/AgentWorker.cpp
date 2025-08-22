@@ -1,26 +1,26 @@
-#include "AgentHandler.h"
+#include "AgentWorker.h"
 #include "Agent.h"
 
 #include <format>
 #include <stdexcept>
 
 
-IAgentHandler::IAgentHandler()
+IAgentWorker::IAgentWorker()
     : mAgent(nullptr) {
 }
 
-IAgentHandler::~IAgentHandler() {
+IAgentWorker::~IAgentWorker() {
 }
 
-void IAgentHandler::SetUpAgent(UAgent *agent) {
+void IAgentWorker::SetUpAgent(UAgent *agent) {
     mAgent = agent;
 }
 
-UAgent *IAgentHandler::GetAgent() const {
+UAgent *IAgentWorker::GetAgent() const {
     return mAgent;
 }
 
-UServer *IAgentHandler::GetServer() const {
+UServer *IAgentWorker::GetServer() const {
     if (!mAgent)
         throw std::logic_error(std::format("{} - Agent not set", __FUNCTION__));
 

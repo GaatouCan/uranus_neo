@@ -3,7 +3,7 @@
 #include "Context.h"
 #include "PlayerBase.h"
 #include "Utils.h"
-#include "base/AgentHandler.h"
+#include "base/AgentWorker.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
 #include "event/EventModule.h"
@@ -107,8 +107,8 @@ void UAgent::SetUpAgent(UServer *pServer) {
     mPool = mServer->CreateUniquePackagePool(static_cast<asio::io_context &>(mCodec->GetExecutor().context()));
     mPool->Initial();
 
-    mHandler = mServer->CreateAgentHandler();
-    mHandler->SetUpAgent(this);
+    mWorker = mServer->CreateAgentWorker();
+    mWorker->SetUpAgent(this);
 }
 
 FPackageHandle UAgent::BuildPackage() const {
@@ -155,7 +155,7 @@ void UAgent::SetUpPlayer(APlayerHandle &&plr) {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        const auto pkg = self->mHandler->OnLoginSuccess(self->mPlayer->GetPlayerID());
+        const auto pkg = self->mWorker->OnLoginSuccess(self->mPlayer->GetPlayerID());
 
         pkg->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
         pkg->SetSource(SERVER_SOURCE_ID);
@@ -316,7 +316,7 @@ void UAgent::CancelAllTimers() {
     mTimerManager.CancelAll();
 }
 
-void UAgent::ListenEvent(const int event) const {
+void UAgent::ListenEvent(const int event) {
     if (mPlayer == nullptr || !mChannel.is_open())
         return;
 
@@ -324,15 +324,15 @@ void UAgent::ListenEvent(const int event) const {
     if (module == nullptr)
         return;
 
-    module->PlayerListenEvent(GetPlayerID(), event);
+    module->PlayerListenEvent(GenerateHandle(), event);
 }
 
-void UAgent::RemoveListener(const int event) const {
+void UAgent::RemoveListener(const int event) {
     auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
-    module->RemovePlayerListenerByEvent(GetPlayerID(), event);
+    module->RemovePlayerListenerByEvent(GenerateHandle(), event);
 }
 
 void UAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
@@ -358,12 +358,12 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
 }
 
 void UAgent::OnLoginFailed(const std::string &desc) {
-    if (mHandler != nullptr)
+    if (mWorker != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
     bCachable = false;
 
-    const auto pkg = mHandler->OnLoginFailure(desc);
+    const auto pkg = mWorker->OnLoginFailure(desc);
     if (pkg == nullptr) {
         Disconnect();
         return;
@@ -377,10 +377,10 @@ void UAgent::OnLoginFailed(const std::string &desc) {
 }
 
 void UAgent::OnRepeated(const std::string &addr) {
-    if (mHandler != nullptr)
+    if (mWorker != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
-    const auto pkg = mHandler->OnRepeated(addr);
+    const auto pkg = mWorker->OnRepeated(addr);
     if (pkg == nullptr) {
         Disconnect();
         return;
@@ -391,6 +391,13 @@ void UAgent::OnRepeated(const std::string &addr) {
     pkg->SetTarget(CLIENT_TARGET_ID);
 
     SendPackage(pkg);
+}
+
+FAgentHandle UAgent::GenerateHandle() {
+    if (mPlayer == nullptr || !mChannel.is_open())
+        return {};
+
+    return FAgentHandle(mPlayer->GetPlayerID(), weak_from_this());
 }
 
 
@@ -529,6 +536,10 @@ void UAgent::CleanUp() {
     if (mPlayer != nullptr) {
         mPlayer->OnLogout();
         mPlayer->Save();
+
+        if (auto *module = GetServer()->GetModule<UEventModule>()) {
+            module->RemovePlayerListener(GenerateHandle());
+        }
 
         if (bCachable) {
             mServer->RecyclePlayer(std::move(mPlayer));

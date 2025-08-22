@@ -3,7 +3,7 @@
 #include "Context.h"
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
-#include "base/AgentHandler.h"
+#include "base/AgentWorker.h"
 #include "config/Config.h"
 #include "login/LoginAuth.h"
 
@@ -363,7 +363,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
     if (bRepeat || !context->BootService()) {
         SPDLOG_ERROR("{} - Service[{}] Name Repeated Or Fail To Boot", __FUNCTION__, name);
         context->Stop();
-        mAllocator.RecycleTS(sid);
+        mAllocator.RecycleTS(sid.id);
         return;
     }
 
@@ -483,11 +483,11 @@ APlayerHandle UServer::CreatePlayer() const {
     return mPlayerFactory->CreatePlayer();
 }
 
-unique_ptr<IAgentHandler> UServer::CreateAgentHandler() const {
+unique_ptr<IAgentWorker> UServer::CreateAgentWorker() const {
     if (mPlayerFactory == nullptr)
         return nullptr;
 
-    return mPlayerFactory->CreateAgentHandler();
+    return mPlayerFactory->CreateAgentWorker();
 }
 
 awaitable<void> UServer::WaitForClient(const uint16_t port) {

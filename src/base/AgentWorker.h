@@ -10,13 +10,14 @@ class UAgent;
 class UServer;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
-class BASE_API IAgentHandler {
+
+class BASE_API IAgentWorker {
 
 public:
-    IAgentHandler();
-    virtual ~IAgentHandler();
+    IAgentWorker();
+    virtual ~IAgentWorker();
 
-    DISABLE_COPY_MOVE(IAgentHandler)
+    DISABLE_COPY_MOVE(IAgentWorker)
 
     void SetUpAgent(UAgent *agent);
 

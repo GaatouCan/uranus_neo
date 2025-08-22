@@ -1,11 +1,12 @@
 #pragma once
 
 #include "base/Recycler.h"
+#include "base/AgentHandle.h"
 #include "timer/TimerManager.h"
 
 
 class UServer;
-class IAgentHandler;
+class IAgentWorker;
 class IPlayerBase;
 class IServiceBase;
 class IPackageCodec_Interface;
@@ -128,8 +129,8 @@ public:
 #pragma endregion
 
 #pragma region Event
-    void ListenEvent(int event) const;
-    void RemoveListener(int event) const;
+    void ListenEvent(int event);
+    void RemoveListener(int event);
     void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
 #pragma endregion
 
@@ -139,6 +140,8 @@ public:
     void OnRepeated(const std::string &addr);
 
 private:
+    FAgentHandle GenerateHandle();
+
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
     awaitable<void> Watchdog();
@@ -151,7 +154,7 @@ private:
 
     unique_ptr<IPackageCodec_Interface> mCodec;
 
-    unique_ptr<IAgentHandler> mHandler;
+    unique_ptr<IAgentWorker> mWorker;
     unique_ptr<IRecyclerBase> mPool;
 
     APackageChannel mOutput;

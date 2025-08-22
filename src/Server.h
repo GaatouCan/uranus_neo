@@ -35,7 +35,7 @@ class BASE_API UServer final {
         ASteadyTimePoint timepoint;
     };
 
-    using AContextMap = absl::flat_hash_map<FContextHandle, shared_ptr<UContext>, FContextHandle::FHash, FContextHandle::FEqual>;
+    using AContextMap = absl::flat_hash_map<FServiceHandle, shared_ptr<UContext>, FServiceHandle::FHash, FServiceHandle::FEqual>;
 
 public:
     UServer();
@@ -109,7 +109,7 @@ public:
     unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
 
     APlayerHandle CreatePlayer() const;
-    unique_ptr<IAgentHandler> CreateAgentHandler() const;
+    unique_ptr<IAgentWorker> CreateAgentWorker() const;
 
     [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;

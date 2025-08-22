@@ -6,7 +6,7 @@
 
 
 class UAgent;
-class IAgentHandler;
+class IAgentWorker;
 class IPlayerBase;
 
 using std::unique_ptr;
@@ -23,5 +23,5 @@ public:
     virtual void Initial() = 0;
 
     [[nodiscard]] virtual APlayerHandle CreatePlayer() const = 0;
-    [[nodiscard]] virtual unique_ptr<IAgentHandler> CreateAgentHandler() const = 0;
+    [[nodiscard]] virtual unique_ptr<IAgentWorker> CreateAgentWorker() const = 0;
 };
