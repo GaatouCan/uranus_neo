@@ -108,7 +108,11 @@ public:
     unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
 
     FPlayerHandle CreatePlayer() const;
-    unique_ptr<IAgentWorker> CreateAgentWorker() const;
+    unique_ptr<IAgentHandler> CreateAgentHandler() const;
+
+    [[nodiscard]] ICodecFactory_Interface *GetCodecFactory() const;
+    [[nodiscard]] IPlayerFactory_Interface *GetPlayerFactory() const;
+    [[nodiscard]] IServiceFactory_Interface *GetServiceFactory() const;
 
     [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;

@@ -3,7 +3,7 @@
 #include "Context.h"
 #include "PlayerBase.h"
 #include "Utils.h"
-#include "base/AgentWorker.h"
+#include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
 #include "event/EventModule.h"
@@ -107,8 +107,8 @@ void UAgent::SetUpAgent(UServer *pServer) {
     mPool = mServer->CreateUniquePackagePool(static_cast<asio::io_context &>(mCodec->GetExecutor().context()));
     mPool->Initial();
 
-    mWorker = mServer->CreateAgentWorker();
-    mWorker->SetUpAgent(this);
+    mHandler = mServer->CreateAgentHandler();
+    mHandler->SetUpAgent(this);
 }
 
 FPackageHandle UAgent::BuildPackage() const {
@@ -155,7 +155,7 @@ void UAgent::SetUpPlayer(FPlayerHandle &&plr) {
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(GetSocket().get_executor(), [self = shared_from_this()]() -> awaitable<void> {
-        const auto pkg = self->mWorker->OnLoginSuccess(self->mPlayer->GetPlayerID());
+        const auto pkg = self->mHandler->OnLoginSuccess(self->mPlayer->GetPlayerID());
 
         pkg->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
         pkg->SetSource(SERVER_SOURCE_ID);
@@ -358,12 +358,12 @@ void UAgent::SendPackage(const FPackageHandle &pkg) {
 }
 
 void UAgent::OnLoginFailed(const std::string &desc) {
-    if (mWorker != nullptr)
+    if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
     bCachable = false;
 
-    const auto pkg = mWorker->OnLoginFailure(desc);
+    const auto pkg = mHandler->OnLoginFailure(desc);
     if (pkg == nullptr) {
         Disconnect();
         return;
@@ -377,10 +377,10 @@ void UAgent::OnLoginFailed(const std::string &desc) {
 }
 
 void UAgent::OnRepeated(const std::string &addr) {
-    if (mWorker != nullptr)
+    if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
 
-    const auto pkg = mWorker->OnRepeated(addr);
+    const auto pkg = mHandler->OnRepeated(addr);
     if (pkg == nullptr) {
         Disconnect();
         return;

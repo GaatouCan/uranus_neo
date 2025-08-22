@@ -10,8 +10,8 @@
 #include <spdlog/spdlog.h>
 
 
-typedef IServiceBase *(*AServiceCreator)();
-typedef void (*AServiceDestroyer)(IServiceBase *);
+using AServiceCreator = IServiceBase *(*)();
+using AServiceDestroyer = void (*)(IServiceBase *);
 
 using std::make_unique;
 

@@ -6,7 +6,7 @@
 
 
 class UServer;
-class IAgentWorker;
+class IAgentHandler;
 class IPlayerBase;
 class IServiceBase;
 class IPackageCodec_Interface;
@@ -151,7 +151,7 @@ private:
 
     unique_ptr<IPackageCodec_Interface> mCodec;
 
-    unique_ptr<IAgentWorker> mWorker;
+    unique_ptr<IAgentHandler> mHandler;
     unique_ptr<IRecyclerBase> mPool;
 
     APackageChannel mOutput;

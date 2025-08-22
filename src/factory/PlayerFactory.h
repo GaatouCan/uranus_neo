@@ -6,8 +6,9 @@
 
 
 class UAgent;
-class IAgentWorker;
+class IAgentHandler;
 class IPlayerBase;
+using std::unique_ptr;
 
 
 class BASE_API IPlayerFactory_Interface {
@@ -20,8 +21,8 @@ public:
 
     virtual void Initial() = 0;
 
-    [[nodiscard]] virtual FPlayerHandle CreatePlayer() const = 0;
-    [[nodiscard]] virtual unique_ptr<IAgentWorker> CreateAgentWorker() const = 0;
+    [[nodiscard]] virtual FPlayerHandle CreatePlayer() = 0;
+    [[nodiscard]] virtual unique_ptr<IAgentHandler> CreateAgentHandler() const = 0;
 
     virtual void DestroyPlayer(IPlayerBase *) const = 0;
 };

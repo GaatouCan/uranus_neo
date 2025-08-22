@@ -3,7 +3,7 @@
 #include "Context.h"
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
-#include "base/AgentWorker.h"
+#include "base/AgentHandler.h"
 #include "config/Config.h"
 #include "login/LoginAuth.h"
 
@@ -489,11 +489,23 @@ FPlayerHandle UServer::CreatePlayer() const {
     return mPlayerFactory->CreatePlayer();
 }
 
-unique_ptr<IAgentWorker> UServer::CreateAgentWorker() const {
+unique_ptr<IAgentHandler> UServer::CreateAgentHandler() const {
     if (mPlayerFactory == nullptr)
         return nullptr;
 
-    return mPlayerFactory->CreateAgentWorker();
+    return mPlayerFactory->CreateAgentHandler();
+}
+
+ICodecFactory_Interface *UServer::GetCodecFactory() const {
+    return mCodecFactory.get();
+}
+
+IPlayerFactory_Interface *UServer::GetPlayerFactory() const {
+    return mPlayerFactory.get();
+}
+
+IServiceFactory_Interface *UServer::GetServiceFactory() const {
+    return mServiceFactory.get();
 }
 
 awaitable<void> UServer::WaitForClient(const uint16_t port) {
