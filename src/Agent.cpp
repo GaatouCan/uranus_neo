@@ -163,7 +163,7 @@ void UAgent::SetUpPlayer(FPlayerHandle &&plr) {
 
         self->SendPackage(pkg);
 
-        self->mPlayer->OnLogin();
+        self->mPlayer->Initial();
         co_await self->ProcessChannel();
     }, detached);
 }

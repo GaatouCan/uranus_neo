@@ -27,6 +27,8 @@ public:
 
     [[nodiscard]] int64_t GetPlayerID() const;
 
+    virtual void Initial();
+
     virtual void OnLogin();
     virtual void OnLogout();
 
