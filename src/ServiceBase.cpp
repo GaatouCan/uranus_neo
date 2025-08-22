@@ -30,7 +30,7 @@ std::string IServiceBase::GetServiceName() const {
     return {};
 }
 
-FServiceHandle IServiceBase::GetServiceID() const {
+int64_t IServiceBase::GetServiceID() const {
     if (mContext == nullptr)
         return INVALID_SERVICE_ID;
     return mContext->GetServiceID();
