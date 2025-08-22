@@ -2,6 +2,7 @@
 
 #include "base/Types.h"
 #include "base/Recycler.h"
+#include "timer/TimerHandle.h"
 
 
 class UServer;
@@ -15,6 +16,7 @@ using std::unique_ptr;
 using std::make_shared;
 using std::make_unique;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using ATimerTask = std::function<void(ASteadyTimePoint, ASteadyDuration)>;
 
 
 class BASE_API IPlayerBase {
