@@ -4,7 +4,6 @@
 #include "PlayerBase.h"
 #include "base/MultiIOContextPool.h"
 #include "base/SingleIOContextPool.h"
-#include "base/ContextHandle.h"
 #include "base/IdentAllocator.h"
 #include "factory/CodecFactory.h"
 #include "factory/PlayerFactory.h"
@@ -35,7 +34,7 @@ class BASE_API UServer final {
         ASteadyTimePoint timepoint;
     };
 
-    using AContextMap = absl::flat_hash_map<FServiceHandle, shared_ptr<UContext>, FServiceHandle::FHash, FServiceHandle::FEqual>;
+    using AContextMap = absl::flat_hash_map<int64_t, shared_ptr<UContext>>;
 
 public:
     UServer();
@@ -123,12 +122,12 @@ public:
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
-    [[nodiscard]] shared_ptr<UContext> FindService(const FServiceHandle &sid) const;
+    [[nodiscard]] shared_ptr<UContext> FindService(int64_t sid) const;
     [[nodiscard]] shared_ptr<UContext> FindService(const std::string &name) const;
 
     void BootService(const std::string &path, const IDataAsset_Interface *pData);
 
-    void ShutdownService(const FServiceHandle &handle);
+    void ShutdownService(int64_t sid);
     void ShutdownService(const std::string &name);
 
 private:
@@ -160,7 +159,7 @@ private:
     AContextMap mServiceMap;
     mutable std::shared_mutex mServiceMutex;
 
-    absl::flat_hash_map<std::string, FServiceHandle> mServiceNameMap;
+    absl::flat_hash_map<std::string, int64_t> mServiceNameMap;
     mutable std::shared_mutex mServiceNameMutex;
 
     TIdentAllocator<int64_t, true> mAllocator;

@@ -324,15 +324,15 @@ void UAgent::ListenEvent(const int event) {
     if (module == nullptr)
         return;
 
-    module->PlayerListenEvent(GenerateHandle(), event);
+    module->PlayerListenEvent(mPlayer->GetPlayerID(), weak_from_this(), event);
 }
 
-void UAgent::RemoveListener(const int event) {
+void UAgent::RemoveListener(const int event) const {
     auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
-    module->RemovePlayerListenerByEvent(GenerateHandle(), event);
+    module->RemovePlayerListenerByEvent(mPlayer->GetPlayerID(), event);
 }
 
 void UAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
@@ -392,14 +392,6 @@ void UAgent::OnRepeated(const std::string &addr) {
 
     SendPackage(pkg);
 }
-
-FAgentHandle UAgent::GenerateHandle() {
-    if (mPlayer == nullptr || !mChannel.is_open())
-        return {};
-
-    return FAgentHandle(mPlayer->GetPlayerID(), weak_from_this());
-}
-
 
 awaitable<void> UAgent::WritePackage() {
     try {
@@ -537,9 +529,9 @@ void UAgent::CleanUp() {
         mPlayer->OnLogout();
         mPlayer->Save();
 
-        if (auto *module = GetServer()->GetModule<UEventModule>()) {
-            module->RemovePlayerListener(GenerateHandle());
-        }
+        // if (auto *module = GetServer()->GetModule<UEventModule>()) {
+        //     module->RemovePlayerListener(GenerateHandle());
+        // }
 
         if (bCachable) {
             mServer->RecyclePlayer(std::move(mPlayer));

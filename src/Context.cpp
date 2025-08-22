@@ -85,7 +85,7 @@ void UContext::SetUpServer(UServer *pServer) {
     mServer = pServer;
 }
 
-void UContext::SetUpServiceID(const FServiceHandle sid) {
+void UContext::SetUpServiceID(const int64_t sid) {
     mServiceID = sid;
 }
 
@@ -152,11 +152,11 @@ bool UContext::BootService() {
     }
 
     SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
-        __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
+        __FUNCTION__, static_cast<const void *>(this), mServiceID, GetServiceName());
 
     if (mService->bUpdatePerTick) {
         if (auto *module = GetServer()->GetModule<UTickerModule>()) {
-            module->AddTicker(GenerateHandle());
+            module->AddTicker(mServiceID, weak_from_this());
         }
     }
 
@@ -173,7 +173,7 @@ std::string UContext::GetServiceName() const {
     return "UNKNOWN";
 }
 
-FServiceHandle UContext::GetServiceID() const {
+int64_t UContext::GetServiceID() const {
     return mServiceID;
 }
 
@@ -423,15 +423,15 @@ void UContext::ListenEvent(const int event) {
     if (module == nullptr)
         return;
 
-    module->ServiceListenEvent(GenerateHandle(), event);
+    module->ServiceListenEvent(mServiceID, weak_from_this(), event);
 }
 
-void UContext::RemoveListener(const int event) {
+void UContext::RemoveListener(const int event) const {
     auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
-    module->RemoveServiceListenerByEvent(GenerateHandle(), event);
+    module->RemoveServiceListenerByEvent(mServiceID, event);
 }
 
 void UContext::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
@@ -453,14 +453,6 @@ UServer *UContext::GetServer() const {
 
 asio::io_context &UContext::GetIOContext() const {
     return mCtx;
-}
-
-
-FContextHandle UContext::GenerateHandle() {
-    if (static_cast<int64_t>(mServiceID) == INVALID_SERVICE_ID)
-        return {};
-
-    return { mServiceID, weak_from_this() };
 }
 
 FPackageHandle UContext::BuildPackage() const {
@@ -505,13 +497,13 @@ void UContext::CleanUp() {
     mService = nullptr;
     mLibrary.Reset();
 
-    if (auto *module = GetServer()->GetModule<UEventModule>()) {
-        module->RemoveServiceListener(mServiceID);
-    }
-
-    if (auto *module = GetServer()->GetModule<UTickerModule>()) {
-        module->RemoveTicker(mServiceID);
-    }
+    // if (auto *module = GetServer()->GetModule<UEventModule>()) {
+    //     module->RemoveServiceListener(mServiceID);
+    // }
+    //
+    // if (auto *module = GetServer()->GetModule<UTickerModule>()) {
+    //     module->RemoveTicker(mServiceID);
+    // }
 
     mServiceID = INVALID_SERVICE_ID;
 }

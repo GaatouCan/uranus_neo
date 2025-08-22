@@ -48,10 +48,10 @@ void UServer::Initial() {
             continue;
         }
 
-        const FServiceHandle sid = mAllocator.Allocate();
+        const auto sid = mAllocator.Allocate();
 
         if (mServiceMap.contains(sid)) [[unlikely]]
-            throw std::logic_error(fmt::format("Allocate Same Service ID[{}]", sid.id));
+            throw std::logic_error(fmt::format("Allocate Same Service ID[{}]", sid));
 
         const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
         context->SetUpServer(this);
@@ -280,7 +280,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     agent->SetUpPlayer(std::move(player));
 }
 
-shared_ptr<UContext> UServer::FindService(const FServiceHandle &sid) const {
+shared_ptr<UContext> UServer::FindService(const int64_t sid) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
@@ -293,7 +293,7 @@ shared_ptr<UContext> UServer::FindService(const std::string &name) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
-    FServiceHandle handle;
+    int64_t sid = -1;
 
     {
         std::shared_lock lock(mServiceNameMutex);
@@ -301,10 +301,13 @@ shared_ptr<UContext> UServer::FindService(const std::string &name) const {
         if (iter == mServiceNameMap.end())
             return nullptr;
 
-        handle = iter->second;
+        sid = iter->second;
     }
 
-    return FindService(handle);
+    if (sid < 0)
+        return nullptr;
+
+    return FindService(sid);
 }
 
 void UServer::BootService(const std::string &path, const IDataAsset_Interface *pData) {
@@ -317,13 +320,13 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
         return;
     }
 
-    const FServiceHandle sid = mAllocator.AllocateTS();
+    const auto sid = mAllocator.AllocateTS();
 
     // Check If The Service Handle Is Valid
     {
         std::shared_lock lock(mServiceMutex);
         if (mServiceMap.contains(sid)) {
-            SPDLOG_CRITICAL("{} - Service Handle Repeated, [{}]", __FUNCTION__, sid.id);
+            SPDLOG_CRITICAL("{} - Service Handle Repeated, [{}]", __FUNCTION__, sid);
             return;
         }
     }
@@ -335,7 +338,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
     context->SetUpLibrary(library);
 
     if (!context->Initial(pData)) {
-        SPDLOG_ERROR("{} - Service[{}] Initialize Fail", __FUNCTION__, sid.id);
+        SPDLOG_ERROR("{} - Service[{}] Initialize Fail", __FUNCTION__, sid);
         context->Stop();
         mAllocator.RecycleTS(sid);
         return;
@@ -345,7 +348,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
 
     // Check If The Service Name Is Defined
     if (name.empty() || name == "UNKNOWN") {
-        SPDLOG_ERROR("{} - Service[{}] Name Undefined", __FUNCTION__, sid.id);
+        SPDLOG_ERROR("{} - Service[{}] Name Undefined", __FUNCTION__, sid);
         context->Stop();
         mAllocator.RecycleTS(sid);
         return;
@@ -363,7 +366,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
     if (bRepeat || !context->BootService()) {
         SPDLOG_ERROR("{} - Service[{}] Name Repeated Or Fail To Boot", __FUNCTION__, name);
         context->Stop();
-        mAllocator.RecycleTS(sid.id);
+        mAllocator.RecycleTS(sid);
         return;
     }
 
@@ -374,7 +377,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
     mServiceNameMap.insert_or_assign(name, sid);
 }
 
-void UServer::ShutdownService(const FServiceHandle &handle) {
+void UServer::ShutdownService(const int64_t sid) {
     if (mState != EServerState::RUNNING)
         return;
 
@@ -383,7 +386,7 @@ void UServer::ShutdownService(const FServiceHandle &handle) {
     // Erase From Service Map
     {
         std::unique_lock lock(mServiceMutex);
-        const auto iter = mServiceMap.find(handle);
+        const auto iter = mServiceMap.find(sid);
         if (iter == mServiceMap.end())
             return;
 
@@ -403,9 +406,9 @@ void UServer::ShutdownService(const FServiceHandle &handle) {
     }
 
     // Recycle The Service Handle
-    mAllocator.RecycleTS(handle);
+    mAllocator.RecycleTS(sid);
 
-    SPDLOG_INFO("{} - Stop The Service[{}, {}]", __FUNCTION__, handle.id, name);
+    SPDLOG_INFO("{} - Stop The Service[{}, {}]", __FUNCTION__, sid, name);
     context->Stop();
 }
 
@@ -413,7 +416,7 @@ void UServer::ShutdownService(const std::string &name) {
     if (mState != EServerState::RUNNING)
         return;
 
-    FServiceHandle handle;
+    int64_t sid = -1;
 
     // Get The Service Handle And Erase From The Name Mapping
     {
@@ -422,16 +425,19 @@ void UServer::ShutdownService(const std::string &name) {
         if (iter == mServiceNameMap.end())
             return;
 
-        handle = iter->second;
+        sid = iter->second;
         mServiceNameMap.erase(iter);
     }
+
+    if (sid < 0)
+        return;
 
     shared_ptr<UContext> context;
 
     // Erase From The Service Map
     {
         std::unique_lock lock(mServiceMutex);
-        const auto iter = mServiceMap.find(handle);
+        const auto iter = mServiceMap.find(sid);
         if (iter == mServiceMap.end())
             return;
 
@@ -440,17 +446,17 @@ void UServer::ShutdownService(const std::string &name) {
     }
 
     // Recycle The Service Handle
-    mAllocator.RecycleTS(handle);
+    mAllocator.RecycleTS(sid);
 
     if (context == nullptr)
         return;
 
     // If The Target Name Not Equal
     if (context->GetServiceName() != name) {
-        SPDLOG_CRITICAL("{} - Service[{}] Name Not Equal[{} - {}]", __FUNCTION__, handle.id, name, context->GetServiceName());
+        SPDLOG_CRITICAL("{} - Service[{}] Name Not Equal[{} - {}]", __FUNCTION__, sid, name, context->GetServiceName());
     }
 
-    SPDLOG_INFO("{} - Stop The Service[{}, {}]", __FUNCTION__, handle.id, context->GetServiceName());
+    SPDLOG_INFO("{} - Stop The Service[{}, {}]", __FUNCTION__, sid, context->GetServiceName());
     context->Stop();
 }
 

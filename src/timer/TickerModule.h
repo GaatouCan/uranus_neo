@@ -2,17 +2,21 @@
 
 #include "Module.h"
 #include "base/Types.h"
-#include "base/ContextHandle.h"
 
-#include <absl/container/flat_hash_set.h>
+#include <absl/container/flat_hash_map.h>
+#include <memory>
 #include <shared_mutex>
+
+
+class UContext;
+using std::weak_ptr;
 
 
 class BASE_API UTickerModule final : public IModuleBase {
 
     DECLARE_MODULE(UTickerModule)
 
-    using ATickerSet = absl::flat_hash_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>;
+    using ATickerSet = absl::flat_hash_map<int64_t, weak_ptr<UContext>>;
 
 protected:
     void Initial() override;
@@ -27,8 +31,8 @@ public:
         return "Timer Module";
     }
 
-    void AddTicker(const FContextHandle &handle);
-    void RemoveTicker(const FContextHandle &handle);
+    void AddTicker(int64_t sid, const weak_ptr<UContext> &weakPtr);
+    void RemoveTicker(int64_t sid);
 
 private:
 #pragma region Update

@@ -36,7 +36,7 @@ void UTickerModule::Start() {
 
             std::unique_lock lock(mTickMutex);
             for (auto iter = mTickers.begin(); iter != mTickers.end();) {
-                if (const auto ctx = iter->Get()) {
+                if (const auto ctx = iter->second.lock()) {
                     ctx->PushTicker(tickPoint, delta);
                     ++iter;
                 } else {
@@ -53,26 +53,26 @@ UTickerModule::~UTickerModule() {
     Stop();
 }
 
-void UTickerModule::AddTicker(const FContextHandle &handle) {
+void UTickerModule::AddTicker(const int64_t sid, const weak_ptr<UContext> &weakPtr) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    if (!handle.IsValid())
+    if (sid < 0)
         return;
 
     std::unique_lock lock(mTickMutex);
-    mTickers.insert(handle);
+    mTickers.insert_or_assign(sid, weakPtr);
 }
 
-void UTickerModule::RemoveTicker(const FContextHandle &handle) {
+void UTickerModule::RemoveTicker(const int64_t sid) {
     if (mState != EModuleState::RUNNING || GetServer()->GetState() == EServerState::TERMINATED)
         return;
 
-    if (handle < 0)
+    if (sid < 0)
         return;
 
     std::unique_lock lock(mTickMutex);
-    mTickers.erase(handle);
+    mTickers.erase(sid);
 }
 
 void UTickerModule::Stop() {

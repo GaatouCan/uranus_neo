@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base/Recycler.h"
-#include "base/AgentHandle.h"
 #include "factory/PlayerHandle.h"
 #include "timer/TimerManager.h"
 
@@ -130,7 +129,7 @@ public:
 
 #pragma region Event
     void ListenEvent(int event);
-    void RemoveListener(int event);
+    void RemoveListener(int event) const;
     void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
 #pragma endregion
 
@@ -140,8 +139,6 @@ public:
     void OnRepeated(const std::string &addr);
 
 private:
-    FAgentHandle GenerateHandle();
-
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
     awaitable<void> Watchdog();

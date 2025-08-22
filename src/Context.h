@@ -2,7 +2,6 @@
 
 #include "base/Recycler.h"
 #include "base/SharedLibrary.h"
-#include "base/ContextHandle.h"
 #include "timer/TimerManager.h"
 
 
@@ -105,17 +104,14 @@ public:
     DISABLE_COPY_MOVE(UContext)
 
     void SetUpServer(UServer *pServer);
-    void SetUpServiceID(FServiceHandle sid);
+    void SetUpServiceID(int64_t sid);
     void SetUpLibrary(const FSharedLibrary &library);
 
     [[nodiscard]] UServer *GetServer() const;
     [[nodiscard]] asio::io_context &GetIOContext() const;
 
-    [[nodiscard]] FServiceHandle GetServiceID() const;
+    [[nodiscard]] int64_t GetServiceID() const;
     [[nodiscard]] std::string GetServiceName() const;
-
-    /** Generate A Handle To Represent Itself **/
-    [[nodiscard]] FContextHandle GenerateHandle();
 
     bool Initial(const IDataAsset_Interface *pData);
     bool BootService();
@@ -151,7 +147,7 @@ public:
 
 #pragma region Event
     void ListenEvent(int event);
-    void RemoveListener(int event);
+    void RemoveListener(int event) const;
     void DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const;
 #pragma endregion
 
@@ -163,7 +159,7 @@ private:
     asio::io_context &mCtx;
     UServer *mServer;
 
-    FServiceHandle mServiceID;
+    int64_t mServiceID;
     IServiceBase *mService;
 
     AContextChannel mChannel;
