@@ -342,8 +342,7 @@ void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
 
     {
         std::shared_lock localLock(mMutex);
-        const auto total = mQueue.size() + mUsage;
-        if (total < mShrinkCount)
+        if (const auto total = mQueue.size() + mUsage; total < mShrinkCount)
             return;
     }
 
@@ -359,7 +358,7 @@ void IRecyclerBase::Recycle(detail::IElementNodeBase *pNode) {
             bShrinking = false;
 
         } catch (const std::exception &e) {
-            SPDLOG_ERROR("{:<20} - Recycler Exception [{}]", __FUNCTION__, e.what());
+            SPDLOG_ERROR("{} - Recycler Exception [{}]", "IRecyclerBase::Recycle", e.what());
         }
     }, detached);
 }
