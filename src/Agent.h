@@ -12,12 +12,13 @@ class IPackageCodec_Interface;
 class IEventParam_Interface;
 class IPackage_Interface;
 
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-using APlayerTask = std::function<void(IPlayerBase *)>;
-using AServiceTask = std::function<void(IServiceBase *)>;
 using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
+using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using APlayerTask = std::function<void(IPlayerBase *)>;
+using AServiceTask = std::function<void(IServiceBase *)>;
+using APlayerHandle = unique_ptr<IPlayerBase, std::function<void(IPlayerBase*)>>;
 
 
 enum class EAgentState {
@@ -103,8 +104,8 @@ public:
     void ConnectToClient();
     void Disconnect();
 
-    void SetUpPlayer(unique_ptr<IPlayerBase> &&plr);
-    [[nodiscard]] unique_ptr<IPlayerBase> ExtractPlayer();
+    void SetUpPlayer(APlayerHandle &&plr);
+    [[nodiscard]] APlayerHandle ExtractPlayer();
 
 #pragma region Schedule Node
     void PushPackage(const FPackageHandle &pkg);
@@ -162,7 +163,7 @@ private:
 
     UTimerManager mTimerManager;
 
-    unique_ptr<IPlayerBase> mPlayer;
+    APlayerHandle mPlayer;
 
     std::string mKey;
     bool bCachable;

@@ -10,7 +10,7 @@ class IAgentHandler;
 class IPlayerBase;
 
 using std::unique_ptr;
-
+using APlayerHandle = unique_ptr<IPlayerBase, std::function<void(IPlayerBase*)>>;
 
 class BASE_API IPlayerFactory_Interface {
 
@@ -22,6 +22,6 @@ public:
 
     virtual void Initial() = 0;
 
-    virtual unique_ptr<IPlayerBase> CreatePlayer() const = 0;
-    virtual unique_ptr<IAgentHandler> CreateAgentHandler() const = 0;
+    [[nodiscard]] virtual APlayerHandle CreatePlayer() const = 0;
+    [[nodiscard]] virtual unique_ptr<IAgentHandler> CreateAgentHandler() const = 0;
 };

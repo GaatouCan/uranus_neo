@@ -179,8 +179,7 @@ std::vector<shared_ptr<UAgent>> UServer::GetPlayerList(const std::vector<int64_t
     std::vector<shared_ptr<UAgent>> result;
     std::shared_lock lock(mPlayerMutex);
     for (const auto &pid : list) {
-        const auto iter = mPlayerMap.find(pid);
-        if (iter != mPlayerMap.end()) {
+        if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
             result.push_back(iter->second);
         }
     }
@@ -196,7 +195,7 @@ void UServer::RemovePlayer(const int64_t pid) {
     mPlayerMap.erase(pid);
 }
 
-void UServer::RecyclePlayer(unique_ptr<IPlayerBase> &&player) {
+void UServer::RecyclePlayer(APlayerHandle &&player) {
     if (mState != EServerState::RUNNING)
         return;
 
@@ -228,7 +227,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     if (mState != EServerState::RUNNING)
         return;
 
-    unique_ptr<IPlayerBase> player;
+    APlayerHandle player;
 
     shared_ptr<UAgent> agent;
     shared_ptr<UAgent> existed;
@@ -477,7 +476,7 @@ unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool(asio::io_context &ctx
     return mCodecFactory->CreateUniquePackagePool(ctx);
 }
 
-unique_ptr<IPlayerBase> UServer::CreatePlayer() const {
+APlayerHandle UServer::CreatePlayer() const {
     if (mPlayerFactory == nullptr)
         return nullptr;
 
@@ -558,14 +557,13 @@ awaitable<void> UServer::CollectCachedPlayer() {
         while (mState != EServerState::TERMINATED) {
             point += duration;
             mCacheTimer.expires_at(point);
-            auto [ec] = co_await mCacheTimer.async_wait();
-            if (ec) {
+            if (auto [ec] = co_await mCacheTimer.async_wait(); ec) {
                 SPDLOG_ERROR("{} - {}", __FUNCTION__, ec.message());
                 break;
             }
 
             std::unique_lock lock(mCacheMutex);
-            absl::erase_if(mCachedMap, [point, keepSec](decltype(mCachedMap)::value_type &pair) {
+            absl::erase_if(mCachedMap, [point, keepSec](const decltype(mCachedMap)::value_type &pair) {
                 return point - pair.second.timepoint > std::chrono::seconds(keepSec);
             });
 

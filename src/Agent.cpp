@@ -144,7 +144,7 @@ void UAgent::Disconnect() {
     mChannel.close();
 }
 
-void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
+void UAgent::SetUpPlayer(APlayerHandle &&plr) {
     if (!IsSocketOpen())
         return;
 
@@ -168,7 +168,7 @@ void UAgent::SetUpPlayer(unique_ptr<IPlayerBase> &&plr) {
     }, detached);
 }
 
-unique_ptr<IPlayerBase> UAgent::ExtractPlayer() {
+APlayerHandle UAgent::ExtractPlayer() {
     return std::move(mPlayer);
 }
 
