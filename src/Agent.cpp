@@ -369,7 +369,7 @@ void UAgent::OnLoginFailed(const std::string &desc) {
         return;
     }
 
-    pkg->SetPackageID(LOGIN_FAILED_PACKAGE_ID);
+    pkg->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
     pkg->SetSource(SERVER_SOURCE_ID);
     pkg->SetTarget(CLIENT_TARGET_ID);
 
