@@ -32,7 +32,11 @@ FPackageHandle UAgentHandlerImpl::OnLoginFailure(int code, const std::string &de
 }
 
 FPackageHandle UAgentHandlerImpl::OnRepeated(const std::string &addr) {
+    // TODO
+    return {};
 }
 
 FPlatformInfo UAgentHandlerImpl::ParsePlatformInfo(const FPackageHandle &pkg) {
+    // TODO
+    return {};
 }

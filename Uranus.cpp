@@ -2,9 +2,11 @@
 #include <config/Config.h>
 #include <login/LoginAuth.h>
 #include <event/EventModule.h>
-#include <timer/TickerModule.h>
 #include <logger/LoggerModule.h>
 #include <monitor/Monitor.h>
+#include <gateway/Gateway.h>
+#include <service/ServiceModule.h>
+#include <route/RouteModule.h>
 #include <internal/CodecFactory.h>
 #include <internal/PlayerFactory.h>
 #include <internal/ServiceFactory.h>
@@ -31,7 +33,7 @@ int main() {
     }
 
     server->CreateModule<UEventModule>();
-    server->CreateModule<UTickerModule>();
+    server->CreateModule<URouteModule>();
     server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
 
@@ -39,9 +41,15 @@ int main() {
     //     dataAccess->SetDatabaseAdapter<UMongoAdapter>();
     // }
 
+    if (auto *module = server->CreateModule<UServiceModule>(); module != nullptr) {
+        module->SetServiceFactory<UServiceFactory>();
+    }
+
+    if (auto *gateway = server->CreateModule<UGateway>(); gateway != nullptr) {
+        gateway->SetPlayerFactory<UPlayerFactory>();
+    }
+
     server->SetCodecFactory<UCodecFactory>();
-    server->SetPlayerFactory<UPlayerFactory>();
-    server->SetServiceFactory<UServiceFactory>();
 
     server->Initial();
     server->Start();
