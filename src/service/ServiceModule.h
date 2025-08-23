@@ -19,9 +19,36 @@ using std::make_shared;
 class UServiceAgent;
 class IDataAsset_Interface;
 
+/**
+ * Manager All The Services
+ */
 class BASE_API UServiceModule final : public IModuleBase {
 
     DECLARE_MODULE(UServiceModule)
+
+    /** The Worker Pool For All The Service **/
+    USingleIOContextPool mWorkerPool;
+
+    /** All The Service Map **/
+    absl::flat_hash_map<int64_t, shared_ptr<UServiceAgent>> mServiceMap;
+    mutable std::shared_mutex mServiceMutex;
+
+    /** Service Name To Serivce ID Mapping **/
+    absl::flat_hash_map<std::string, int64_t> mServiceNameMap;
+    mutable std::shared_mutex mServiceNameMutex;
+
+    /** The Service Factory Use To Load Service Shared Libraries **/
+    unique_ptr<IServiceFactory_Interface> mServiceFactory;
+
+    /** Allocate Service ID **/
+    TIdentAllocator<int64_t, true> mAllocator;
+
+    /** For Update Per Tick **/
+    std::unique_ptr<ASteadyTimer> mTickTimer;
+
+    /** All The Service ID Which Need To Update **/
+    absl::flat_hash_set<int64_t> mTickerSet;
+    mutable std::shared_mutex mTickMutex;
 
 public:
     UServiceModule();
@@ -40,17 +67,28 @@ public:
         mServiceFactory = make_unique<T>(std::forward<Args>(args)...);
     }
 
+    /// Get Reference Of IOContext In Worker Pool
     [[nodiscard]] asio::io_context &GetWorkerIOContext();
 
+    /// Find Service By Service ID
     [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
+
+    /// Find Service By Service Name
     [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
 
+    /// Boot Extend Service
     void BootService(const std::string &path, IDataAsset_Interface *pData);
 
+    /// Shutdown Extend Service By Service ID
     void ShutdownService(int64_t sid);
+
+    /// Shutdown Extend Service By Service Name
     void ShutdownService(const std::string &name);
 
-    void AddTicker(int64_t sid);
+    /// Register Service To Update
+    void InsertTicker(int64_t sid);
+
+    /// Unregister Service To Update
     void RemoveTicker(int64_t sid);
 
 protected:
@@ -60,21 +98,4 @@ protected:
 
 private:
     awaitable<void> UpdateLoop(int ms);
-
-private:
-    USingleIOContextPool mWorkerPool;
-
-    absl::flat_hash_map<int64_t, shared_ptr<UServiceAgent>> mServiceMap;
-    mutable std::shared_mutex mServiceMutex;
-
-    absl::flat_hash_map<std::string, int64_t> mServiceNameMap;
-    mutable std::shared_mutex mServiceNameMutex;
-
-    unique_ptr<IServiceFactory_Interface> mServiceFactory;
-    TIdentAllocator<int64_t, true> mAllocator;
-
-    std::unique_ptr<ASteadyTimer> mTickTimer;
-
-    absl::flat_hash_set<int64_t> mTickerSet;
-    mutable std::shared_mutex mTickMutex;
 };

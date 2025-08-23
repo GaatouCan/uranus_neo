@@ -15,6 +15,7 @@ public:
     DISABLE_COPY_MOVE(USingleIOContextPool);
 
     void Start(size_t capacity = 4);
+    void Stop();
 
     [[nodiscard]] asio::io_context& GetIOContext();
 

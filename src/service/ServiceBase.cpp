@@ -35,7 +35,6 @@ FPackageHandle IServiceBase::BuildPackage() const {
     return {};
 }
 
-
 void IServiceBase::ListenEvent(const int event) const {
     if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)
         throw std::runtime_error(std::format("{} - In Error State: [{}]", __FUNCTION__, static_cast<int>(mState.load())));
@@ -78,6 +77,9 @@ void IServiceBase::TryCreateLogger(const std::string &name) const {
         return;
 
     module->TryCreateLogger(name);
+}
+
+void IServiceBase::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
 }
 
 EServiceState IServiceBase::GetState() const {
@@ -162,14 +164,4 @@ void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) co
         return;
 
     GetAgentT<UServiceAgent>()->SendToClient(pid, pkg);
-}
-
-void IServiceBase::OnPackage(IPackage_Interface *pkg) {
-}
-
-void IServiceBase::OnEvent(IEventParam_Interface *event) {
-}
-
-void IServiceBase::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
-
 }

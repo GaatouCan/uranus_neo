@@ -7,6 +7,8 @@ USingleIOContextPool::USingleIOContextPool()
 }
 
 USingleIOContextPool::~USingleIOContextPool() {
+    Stop();
+
     for (auto &val: mThreadList) {
         if (val.joinable()) {
             val.join();
@@ -26,6 +28,14 @@ void USingleIOContextPool::Start(const size_t capacity) {
     signals.async_wait([this](auto, auto) {
         mIOContext.stop();
     });
+}
+
+void USingleIOContextPool::Stop() {
+    if (mIOContext.stopped())
+        return;
+
+    mGuard.reset();
+    mIOContext.stop();
 }
 
 asio::io_context &USingleIOContextPool::GetIOContext() {

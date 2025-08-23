@@ -129,7 +129,7 @@ bool UServiceAgent::BootService() {
     // If It Set Update
     if (mService->bUpdatePerTick) {
         if (auto *module = dynamic_cast<UServiceModule *>(mModule)) {
-            module->AddTicker(mServiceID);
+            module->InsertTicker(mServiceID);
         }
     }
 

@@ -4,6 +4,7 @@
 
 #include <spdlog/spdlog.h>
 
+
 UServiceModule::UServiceModule() {
 }
 
@@ -20,44 +21,53 @@ void UServiceModule::Initial() {
         throw std::logic_error(std::format("{} - Module[{}] Not In CREATED State", __FUNCTION__, GetModuleName()));
 
     const auto &cfg = GetServer()->GetServerConfig();
-    
+
+    // Load The Service Shared Libraries
     mServiceFactory->LoadService();
 
+    // Create All The Core Services Defined In Configureation
     for (const auto &val : cfg["services"]["core"]) {
         const auto path = val["path"].as<std::string>();
-        const auto library = mServiceFactory->FindService(path);
+        const auto library = mServiceFactory->FindService("core." + path);
         if (!library.IsValid()) {
             SPDLOG_CRITICAL("Failed To Find Service[{}]", path);
             continue;
         }
 
+        // Allocate A Service ID
         const auto sid = mAllocator.Allocate();
 
+        // Check If Service ID Repeated
         if (mServiceMap.contains(sid)) [[unlikely]]
             throw std::logic_error(fmt::format("Allocate Same Service ID[{}]", sid));
 
-        const auto context = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
-        
-        context->SetUpServiceID(sid);
-        context->SetUpLibrary(library);
+        // Create An Agent For Service
+        const auto agent = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
 
-        if (!context->Initial(this, nullptr)) {
+        // Set Up The Agent
+        agent->SetUpServiceID(sid);
+        agent->SetUpLibrary(library);
+
+        // Initial The Agent
+        if (!agent->Initial(this, nullptr)) {
             SPDLOG_CRITICAL("Failed To Initial Service: {}", path);
             mAllocator.Recycle(sid);
-            context->Stop();
+            agent->Stop();
             continue;
         }
 
-        const std::string name = context->GetServiceName();
+        // Check If The Service Name Repeated
+        const std::string name = agent->GetServiceName();
         if (mServiceNameMap.contains(name)) {
             SPDLOG_CRITICAL("Service[{}] Already Exists", name);
-            context->Stop();
+            agent->Stop();
             continue;
         }
 
         SPDLOG_INFO("Service[{}] Initialized", name);
 
-        mServiceMap.insert_or_assign(sid, context);
+        // Insert The Service And Its Name To The Maps
+        mServiceMap.insert_or_assign(sid, agent);
         mServiceNameMap.insert_or_assign(name, sid);
     }
 
@@ -67,7 +77,9 @@ void UServiceModule::Initial() {
     mTickTimer = make_unique<ASteadyTimer>(mWorkerPool.GetIOContext());
     co_spawn(mWorkerPool.GetIOContext(), UpdateLoop(updateMs), detached);
 
+    // Start The Worker Pool
     mWorkerPool.Start(4);
+
     mState = EModuleState::INITIALIZED;
 }
 
@@ -75,6 +87,7 @@ void UServiceModule::Start() {
     if (mState != EModuleState::INITIALIZED)
         throw std::logic_error(std::format("{} - Module[{}] Not In INITIALIZED State", __FUNCTION__, GetModuleName()));
 
+    // Boot All The Core Service
     for (const auto &context : mServiceMap | std::views::values) {
         SPDLOG_INFO("Boot Service[{}]", context->GetServiceName());
         context->BootService();
@@ -87,17 +100,24 @@ void UServiceModule::Stop() {
     if (mState == EModuleState::STOPPED)
         return;
 
+    mState = EModuleState::STOPPED;
+
+    // Stop The Worker Pool
+    mWorkerPool.Stop();
+
+    // Stop The Update Timer
     if (mTickTimer != nullptr) {
         mTickTimer->cancel();
     }
 
+    // Shutdown All The Core Service
     for (const auto &context : mServiceMap | std::views::values) {
         SPDLOG_INFO("Stop Service[{}]", context->GetServiceName());
         context->Stop();
     }
 
     mServiceMap.clear();
-    mState = EModuleState::STOPPED;
+    mServiceNameMap.clear();
 }
 
 awaitable<void> UServiceModule::UpdateLoop(int ms) {
@@ -125,6 +145,7 @@ awaitable<void> UServiceModule::UpdateLoop(int ms) {
                     continue;
                 }
 
+                // Erase The Expired Service ID
                 mTickerSet.erase(tickIter++);
             }
         }
@@ -146,8 +167,9 @@ shared_ptr<UServiceAgent> UServiceModule::FindService(const std::string &name) c
     if (mState != EModuleState::RUNNING)
         return nullptr;
 
-    int64_t sid = -1;
+    int64_t sid;
 
+    // Find The Service ID
     {
         std::shared_lock lock(mServiceNameMutex);
         const auto iter = mServiceNameMap.find(name);
@@ -167,7 +189,7 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
     if (mState != EModuleState::RUNNING || mServiceFactory == nullptr)
         return;
 
-    const auto library = mServiceFactory->FindService(path);
+    const auto library = mServiceFactory->FindService("extend." + path);
     if (!library.IsValid()) {
         SPDLOG_ERROR("{} - Fail To Find Service Library[{}]", __FUNCTION__, path);
         return;
@@ -175,33 +197,35 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
 
     const auto sid = mAllocator.AllocateTS();
 
-    // Check If The Service Handle Is Valid
+    // Check If The Service ID Is Valid
     {
         std::shared_lock lock(mServiceMutex);
         if (mServiceMap.contains(sid)) {
-            SPDLOG_CRITICAL("{} - Service Handle Repeated, [{}]", __FUNCTION__, sid);
+            SPDLOG_CRITICAL("{} - Service ID Repeated, [{}]", __FUNCTION__, sid);
             return;
         }
     }
 
-    const auto context = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
+    // Create The Agent For Service
+    const auto agent = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
 
-    context->SetUpServiceID(sid);
-    context->SetUpLibrary(library);
+    // Set Up The Agent
+    agent->SetUpServiceID(sid);
+    agent->SetUpLibrary(library);
 
-    if (!context->Initial(this, pData)) {
+    // Initial The Service
+    if (!agent->Initial(this, pData)) {
         SPDLOG_ERROR("{} - Service[{}] Initialize Fail", __FUNCTION__, sid);
-        context->Stop();
+        agent->Stop();
         mAllocator.RecycleTS(sid);
         return;
     }
 
-    const std::string name = context->GetServiceName();
-
     // Check If The Service Name Is Defined
+    const std::string name = agent->GetServiceName();
     if (name.empty() || name == "UNKNOWN") {
         SPDLOG_ERROR("{} - Service[{}] Name Undefined", __FUNCTION__, sid);
-        context->Stop();
+        agent->Stop();
         mAllocator.RecycleTS(sid);
         return;
     }
@@ -215,17 +239,19 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
         }
     }
 
-    if (bRepeat || !context->BootService()) {
+    // Try To Boot The Service
+    if (bRepeat || !agent->BootService()) {
         SPDLOG_ERROR("{} - Service[{}] Name Repeated Or Fail To Boot", __FUNCTION__, name);
-        context->Stop();
+        agent->Stop();
         mAllocator.RecycleTS(sid);
         return;
     }
 
     SPDLOG_INFO("{} - Boot Service[{}] Successfully", __FUNCTION__, name);
 
+    // Insert The Service And The Name To The Maps
     std::scoped_lock lock(mServiceMutex, mServiceNameMutex);
-    mServiceMap.insert_or_assign(sid, context);
+    mServiceMap.insert_or_assign(sid, agent);
     mServiceNameMap.insert_or_assign(name, sid);
 }
 
@@ -253,11 +279,17 @@ void UServiceModule::ShutdownService(const int64_t sid) {
 
     // Erase From Name Mapping
     {
-        std::shared_lock lock(mServiceNameMutex);
+        std::unique_lock lock(mServiceNameMutex);
         mServiceNameMap.erase(name);
     }
 
-    // Recycle The Service Handle
+    // Erase From The Update Map
+    {
+        std::unique_lock lock(mTickMutex);
+        mTickerSet.erase(sid);
+    }
+
+    // Recycle The Service ID
     mAllocator.RecycleTS(sid);
 
     SPDLOG_INFO("{} - Stop The Service[{}, {}]", __FUNCTION__, sid, name);
@@ -268,9 +300,9 @@ void UServiceModule::ShutdownService(const std::string &name) {
     if (mState != EModuleState::RUNNING)
         return;
 
-    int64_t sid = -1;
+    int64_t sid;
 
-    // Get The Service Handle And Erase From The Name Mapping
+    // Get The Service ID And Erase From The Name Mapping
     {
         std::unique_lock lock(mServiceNameMutex);
         const auto iter = mServiceNameMap.find(name);
@@ -297,7 +329,13 @@ void UServiceModule::ShutdownService(const std::string &name) {
         mServiceMap.erase(iter);
     }
 
-    // Recycle The Service Handle
+    // Erase From The Update Map
+    {
+        std::unique_lock lock(mTickMutex);
+        mTickerSet.erase(sid);
+    }
+
+    // Recycle The Service ID
     mAllocator.RecycleTS(sid);
 
     if (context == nullptr)
@@ -312,7 +350,7 @@ void UServiceModule::ShutdownService(const std::string &name) {
     context->Stop();
 }
 
-void UServiceModule::AddTicker(const int64_t sid) {
+void UServiceModule::InsertTicker(const int64_t sid) {
     if (mState != EModuleState::RUNNING)
         return;
 
@@ -324,9 +362,12 @@ void UServiceModule::AddTicker(const int64_t sid) {
 }
 
 void UServiceModule::RemoveTicker(const int64_t sid) {
-    if (mState == EModuleState::STOPPED)
+    if (mState != EModuleState::RUNNING)
         return;
 
-    mState = EModuleState::STOPPED;
+    if (sid < 0)
+        return;
+
+    std::unique_lock lock(mTickMutex);
     mTickerSet.erase(sid);
 }
