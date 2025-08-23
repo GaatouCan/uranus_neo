@@ -1,6 +1,6 @@
 #include "TickerModule.h"
 #include "Server.h"
-#include "Context.h"
+#include "ServiceAgent.h"
 
 #include <spdlog/spdlog.h>
 
@@ -53,7 +53,7 @@ UTickerModule::~UTickerModule() {
     Stop();
 }
 
-void UTickerModule::AddTicker(const int64_t sid, const weak_ptr<UContext> &weakPtr) {
+void UTickerModule::AddTicker(const int64_t sid, const weak_ptr<UServiceAgent> &weakPtr) {
     if (mState != EModuleState::RUNNING)
         return;
 

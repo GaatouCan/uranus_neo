@@ -5,7 +5,7 @@
 #include <memory>
 
 
-class UAgent;
+class UPlayerAgent;
 class IAgentHandler;
 class IPlayerBase;
 using std::unique_ptr;

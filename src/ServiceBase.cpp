@@ -1,5 +1,5 @@
 #include "ServiceBase.h"
-#include "Context.h"
+#include "ServiceAgent.h"
 #include "Server.h"
 #include "base/Package.h"
 #include "logger/LoggerModule.h"
@@ -7,13 +7,13 @@
 #include <spdlog/spdlog.h>
 
 
-void IServiceBase::SetUpContext(UContext *pContext) {
+void IServiceBase::SetUpContext(UServiceAgent *pContext) {
     if (mState != EServiceState::CREATED)
         return;
     mContext = pContext;
 }
 
-UContext *IServiceBase::GetContext() const {
+UServiceAgent *IServiceBase::GetContext() const {
     return mContext;
 }
 
@@ -36,9 +36,9 @@ int64_t IServiceBase::GetServiceID() const {
     return mContext->GetServiceID();
 }
 
-asio::io_context &IServiceBase::GetIOContext() const {
-    return mContext->GetIOContext();
-}
+// asio::io_context &IServiceBase::GetIOContext() const {
+//     return mContext->GetIOContext();
+// }
 
 UServer *IServiceBase::GetServer() const {
     if (mContext == nullptr)
@@ -89,19 +89,19 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
     mContext->PostTask(name, task);
 }
 
-void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-   mContext->SendToPlayer(pid, pkg);
-}
-
-void IServiceBase::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->PostToPlayer(pid, task);
-}
+// void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//    mContext->SendToPlayer(pid, pkg);
+// }
+//
+// void IServiceBase::PostToPlayer(const int64_t pid, const APlayerTask &task) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->PostToPlayer(pid, task);
+// }
 
 void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
     if (mState <= EServiceState::INITIALIZED)

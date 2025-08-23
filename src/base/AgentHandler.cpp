@@ -1,5 +1,5 @@
 #include "AgentHandler.h"
-#include "Agent.h"
+#include "PlayerAgent.h"
 
 #include <format>
 #include <stdexcept>
@@ -12,11 +12,11 @@ IAgentHandler::IAgentHandler()
 IAgentHandler::~IAgentHandler() {
 }
 
-void IAgentHandler::SetUpAgent(UAgent *agent) {
+void IAgentHandler::SetUpAgent(UPlayerAgent *agent) {
     mAgent = agent;
 }
 
-UAgent *IAgentHandler::GetAgent() const {
+UPlayerAgent *IAgentHandler::GetAgent() const {
     return mAgent;
 }
 

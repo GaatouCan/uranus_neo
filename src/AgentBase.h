@@ -15,6 +15,7 @@ class IAgentBase;
 class IActorBase;
 class IPackage_Interface;
 class IEventParam_Interface;
+class IDataAsset_Interface;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
@@ -60,8 +61,6 @@ public:
 
 class BASE_API IAgentBase : public std::enable_shared_from_this<IAgentBase> {
 
-    using AChannel = TConcurrentChannel<void(std::error_code, unique_ptr<IChannelNode_Interface>)>;
-
 public:
     IAgentBase() = delete;
 
@@ -73,11 +72,7 @@ public:
     [[nodiscard]] asio::io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    virtual void Initial(UServer *pServer);
-    virtual void CleanUp();
-
-    virtual void Start();
-    virtual void Stop();
+    virtual bool Initial(UServer *pServer, IDataAsset_Interface *pData = nullptr);
 
     void PushPackage(const FPackageHandle &pkg);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
@@ -93,15 +88,16 @@ public:
 
 protected:
     [[nodiscard]] virtual IActorBase *GetActor() const = 0;
+    virtual void CleanUp();
 
-private:
     awaitable<void> ProcessChannel();
 
-private:
+protected:
+    using AChannel = TConcurrentChannel<void(std::error_code, unique_ptr<IChannelNode_Interface>)>;
+
     asio::io_context &mContext;
     UServer *mServer;
 
-protected:
     unique_ptr<AChannel> mChannel;
     unique_ptr<IRecyclerBase> mPackagePool;
 

@@ -7,7 +7,7 @@
 #include <string>
 
 
-class UAgent;
+class UPlayerAgent;
 class IPluginBase;
 
 

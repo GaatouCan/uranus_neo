@@ -6,7 +6,7 @@
 
 class UMonitor;
 class UServer;
-class UAgent;
+class UPlayerAgent;
 
 class BASE_API IPluginBase {
 

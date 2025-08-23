@@ -1,6 +1,6 @@
 #include "Server.h"
-#include "Agent.h"
-#include "Context.h"
+#include "PlayerAgent.h"
+#include "ServiceAgent.h"
 #include "base/PackageCodec.h"
 #include "base/Recycler.h"
 #include "base/AgentHandler.h"
@@ -53,7 +53,7 @@ void UServer::Initial() {
         if (mServiceMap.contains(sid)) [[unlikely]]
             throw std::logic_error(fmt::format("Allocate Same Service ID[{}]", sid));
 
-        const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
+        const auto context = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
         context->SetUpServer(this);
         context->SetUpServiceID(sid);
         context->SetUpLibrary(library);
@@ -154,7 +154,7 @@ asio::io_context &UServer::GetWorkerContext() {
     return mWorkerPool.GetIOContext();
 }
 
-shared_ptr<UAgent> UServer::FindPlayer(const int64_t pid) const {
+shared_ptr<UPlayerAgent> UServer::FindPlayer(const int64_t pid) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
@@ -163,7 +163,7 @@ shared_ptr<UAgent> UServer::FindPlayer(const int64_t pid) const {
     return iter == mPlayerMap.end() ? nullptr : iter->second;
 }
 
-shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
+shared_ptr<UPlayerAgent> UServer::FindAgent(const std::string &key) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
@@ -172,11 +172,11 @@ shared_ptr<UAgent> UServer::FindAgent(const std::string &key) const {
     return iter == mAgentMap.end() ? nullptr : iter->second;
 }
 
-std::vector<shared_ptr<UAgent>> UServer::GetPlayerList(const std::vector<int64_t> &list) const {
+std::vector<shared_ptr<UPlayerAgent>> UServer::GetPlayerList(const std::vector<int64_t> &list) const {
     if (mState != EServerState::RUNNING)
         return {};
 
-    std::vector<shared_ptr<UAgent>> result;
+    std::vector<shared_ptr<UPlayerAgent>> result;
     std::shared_lock lock(mPlayerMutex);
     for (const auto &pid : list) {
         if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
@@ -229,8 +229,8 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
 
     FPlayerHandle player;
 
-    shared_ptr<UAgent> agent;
-    shared_ptr<UAgent> existed;
+    shared_ptr<UPlayerAgent> agent;
+    shared_ptr<UPlayerAgent> existed;
 
     {
         std::scoped_lock lock(mAgentMutex, mPlayerMutex);
@@ -280,7 +280,7 @@ void UServer::OnPlayerLogin(const std::string &key, const int64_t pid) {
     agent->SetUpPlayer(std::move(player));
 }
 
-shared_ptr<UContext> UServer::FindService(const int64_t sid) const {
+shared_ptr<UServiceAgent> UServer::FindService(const int64_t sid) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
@@ -289,7 +289,7 @@ shared_ptr<UContext> UServer::FindService(const int64_t sid) const {
     return iter == mServiceMap.end() ? nullptr : iter->second;
 }
 
-shared_ptr<UContext> UServer::FindService(const std::string &name) const {
+shared_ptr<UServiceAgent> UServer::FindService(const std::string &name) const {
     if (mState != EServerState::RUNNING)
         return nullptr;
 
@@ -331,7 +331,7 @@ void UServer::BootService(const std::string &path, const IDataAsset_Interface *p
         }
     }
 
-    const auto context = make_shared<UContext>(mWorkerPool.GetIOContext());
+    const auto context = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
 
     context->SetUpServer(this);
     context->SetUpServiceID(sid);
@@ -381,7 +381,7 @@ void UServer::ShutdownService(const int64_t sid) {
     if (mState != EServerState::RUNNING)
         return;
 
-    shared_ptr<UContext> context;
+    shared_ptr<UServiceAgent> context;
 
     // Erase From Service Map
     {
@@ -432,7 +432,7 @@ void UServer::ShutdownService(const std::string &name) {
     if (sid < 0)
         return;
 
-    shared_ptr<UContext> context;
+    shared_ptr<UServiceAgent> context;
 
     // Erase From The Service Map
     {
@@ -533,7 +533,7 @@ awaitable<void> UServer::WaitForClient(const uint16_t port) {
                     }
                 }
 
-                const auto agent = make_shared<UAgent>(CreateUniquePackageCodec(std::move(socket)));
+                const auto agent = make_shared<UPlayerAgent>(CreateUniquePackageCodec(std::move(socket)));
                 const auto key = agent->GetKey();
 
                 if (key.empty()) {

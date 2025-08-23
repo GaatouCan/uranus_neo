@@ -1,31 +1,23 @@
 #pragma once
 
-#include "base/Types.h"
-#include "base/Recycler.h"
-#include "timer/TimerHandle.h"
+#include "ActorBase.h"
 
+#include <functional>
 
 class UServer;
-class UAgent;
+class UPlayerAgent;
 class IPackage_Interface;
 class IDataAsset_Interface;
 class IEventParam_Interface;
 
-using std::shared_ptr;
-using std::unique_ptr;
-using std::make_shared;
-using std::make_unique;
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-using ATimerTask = std::function<void(ASteadyTimePoint, ASteadyDuration)>;
 
-
-class BASE_API IPlayerBase {
+class BASE_API IPlayerBase : public IActorBase {
 
     friend class UServer;
 
 public:
     IPlayerBase();
-    virtual ~IPlayerBase();
+    ~IPlayerBase() override;
 
     [[nodiscard]] int64_t GetPlayerID() const;
 
@@ -35,9 +27,6 @@ public:
     virtual void OnLogout();
 
     virtual void Save();
-
-    virtual void OnPackage(IPackage_Interface *pkg);
-    virtual void OnEvent(IEventParam_Interface *event);
 
 protected:
     virtual void OnReset();

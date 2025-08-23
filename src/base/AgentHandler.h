@@ -7,7 +7,7 @@
 
 
 class IPackage_Interface;
-class UAgent;
+class UPlayerAgent;
 class UServer;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
@@ -20,9 +20,9 @@ public:
 
     DISABLE_COPY_MOVE(IAgentHandler)
 
-    void SetUpAgent(UAgent *agent);
+    void SetUpAgent(UPlayerAgent *agent);
 
-    [[nodiscard]] UAgent* GetAgent() const;
+    [[nodiscard]] UPlayerAgent* GetAgent() const;
     [[nodiscard]] UServer* GetServer() const;
 
     virtual FPackageHandle OnLoginSuccess(int64_t pid) = 0;
@@ -32,5 +32,5 @@ public:
     virtual FPlatformInfo ParsePlatformInfo(const FPackageHandle &pkg) = 0;
 
 private:
-    UAgent* mAgent;
+    UPlayerAgent* mAgent;
 };

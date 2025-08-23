@@ -53,7 +53,7 @@ UServer *IAgentBase::GetServer() const {
     return mServer;
 }
 
-void IAgentBase::Initial(UServer *pServer) {
+bool IAgentBase::Initial(UServer *pServer, IDataAsset_Interface *pData) {
     mServer = pServer;
 
     // Create The Channel
@@ -62,23 +62,12 @@ void IAgentBase::Initial(UServer *pServer) {
     // Create The Package Pool
     mPackagePool = mServer->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
+
+    return true;
 }
 
 void IAgentBase::CleanUp() {
-}
 
-void IAgentBase::Start() {
-    if (mServer == nullptr || mChannel == nullptr || mPackagePool == nullptr)
-        throw std::runtime_error(fmt::format("{} - AgentBase[{:p}] Not Initialized",
-            __FUNCTION__, static_cast<const void *>(this)));
-
-    co_spawn(mContext, ProcessChannel(), detached);
-}
-
-void IAgentBase::Stop() {
-    if (mChannel && mChannel->is_open()) {
-        mChannel->close();
-    }
 }
 
 void IAgentBase::PushPackage(const FPackageHandle &pkg) {

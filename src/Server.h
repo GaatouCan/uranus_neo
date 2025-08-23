@@ -24,7 +24,7 @@ enum class EServerState {
 };
 
 
-class UContext;
+class UServiceAgent;
 class IDataAsset_Interface;
 
 class BASE_API UServer final {
@@ -34,7 +34,7 @@ class BASE_API UServer final {
         ASteadyTimePoint timepoint;
     };
 
-    using AContextMap = absl::flat_hash_map<int64_t, shared_ptr<UContext>>;
+    using AContextMap = absl::flat_hash_map<int64_t, shared_ptr<UServiceAgent>>;
 
 public:
     UServer();
@@ -114,10 +114,10 @@ public:
     [[nodiscard]] IPlayerFactory_Interface *GetPlayerFactory() const;
     [[nodiscard]] IServiceFactory_Interface *GetServiceFactory() const;
 
-    [[nodiscard]] shared_ptr<UAgent> FindPlayer(int64_t pid) const;
-    [[nodiscard]] shared_ptr<UAgent> FindAgent(const std::string &key) const;
+    [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
+    [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
 
-    [[nodiscard]] std::vector<shared_ptr<UAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
+    [[nodiscard]] std::vector<shared_ptr<UPlayerAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
 
     void RemovePlayer(int64_t pid);
     void RecyclePlayer(FPlayerHandle &&player);
@@ -126,8 +126,8 @@ public:
 
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
-    [[nodiscard]] shared_ptr<UContext> FindService(int64_t sid) const;
-    [[nodiscard]] shared_ptr<UContext> FindService(const std::string &name) const;
+    [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
+    [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
 
     void BootService(const std::string &path, const IDataAsset_Interface *pData);
 
@@ -146,10 +146,10 @@ private:
 #pragma endregion IO Manage
 
 #pragma region Agent Management
-    absl::flat_hash_map<std::string, shared_ptr<UAgent>> mAgentMap;
+    absl::flat_hash_map<std::string, shared_ptr<UPlayerAgent>> mAgentMap;
     mutable std::shared_mutex mAgentMutex;
 
-    absl::flat_hash_map<int64_t, shared_ptr<UAgent>> mPlayerMap;
+    absl::flat_hash_map<int64_t, shared_ptr<UPlayerAgent>> mPlayerMap;
     mutable std::shared_mutex mPlayerMutex;
 
     absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
