@@ -65,18 +65,18 @@ public:
     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
 #pragma endregion
 
-#pragma region Task
-    void PostTask(int64_t target, const std::function<void(IServiceBase *)> &task) const;
-    void PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const;
-
-    template<class Type, class Callback, class... Args>
-    requires std::derived_from<Type, IServiceBase>
-    void PostTaskT(int64_t target, Callback &&func, Args &&... args);
-
-    template<class Type, class Callback, class... Args>
-    requires std::derived_from<Type, IServiceBase>
-    void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
-#pragma endregion
+// #pragma region Task
+//     void PostTask(int64_t target, const std::function<void(IServiceBase *)> &task) const;
+//     void PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const;
+//
+//     template<class Type, class Callback, class... Args>
+//     requires std::derived_from<Type, IServiceBase>
+//     void PostTaskT(int64_t target, Callback &&func, Args &&... args);
+//
+//     template<class Type, class Callback, class... Args>
+//     requires std::derived_from<Type, IServiceBase>
+//     void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
+// #pragma endregion
 
 #pragma region To Player
     // void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
@@ -118,31 +118,31 @@ protected:
 };
 
 
-template<class Type, class Callback, class ... Args>
-requires std::derived_from<Type, IServiceBase>
-inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
-    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-        auto *ptr = dynamic_cast<Type *>(ser);
-        if (ptr == nullptr)
-            return;
-
-        std::invoke(func, ptr, args...);
-    };
-    this->PostTask(target, task);
-}
-
-template<class Type, class Callback, class ... Args>
-requires std::derived_from<Type, IServiceBase>
-inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
-    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-        auto *pService = dynamic_cast<Type *>(ser);
-        if (pService == nullptr)
-            return;
-
-        std::invoke(func, pService, args...);
-    };
-    this->PostTask(name, task);
-}
+// template<class Type, class Callback, class ... Args>
+// requires std::derived_from<Type, IServiceBase>
+// inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
+//     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
+//         auto *ptr = dynamic_cast<Type *>(ser);
+//         if (ptr == nullptr)
+//             return;
+//
+//         std::invoke(func, ptr, args...);
+//     };
+//     this->PostTask(target, task);
+// }
+//
+// template<class Type, class Callback, class ... Args>
+// requires std::derived_from<Type, IServiceBase>
+// inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
+//     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
+//         auto *pService = dynamic_cast<Type *>(ser);
+//         if (pService == nullptr)
+//             return;
+//
+//         std::invoke(func, pService, args...);
+//     };
+//     this->PostTask(name, task);
+// }
 
 // template<class Type, class Callback, class ... Args>
 // requires std::derived_from<Type, IPlayerBase>

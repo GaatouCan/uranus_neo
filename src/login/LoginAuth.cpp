@@ -1,10 +1,9 @@
 #include "LoginAuth.h"
 #include "Server.h"
+#include "gateway/PlayerAgent.h"
+#include "gateway/Gateway.h"
 
 #include <spdlog/spdlog.h>
-
-#include "../gateway/PlayerAgent.h"
-
 
 ULoginAuth::ULoginAuth() {
 }
@@ -58,8 +57,10 @@ void ULoginAuth::OnLoginRequest(const std::string &key, const FPackageHandle &pk
     if (token.empty() || pid == 0) {
         SPDLOG_WARN("{:<20} - fd[{}] Parse Login Request Failed.", __FUNCTION__, key);
 
-        if (const auto agent = GetServer()->FindAgent(key)) {
-            agent->OnLoginFailed(1, "Fail To Parse Token");
+        if (const auto *gateway = GetServer()->GetModule<UGateway>()) {
+            if (const auto agent = gateway->FindAgent(key)) {
+                agent->OnLoginFailed(0, "Fail To Parse Token");
+            }
         }
 
         return;
@@ -89,5 +90,7 @@ void ULoginAuth::OnLoginSuccess(const std::string &key, const int64_t pid) {
         mRecentLoginMap.erase(key);
     }
 
-    GetServer()->OnPlayerLogin(key, pid);
+    if (auto *gateway = GetServer()->GetModule<UGateway>()) {
+        gateway->OnPlayerLogin(key, pid);
+    }
 }

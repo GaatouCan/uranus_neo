@@ -6,7 +6,6 @@
 #include "base/Package.h"
 #include "base/DataAsset.h"
 #include "event/EventModule.h"
-#include "timer/TickerModule.h"
 
 #include <spdlog/spdlog.h>
 
@@ -121,8 +120,8 @@ bool UServiceAgent::BootService() {
         __FUNCTION__, static_cast<const void *>(this), mServiceID, GetServiceName());
 
     if (mService->bUpdatePerTick) {
-        if (auto *module = GetServer()->GetModule<UTickerModule>()) {
-            module->AddTicker(mServiceID, WeakFromThis());
+        if (auto *module = dynamic_cast<UServiceModule *>(mModule)) {
+            module->AddTicker(mServiceID);
         }
     }
 

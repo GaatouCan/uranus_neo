@@ -51,8 +51,8 @@ public:
     [[nodiscard]] FPlayerHandle ExtractPlayer();
 
 #pragma region Post
-    void PostPackage(const FPackageHandle &pkg) const;
-    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+    // void PostPackage(const FPackageHandle &pkg) const;
+    // void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
 
     // TODO
     // void PostTask(int64_t target, const AServiceTask &task) const;

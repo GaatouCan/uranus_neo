@@ -61,33 +61,33 @@ FPackageHandle IServiceBase::BuildPackage() const {
     return {};
 }
 
-void IServiceBase::PostPackage(const FPackageHandle &pkg) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->PostPackage(pkg);
-}
-
-void IServiceBase::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->PostPackage(name, pkg);
-}
-
-void IServiceBase::PostTask(const int64_t target, const std::function<void(IServiceBase *)> &task) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->PostTask(target, task);
-}
-
-void IServiceBase::PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->PostTask(name, task);
-}
+// void IServiceBase::PostPackage(const FPackageHandle &pkg) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->PostPackage(pkg);
+// }
+//
+// void IServiceBase::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->PostPackage(name, pkg);
+// }
+//
+// void IServiceBase::PostTask(const int64_t target, const std::function<void(IServiceBase *)> &task) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->PostTask(target, task);
+// }
+//
+// void IServiceBase::PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->PostTask(name, task);
+// }
 
 // void IServiceBase::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
 //     if (mState <= EServiceState::INITIALIZED)
@@ -103,12 +103,12 @@ void IServiceBase::PostTask(const std::string &name, const std::function<void(IS
 //     mContext->PostToPlayer(pid, task);
 // }
 
-void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
-    if (mState <= EServiceState::INITIALIZED)
-        throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
-
-    mContext->SendToClient(pid, pkg);
-}
+// void IServiceBase::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
+//     if (mState <= EServiceState::INITIALIZED)
+//         throw std::runtime_error(std::format("{} - Service Not Initialized", __FUNCTION__));
+//
+//     mContext->SendToClient(pid, pkg);
+// }
 
 void IServiceBase::ListenEvent(const int event) const {
     if (mState == EServiceState::CREATED || mState == EServiceState::TERMINATED)

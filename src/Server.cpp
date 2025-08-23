@@ -1,14 +1,9 @@
 #include "Server.h"
-#include "gateway/PlayerAgent.h"
-#include "service/ServiceAgent.h"
 #include "base/PackageCodec.h"
-#include "base/Recycler.h"
-#include "base/AgentHandler.h"
 #include "config/Config.h"
 #include "login/LoginAuth.h"
 
 #include <spdlog/spdlog.h>
-#include <ranges>
 #include <format>
 
 
@@ -33,50 +28,6 @@ void UServer::Initial() {
         pModule->Initial();
     }
 
-    const auto &cfg = GetServerConfig();
-
-    mServiceFactory->LoadService();
-
-    for (const auto &val : cfg["services"]["core"]) {
-        const auto path = val["path"].as<std::string>();
-        const auto library = mServiceFactory->FindService(path);
-        if (!library.IsValid()) {
-            SPDLOG_CRITICAL("Failed To Find Service[{}]", path);
-            continue;
-        }
-
-        const auto sid = mAllocator.Allocate();
-
-        if (mServiceMap.contains(sid)) [[unlikely]]
-            throw std::logic_error(fmt::format("Allocate Same Service ID[{}]", sid));
-
-        const auto context = make_shared<UServiceAgent>(mWorkerPool.GetIOContext());
-        context->SetUpServer(this);
-        context->SetUpServiceID(sid);
-        context->SetUpLibrary(library);
-
-        if (!context->Initial(nullptr)) {
-            SPDLOG_CRITICAL("Failed To Initial Service: {}", path);
-            mAllocator.Recycle(sid);
-            context->Stop();
-            continue;
-        }
-
-        const std::string name = context->GetServiceName();
-        if (mServiceNameMap.contains(name)) {
-            SPDLOG_CRITICAL("Service[{}] Already Exists", name);
-            context->Stop();
-            continue;
-        }
-
-        SPDLOG_INFO("Service[{}] Initialized", name);
-
-        mServiceMap.insert_or_assign(sid, context);
-        mServiceNameMap.insert_or_assign(name, sid);
-    }
-
-    mWorkerPool.Start(4);
-
     mState = EServerState::INITIALIZED;
 }
 
@@ -90,16 +41,6 @@ void UServer::Start() {
         SPDLOG_INFO("Start Server Module[{}]", pModule->GetModuleName());
         pModule->Start();
     }
-
-    for (const auto &context : mServiceMap | std::views::values) {
-        SPDLOG_INFO("Boot Service[{}]", context->GetServiceName());
-        context->BootService();
-    }
-
-    const auto port = cfg["server"]["port"].as<uint16_t>();
-
-    co_spawn(mIOContext, WaitForClient(port), detached);
-    co_spawn(mIOContext, CollectCachedPlayer(), detached);
 
     mState = EServerState::RUNNING;
 
@@ -122,14 +63,6 @@ void UServer::Shutdown() {
     if (mIOContext.stopped()) {
         mIOContext.stop();
     }
-
-    mServiceMap.clear();
-
-    for (const auto &context : mServiceMap | std::views::values) {
-        SPDLOG_INFO("Stop Service[{}]", context->GetServiceName());
-        context->Stop();
-    }
-
     for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
         SPDLOG_INFO("Stop Module[{}]", (*iter)->GetModuleName());
         (*iter)->Stop();
@@ -141,8 +74,6 @@ void UServer::Shutdown() {
 asio::io_context &UServer::GetIOContext() {
     return mIOContext;
 }
-
-
 
 
 const YAML::Node &UServer::GetServerConfig() const {
@@ -169,8 +100,4 @@ unique_ptr<IRecyclerBase> UServer::CreateUniquePackagePool(asio::io_context &ctx
 
 ICodecFactory_Interface *UServer::GetCodecFactory() const {
     return mCodecFactory.get();
-}
-
-IServiceFactory_Interface *UServer::GetServiceFactory() const {
-    return mServiceFactory.get();
 }

@@ -1,6 +1,7 @@
 #include "Gateway.h"
 #include "Server.h"
 #include "PlayerAgent.h"
+#include "PlayerBase.h"
 #include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"

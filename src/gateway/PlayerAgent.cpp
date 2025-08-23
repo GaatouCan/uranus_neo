@@ -146,40 +146,40 @@ FPlayerHandle UPlayerAgent::ExtractPlayer() {
     return std::move(mPlayer);
 }
 
-void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
-    if (pkg == nullptr)
-        return;
-
-    const auto target = pkg->GetTarget();
-    if (target <= 0)
-        return;
-
-    if (const auto context = GetServer()->FindService(target)) {
-        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(), target, context->GetServiceName());
-
-        pkg->SetSource(PLAYER_TARGET_ID);
-        context->PushPackage(pkg);
-    }
-}
-
-void UPlayerAgent::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
-    if (pkg == nullptr)
-        return;
-
-    if (const auto context = GetServer()->FindService(name)) {
-        const auto target = context->GetServiceID();
-
-        SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-            __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
-            static_cast<int>(target), context->GetServiceName());
-
-        pkg->SetSource(PLAYER_TARGET_ID);
-        pkg->SetTarget(target);
-
-        context->PushPackage(pkg);
-    }
-}
+// void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
+//     if (pkg == nullptr)
+//         return;
+//
+//     const auto target = pkg->GetTarget();
+//     if (target <= 0)
+//         return;
+//
+//     if (const auto context = GetServer()->FindService(target)) {
+//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(), target, context->GetServiceName());
+//
+//         pkg->SetSource(PLAYER_TARGET_ID);
+//         context->PushPackage(pkg);
+//     }
+// }
+//
+// void UPlayerAgent::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+//     if (pkg == nullptr)
+//         return;
+//
+//     if (const auto context = GetServer()->FindService(name)) {
+//         const auto target = context->GetServiceID();
+//
+//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
+//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
+//             static_cast<int>(target), context->GetServiceName());
+//
+//         pkg->SetSource(PLAYER_TARGET_ID);
+//         pkg->SetTarget(target);
+//
+//         context->PushPackage(pkg);
+//     }
+// }
 
 // void UPlayerAgent::PostTask(const int64_t target, const AServiceTask &task) const {
 //     if (task == nullptr)
@@ -378,7 +378,7 @@ awaitable<void> UPlayerAgent::ReadPackage() {
                         mPlayer->OnPackage(pkg.Get());
                     } else if (target > 0) {
                         // Post Package To Service
-                        PostPackage(pkg);
+                        // PostPackage(pkg);
                     }
                 }
             }
