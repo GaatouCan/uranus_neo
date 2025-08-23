@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ActorBase.h"
+#include "timer/TimerHandle.h"
 
 #include <functional>
 
@@ -48,6 +49,10 @@ public:
     template<class Type, class Callback, class... Args>
     requires std::derived_from<Type, IServiceBase>
     void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
+
+    [[nodiscard]] FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1) const;
+    void CancelTimer(int64_t tid) const;
+    void CancelAllTimers() const;
 
 private:
     void SetPlayerID(int64_t id);

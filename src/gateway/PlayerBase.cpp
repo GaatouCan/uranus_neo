@@ -67,6 +67,18 @@ void IPlayerBase::PostTask(const std::string &name, const AActorTask &task) cons
     GetAgentT<UPlayerAgent>()->PostTask(name, task);
 }
 
+FTimerHandle IPlayerBase::CreateTimer(const ATimerTask &task, const int delay, const int rate) const {
+    return GetAgent()->CreateTimer(task, delay, rate);
+}
+
+void IPlayerBase::CancelTimer(const int64_t tid) const {
+    GetAgent()->CancelTimer(tid);
+}
+
+void IPlayerBase::CancelAllTimers() const {
+    GetAgent()->CancelAllTimers();
+}
+
 void IPlayerBase::SetPlayerID(const int64_t id) {
     mPlayerID = id;
 }
