@@ -27,7 +27,5 @@ public:
     virtual void OnLogout();
 
     virtual void Save();
-
-protected:
     virtual void OnReset();
 };

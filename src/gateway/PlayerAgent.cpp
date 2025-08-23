@@ -12,6 +12,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
 
+#include "Gateway.h"
+
 
 using namespace asio::experimental::awaitable_operators;
 using namespace std::literals::chrono_literals;
@@ -66,17 +68,17 @@ void UPlayerAgent::SetExpireSecond(const int sec) {
 }
 
 
-bool UPlayerAgent::Initial(UServer *pServer, IDataAsset_Interface *pData) {
-    mServer = pServer;
+bool UPlayerAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
+    mModule = pModule;
 
     // Create The Channel
     mChannel = make_unique<AChannel>(mContext, 1024);
 
     // Create The Package Pool
-    mPackagePool = mServer->CreateUniquePackagePool(mContext);
+    mPackagePool = mModule->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
 
-    mHandler = mServer->CreateAgentHandler();
+    mHandler = mModule->GetServer()->CreateAgentHandler();
     mHandler->SetUpAgent(this);
 
     return true;
@@ -85,7 +87,7 @@ bool UPlayerAgent::Initial(UServer *pServer, IDataAsset_Interface *pData) {
 void UPlayerAgent::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
-    co_spawn(mContext, [self = std::dynamic_pointer_cast<UPlayerAgent>(shared_from_this())]() -> awaitable<void> {
+    co_spawn(mContext, [self = SharedFromThis()]() -> awaitable<void> {
         if (const auto ret = co_await self->mCodec->Initial(); !ret) {
             self->Disconnect();
             co_return;
@@ -122,7 +124,7 @@ void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
     mPlayer = std::move(plr);
     mReceiveTime = std::chrono::steady_clock::now();
 
-    co_spawn(mContext, [self = std::dynamic_pointer_cast<UPlayerAgent>(shared_from_this())]() -> awaitable<void> {
+    co_spawn(mContext, [self = SharedFromThis()]() -> awaitable<void> {
         const auto pkg = self->mHandler->OnLoginSuccess(self->mPlayer->GetPlayerID());
 
         pkg->SetPackageID(LOGIN_RESPONSE_PACKAGE_ID);
@@ -148,7 +150,7 @@ void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
     if (target <= 0)
         return;
 
-    if (const auto context = mServer->FindService(target)) {
+    if (const auto context = GetServer()->FindService(target)) {
         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(), target, context->GetServiceName());
 
@@ -161,7 +163,7 @@ void UPlayerAgent::PostPackage(const std::string &name, const FPackageHandle &pk
     if (pkg == nullptr)
         return;
 
-    if (const auto context = mServer->FindService(name)) {
+    if (const auto context = GetServer()->FindService(name)) {
         const auto target = context->GetServiceID();
 
         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
@@ -213,15 +215,15 @@ void UPlayerAgent::ListenEvent(const int event) {
     if (mPlayer == nullptr || mHandler == nullptr || !mChannel->is_open())
         return;
 
-    auto *module = mServer->GetModule<UEventModule>();
+    auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
-    module->PlayerListenEvent(mPlayer->GetPlayerID(), weak_from_this(), event);
+    module->PlayerListenEvent(mPlayer->GetPlayerID(), WeakFromThis(), event);
 }
 
 void UPlayerAgent::RemoveListener(const int event) const {
-    auto *module = mServer->GetModule<UEventModule>();
+    auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
@@ -232,7 +234,7 @@ void UPlayerAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param)
     if (mPlayer == nullptr || mHandler == nullptr || !mChannel->is_open())
         return;
 
-    auto *module = mServer->GetModule<UEventModule>();
+    auto *module = GetServer()->GetModule<UEventModule>();
     if (module == nullptr)
         return;
 
@@ -244,7 +246,7 @@ void UPlayerAgent::SendPackage(const FPackageHandle &pkg) {
         return;
 
     if (const bool ret = mOutput.try_send_via_dispatch(std::error_code{}, pkg); !ret && mOutput.is_open()) {
-        co_spawn(mContext, [self = std::dynamic_pointer_cast<UPlayerAgent>(shared_from_this()), pkg]() -> awaitable<void> {
+        co_spawn(mContext, [self = SharedFromThis(), pkg]() -> awaitable<void> {
             co_await self->mOutput.async_send(std::error_code{}, pkg);
         }, detached);
     }
@@ -291,6 +293,14 @@ IActorBase *UPlayerAgent::GetActor() const {
         return mPlayer.Get();
 
     return nullptr;
+}
+
+shared_ptr<UPlayerAgent> UPlayerAgent::SharedFromThis() {
+    return std::dynamic_pointer_cast<UPlayerAgent>(shared_from_this());
+}
+
+weak_ptr<UPlayerAgent> UPlayerAgent::WeakFromThis() {
+    return this->SharedFromThis();
 }
 
 awaitable<void> UPlayerAgent::WritePackage() {
@@ -340,7 +350,7 @@ awaitable<void> UPlayerAgent::ReadPackage() {
             // Run The Login Branch
             if (mPlayer == nullptr) {
                 // Handle Login Logic
-                if (auto *login = mServer->GetModule<ULoginAuth>(); login != nullptr) {
+                if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
                     login->OnLoginRequest(mKey, pkg);
                 }
                 continue;
@@ -403,16 +413,20 @@ awaitable<void> UPlayerAgent::Watchdog() {
 }
 
 void UPlayerAgent::CleanUp() {
+    auto *gateway = dynamic_cast<UGateway *>(mModule);
+    if (gateway == nullptr)
+        return;
+
     if (mPlayer != nullptr) {
         mPlayer->OnLogout();
         mPlayer->Save();
 
         if (bCachable) {
-            mServer->RecyclePlayer(std::move(mPlayer));
+            gateway->RecyclePlayer(std::move(mPlayer));
         } else {
-            mServer->RemovePlayer(mPlayer->GetPlayerID());
+            gateway->RemovePlayer(mPlayer->GetPlayerID());
         }
     }
 
-    mServer->RemoveAgent(mKey);
+    gateway->RemoveAgent(mKey);
 }

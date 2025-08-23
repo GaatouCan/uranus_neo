@@ -9,8 +9,7 @@
 #include <shared_mutex>
 
 
-class UServiceAgent;
-class UPlayerAgent;
+class IAgentBase;
 using std::weak_ptr;
 
 
@@ -18,8 +17,7 @@ class BASE_API UEventModule final : public IModuleBase {
 
     DECLARE_MODULE(UEventModule)
 
-    using AServiceListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<UServiceAgent>>>;
-    using APlayerListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<UPlayerAgent>>>;
+    using AListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<IAgentBase>>>;
 
 protected:
     void Initial() override;
@@ -29,7 +27,7 @@ public:
     UEventModule();
     ~UEventModule() override = default;
 
-    constexpr const char *GetModuleName() const override {
+    [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Event Module";
     }
 
@@ -41,12 +39,12 @@ public:
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
 
-    void ServiceListenEvent(int64_t sid, const weak_ptr<UServiceAgent> &weakPtr, int event);
+    void ServiceListenEvent(int64_t sid, const weak_ptr<IAgentBase> &weakPtr, int event);
 
     void RemoveServiceListenerByEvent(int64_t sid, int event);
     void RemoveServiceListener(int64_t sid);
 
-    void PlayerListenEvent(int64_t pid, const weak_ptr<UPlayerAgent> &weakPtr, int event);
+    void PlayerListenEvent(int64_t pid, const weak_ptr<IAgentBase> &weakPtr, int event);
 
     void RemovePlayerListenerByEvent(int64_t pid, int event);
     void RemovePlayerListener(int64_t pid);
@@ -56,12 +54,12 @@ private:
     void RemoveExpiredPlayers();
 
 private:
-    AServiceListenerMap mServiceListenerMap;
+    AListenerMap mServiceListenerMap;
     mutable std::shared_mutex mServiceListenerMutex;
 
     std::unique_ptr<ASteadyTimer> mServiceTimer;
 
-    APlayerListenerMap mPlayerListenerMap;
+    AListenerMap mPlayerListenerMap;
     mutable std::shared_mutex mPlayerListenerMutex;
 
     std::unique_ptr<ASteadyTimer> mPlayerTimer;

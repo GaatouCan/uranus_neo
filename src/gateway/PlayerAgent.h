@@ -4,20 +4,14 @@
 #include "factory/PlayerHandle.h"
 
 
-class UServer;
 class IAgentHandler;
 class IPlayerBase;
 class IServiceBase;
 class IPackageCodec_Interface;
-class IEventParam_Interface;
-class IPackage_Interface;
 
 using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-using APlayerTask = std::function<void(IPlayerBase *)>;
-using AServiceTask = std::function<void(IServiceBase *)>;
 
 
 enum class EAgentState {
@@ -47,7 +41,7 @@ public:
 public:
     [[nodiscard]] int64_t GetPlayerID() const;
 
-    bool Initial(UServer *pServer, IDataAsset_Interface *pData) override;
+    bool Initial(IModuleBase *pModule, IDataAsset_Interface *pData) override;
     void SetExpireSecond(int sec);
 
     void ConnectToClient();
@@ -80,6 +74,9 @@ protected:
     [[nodiscard]] IActorBase *GetActor() const override;
 
 private:
+    shared_ptr<UPlayerAgent> SharedFromThis();
+    weak_ptr<UPlayerAgent> WeakFromThis();
+
     awaitable<void> WritePackage();
     awaitable<void> ReadPackage();
     awaitable<void> Watchdog();
@@ -88,7 +85,6 @@ private:
 
 private:
     unique_ptr<IPackageCodec_Interface> mCodec;
-
     unique_ptr<IAgentHandler> mHandler;
 
     APackageChannel mOutput;

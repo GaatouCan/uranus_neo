@@ -1,6 +1,5 @@
 #include "EventModule.h"
-#include "ServiceAgent.h"
-#include "PlayerAgent.h"
+#include "AgentBase.h"
 #include "Server.h"
 
 #include <spdlog/spdlog.h>
@@ -64,7 +63,7 @@ void UEventModule::Dispatch(const std::shared_ptr<IEventParam_Interface> &event)
     RemoveExpiredPlayers();
 }
 
-void UEventModule::ServiceListenEvent(const int64_t sid, const weak_ptr<UServiceAgent> &weakPtr, const int event) {
+void UEventModule::ServiceListenEvent(const int64_t sid, const weak_ptr<IAgentBase> &weakPtr, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 
@@ -118,7 +117,7 @@ void UEventModule::RemoveServiceListener(const int64_t sid) {
     RemoveExpiredServices();
 }
 
-void UEventModule::PlayerListenEvent(const int64_t pid, const weak_ptr<UPlayerAgent> &weakPtr, const int event) {
+void UEventModule::PlayerListenEvent(const int64_t pid, const weak_ptr<IAgentBase> &weakPtr, const int event) {
     if (mState < EModuleState::INITIALIZED)
         return;
 

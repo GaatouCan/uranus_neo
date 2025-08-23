@@ -12,6 +12,7 @@ inline constexpr auto SERVER_CONFIG_JSON = "/json";
 
 
 class BASE_API UConfig final : public IModuleBase {
+
     DECLARE_MODULE(UConfig)
 
 protected:

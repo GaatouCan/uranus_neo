@@ -11,6 +11,7 @@ using std::make_shared;
 using std::make_unique;
 
 class UServer;
+class IModuleBase;
 class IAgentBase;
 class IActorBase;
 class IPackage_Interface;
@@ -72,7 +73,7 @@ public:
     [[nodiscard]] asio::io_context &GetIOContext() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    virtual bool Initial(UServer *pServer, IDataAsset_Interface *pData = nullptr);
+    virtual bool Initial(IModuleBase *pModule, IDataAsset_Interface *pData);
 
     void PushPackage(const FPackageHandle &pkg);
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
@@ -96,7 +97,7 @@ protected:
     using AChannel = TConcurrentChannel<void(std::error_code, unique_ptr<IChannelNode_Interface>)>;
 
     asio::io_context &mContext;
-    UServer *mServer;
+    IModuleBase *mModule;
 
     unique_ptr<AChannel> mChannel;
     unique_ptr<IRecyclerBase> mPackagePool;

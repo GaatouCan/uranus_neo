@@ -1,5 +1,5 @@
 #include "AgentHandlerImpl.h"
-#include "PlayerAgent.h"
+#include "../src/gateway/PlayerAgent.h"
 #include "internal/Packet.h"
 
 #include <login.pb.h>

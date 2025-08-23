@@ -24,13 +24,6 @@ void IPlayerBase::Save() {
     // TODO
 }
 
-void IPlayerBase::OnPackage(IPackage_Interface *pkg) {
-
-}
-
-void IPlayerBase::OnEvent(IEventParam_Interface *event) {
-}
-
 void IPlayerBase::OnReset() {
 
 }

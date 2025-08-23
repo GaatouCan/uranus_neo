@@ -60,18 +60,18 @@ public:
 
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
 
-#pragma region Post
-    void PostPackage(const FPackageHandle &pkg) const;
-    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
-
-    void PostTask(int64_t target, const AServiceTask &task) const;
-    void PostTask(const std::string &name, const AServiceTask &task) const;
-
-    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
-
-    void PostToPlayer(int64_t pid, const APlayerTask &task) const;
-#pragma endregion
+// #pragma region Post
+//     void PostPackage(const FPackageHandle &pkg) const;
+//     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+//
+//     void PostTask(int64_t target, const AServiceTask &task) const;
+//     void PostTask(const std::string &name, const AServiceTask &task) const;
+//
+//     void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
+//     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+//
+//     void PostToPlayer(int64_t pid, const APlayerTask &task) const;
+// #pragma endregion
 
 #pragma region Event
     void ListenEvent(int event);
@@ -82,6 +82,10 @@ public:
 protected:
     [[nodiscard]] IActorBase *GetActor() const override;
     void CleanUp() override;
+
+private:
+    shared_ptr<UServiceAgent> SharedFromThis();
+    weak_ptr<UServiceAgent> WeakFromThis();
 
 private:
     int64_t mServiceID;

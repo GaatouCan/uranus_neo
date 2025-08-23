@@ -1,7 +1,9 @@
 #include "Module.h"
+#include "Server.h"
 
 #include <format>
 #include <stdexcept>
+
 
 IModuleBase::IModuleBase()
     : mServer(nullptr),
@@ -34,6 +36,13 @@ UServer *IModuleBase::GetServer() const {
     if (mServer == nullptr)
         throw std::logic_error(std::format("{} - Server Is NULL Pointer", __FUNCTION__));
     return mServer;
+}
+
+asio::io_context &IModuleBase::GetIOContext() const {
+    if (mServer == nullptr)
+        throw std::logic_error(std::format("{} - Server Is NULL Pointer", __FUNCTION__));
+
+    return mServer->GetIOContext();
 }
 
 EModuleState IModuleBase::GetState() const {

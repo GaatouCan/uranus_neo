@@ -38,7 +38,7 @@ void UChannelEventNode::Execute(IActorBase *pActor) const {
 
 IAgentBase::IAgentBase(asio::io_context &ctx)
     : mContext(ctx),
-      mServer(nullptr),
+      mModule(nullptr),
       mTimerManager(mContext) {
 }
 
@@ -50,17 +50,19 @@ asio::io_context &IAgentBase::GetIOContext() const {
 }
 
 UServer *IAgentBase::GetServer() const {
-    return mServer;
+    if (mModule == nullptr)
+        throw std::runtime_error(fmt::format("{} - Module Is Null Pointer", __FUNCTION__));
+    return mModule->GetServer();
 }
 
-bool IAgentBase::Initial(UServer *pServer, IDataAsset_Interface *pData) {
-    mServer = pServer;
+bool IAgentBase::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
+    mModule = pModule;
 
     // Create The Channel
     mChannel = make_unique<AChannel>(mContext, 1024);
 
     // Create The Package Pool
-    mPackagePool = mServer->CreateUniquePackagePool(mContext);
+    mPackagePool = mModule->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
 
     return true;
@@ -131,7 +133,7 @@ void IAgentBase::PushTask(const std::function<void(IActorBase *)> &task) {
 }
 
 FPackageHandle IAgentBase::BuildPackage() const {
-    if (mServer == nullptr || mChannel == nullptr || mPackagePool == nullptr)
+    if (mModule == nullptr || mChannel == nullptr || mPackagePool == nullptr)
         throw std::runtime_error(fmt::format("{} - AgentBase[{:p}] Not Initialized",
             __FUNCTION__, static_cast<const void *>(this)));
 

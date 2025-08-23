@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <concepts>
+#include <asio/io_context.hpp>
 
 
 enum class EModuleState {
@@ -38,6 +39,7 @@ public:
 
     /** Call This Method After ::SetUpModule, Is Return Valid Pointer Or Throw Exception **/
     [[nodiscard]] UServer *GetServer() const;
+    [[nodiscard]] asio::io_context& GetIOContext() const;
 
     [[nodiscard]] EModuleState GetState() const;
 

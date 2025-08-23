@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Module.h"
-#include "PlayerBase.h"
+#include "gateway/PlayerBase.h"
 #include "base/MultiIOContextPool.h"
 #include "base/SingleIOContextPool.h"
 #include "base/IdentAllocator.h"
@@ -114,17 +114,17 @@ public:
     [[nodiscard]] IPlayerFactory_Interface *GetPlayerFactory() const;
     [[nodiscard]] IServiceFactory_Interface *GetServiceFactory() const;
 
-    [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
-    [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
-
-    [[nodiscard]] std::vector<shared_ptr<UPlayerAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
-
-    void RemovePlayer(int64_t pid);
-    void RecyclePlayer(FPlayerHandle &&player);
-
-    void RemoveAgent(const std::string &key);
-
-    void OnPlayerLogin(const std::string &key, int64_t pid);
+    // [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
+    // [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
+    //
+    // [[nodiscard]] std::vector<shared_ptr<UPlayerAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
+    //
+    // void RemovePlayer(int64_t pid);
+    // void RecyclePlayer(FPlayerHandle &&player);
+    //
+    // void RemoveAgent(const std::string &key);
+    //
+    // void OnPlayerLogin(const std::string &key, int64_t pid);
 
     [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
     [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
@@ -178,6 +178,6 @@ private:
     unique_ptr<IPlayerFactory_Interface> mPlayerFactory;
     unique_ptr<IServiceFactory_Interface> mServiceFactory;
 
-    EServerState mState;
+    EModuleState mState;
 };
 
