@@ -83,6 +83,8 @@ void IAgentBase::PushPackage(const FPackageHandle &pkg) {
     auto node = make_unique<UChannelPackageNode>();
     node->SetPackage(pkg);
 
+    SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
+
     // Push To The Channel
     if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UChannelPackageNode>();
@@ -105,6 +107,8 @@ void IAgentBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     auto node = make_unique<UChannelEventNode>();
     node->SetEventParam(event);
 
+    SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
+
     // Push To The Channel
     if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UChannelEventNode>();
@@ -126,6 +130,8 @@ void IAgentBase::PushTask(const std::function<void(IActorBase *)> &task) {
     // Wrap The Function In Node
     auto node = make_unique<UChannelTaskNode>();
     node->SetTask(task);
+
+    SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
 
     // Push To The Channel
     if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
@@ -167,6 +173,8 @@ awaitable<void> IAgentBase::ProcessChannel() {
     if (mChannel == nullptr)
         co_return;
 
+    SPDLOG_TRACE("{} - Agent[{:p}] Begin Process Channel", __FUNCTION__, static_cast<const void *>(this));
+
     try {
         // Looping Condition
         while (mChannel->is_open()) {
@@ -184,6 +192,9 @@ awaitable<void> IAgentBase::ProcessChannel() {
             // Execute The Task
             node->Execute(actor);
         }
+
+        SPDLOG_TRACE("{} - Agent[{:p}] Complete Process Channel, Begin Clean Up",
+            __FUNCTION__, static_cast<const void *>(this));
 
         // Clean Up The Resource After The Looping Completes
         CleanUp();

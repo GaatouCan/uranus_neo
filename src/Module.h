@@ -15,11 +15,18 @@ enum class EModuleState {
 };
 
 /**
- * The Base Class Of Server Module
+ * The Basic Class Of Server Module
  */
 class BASE_API IModuleBase {
 
     friend class UServer;
+
+    /** The Owner Server Pointer */
+    UServer *mServer;
+
+protected:
+    /** Module Current State */
+    std::atomic<EModuleState> mState;
 
 protected:
     IModuleBase();
@@ -37,19 +44,14 @@ public:
 
     virtual const char *GetModuleName() const = 0;
 
-    /** Call This Method After ::SetUpModule, Is Return Valid Pointer Or Throw Exception **/
+    /// Call This Method After ::SetUpModule, It Will Return A Valid Pointer Or Throw Exception
     [[nodiscard]] UServer *GetServer() const;
+
+    /// Get The IOContext Reference Of The Server's IOContext
     [[nodiscard]] asio::io_context& GetIOContext() const;
 
+    /// Get The Module Current State
     [[nodiscard]] EModuleState GetState() const;
-
-private:
-    /** The Owner Server Pointer */
-    UServer *mServer;
-
-protected:
-    /** Module Current State */
-    std::atomic<EModuleState> mState;
 };
 
 template<typename T>

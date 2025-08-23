@@ -2,9 +2,9 @@
 #include "ServiceBase.h"
 #include "Server.h"
 #include "ServiceModule.h"
-#include "gateway/PlayerAgent.h"
 #include "base/Package.h"
 #include "base/DataAsset.h"
+#include "gateway/PlayerAgent.h"
 #include "event/EventModule.h"
 #include "route/RouteModule.h"
 
@@ -31,6 +31,7 @@ void UTickerNode::Execute(IActorBase *pActor) const {
     if (pActor == nullptr)
         return;
 
+    // Only Service SubClass Can Update
     if (auto *pService = dynamic_cast<IServiceBase *>(pActor)) {
         pService->OnUpdate(mTickTime, mDeltaTime);
     }
@@ -55,30 +56,33 @@ void UServiceAgent::SetUpLibrary(const FSharedLibrary &library) {
 }
 
 bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
+    // Check If The Shared Library Assigned
+    if (!mLibrary.IsValid())
+        throw std::logic_error(std::format("{} - Shared Library Is Null", __FUNCTION__));
+
+    // Assign The mModule
     auto *module = dynamic_cast<UServiceModule *>(pModule);
     if (module == nullptr)
         throw std::bad_cast();
 
-    if (!mLibrary.IsValid())
-        throw std::logic_error(std::format("{} - Shared Library Is Null", __FUNCTION__));
-
     mModule = module;
-
-    // Start To Create Service
 
     // Load The Constructor From Shared Library
     auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
     if (creator == nullptr) {
-        SPDLOG_ERROR("{:<20} - Can't Load Creator", __FUNCTION__);
+        SPDLOG_ERROR("{} - Can't Load Creator", __FUNCTION__);
         return false;
     }
 
     mService = std::invoke(creator);
     if (mService == nullptr) {
-        SPDLOG_ERROR("{:<20} - Can't Create Service", __FUNCTION__);
+        SPDLOG_ERROR("{} - Can't Create Service", __FUNCTION__);
         return false;
     }
+    SPDLOG_INFO("{} - ServiceAgent[{} - {:p}] - Service Created",
+        __FUNCTION__, mServiceID, static_cast<void *>(this));
 
+    // Create The Inner Channel
     mChannel = make_unique<AChannel>(mContext, 1024);
 
     // Create Package Pool For Data Exchange
@@ -90,8 +94,8 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     const auto ret = mService->Initial(pData);
 
     // Context And Service Initialized
-    SPDLOG_TRACE("{:<20} - Context[{:p}] Service[{}] Initial Successfully",
-        __FUNCTION__, static_cast<const void *>(this), mService->GetServiceName());
+    SPDLOG_INFO("{} - Agent[{} - {:p}] Service[{}] Initial Successfully",
+        __FUNCTION__, mServiceID, static_cast<const void *>(this), mService->GetServiceName());
 
     // Delete The Data Asset For Initialization
     delete pData;
@@ -102,6 +106,8 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
 void UServiceAgent::Stop() {
     if (mChannel != nullptr || mChannel->is_open()) {
         mChannel->close();
+        SPDLOG_INFO("{} - Agent[{} - {:p}] Will Stop",
+            __FUNCTION__, mServiceID, static_cast<const void *>(this));
     }
 }
 
@@ -109,22 +115,25 @@ bool UServiceAgent::BootService() {
     if (mModule == nullptr || mChannel == nullptr || mPackagePool == nullptr || !mLibrary.IsValid() || mService == nullptr)
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
+    // Start The Service
     if (const auto res = mService->Start(); !res) {
-        SPDLOG_ERROR("{:<20} - Context[{:p}], Service[{} - {}] Failed To Boot.",
-            __FUNCTION__, static_cast<const void *>(this), static_cast<int64_t>(mServiceID), GetServiceName());
+        SPDLOG_ERROR("{} - Agent[{} - {:p}], Service[{}] Failed To Boot.",
+            __FUNCTION__, mServiceID, static_cast<const void *>(this), GetServiceName());
 
         return false;
     }
 
-    SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{} - {}] Started.",
-        __FUNCTION__, static_cast<const void *>(this), mServiceID, GetServiceName());
+    SPDLOG_TRACE("{} - Agent[{} - {:p}], Service[{}] Started.",
+        __FUNCTION__, mServiceID,static_cast<const void *>(this), GetServiceName());
 
+    // If It Set Update
     if (mService->bUpdatePerTick) {
         if (auto *module = dynamic_cast<UServiceModule *>(mModule)) {
             module->AddTicker(mServiceID);
         }
     }
 
+    // Begin The Looping
     co_spawn(mContext, [self = SharedFromThis()] -> awaitable<void> {
         co_await self->ProcessChannel();
     }, detached);
@@ -146,13 +155,11 @@ void UServiceAgent::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDu
     if (mService == nullptr || mChannel == nullptr || !mChannel->is_open())
         return;
 
-    // SPDLOG_TRACE("{:<20} - Context[{:p}], Service[{}]",
-    //              __FUNCTION__, static_cast<const void *>(this), GetServiceName());
-
     auto node = make_unique<UTickerNode>();
     node->SetCurrentTickTime(timepoint);
     node->SetDeltaTime(delta);
 
+    // Push To The Inner Channel
     if (const bool ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel->is_open()) {
         auto temp = make_unique<UTickerNode>();
         temp->SetCurrentTickTime(timepoint);
@@ -168,6 +175,7 @@ void UServiceAgent::PostPackage(const FPackageHandle &pkg) const {
     if (pkg == nullptr)
         return;
 
+    // Do Not Post Th Self
     if (const auto target = pkg->GetTarget(); target < 0 || target == mServiceID)
         return;
 
@@ -182,6 +190,7 @@ void UServiceAgent::PostPackage(const std::string &name, const FPackageHandle &p
     if (pkg == nullptr)
         return;
 
+    // Do Not Post Th Self
     if (name.empty() || name == GetServiceName())
         return;
 
@@ -196,6 +205,7 @@ void UServiceAgent::PostTask(const int64_t target, const AActorTask &task) const
     if (task == nullptr)
         return;
 
+    // Do Not Post Th Self
     if (target < 0 || target == mServiceID)
         return;
 
@@ -210,6 +220,7 @@ void UServiceAgent::PostTask(const std::string &name, const AActorTask &task) co
     if (task == nullptr)
         return;
 
+    // Do Not Post Th Self
     if (name.empty() || name == GetServiceName())
         return;
 
@@ -221,10 +232,7 @@ void UServiceAgent::PostTask(const std::string &name, const AActorTask &task) co
 }
 
 void UServiceAgent::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) const {
-    if (pkg == nullptr)
-        return;
-
-    if (pid < 0)
+    if (pkg == nullptr || pid < 0)
         return;
 
     const auto *router = GetServer()->GetModule<URouteModule>();
@@ -236,10 +244,7 @@ void UServiceAgent::SendToPlayer(const int64_t pid, const FPackageHandle &pkg) c
 }
 
 void UServiceAgent::SendToClient(const int64_t pid, const FPackageHandle &pkg) const {
-    if (pkg == nullptr)
-        return;
-
-    if (pid <= 0)
+    if (pkg == nullptr || pid <= 0)
         return;
 
     const auto *router = GetServer()->GetModule<URouteModule>();
@@ -251,10 +256,7 @@ void UServiceAgent::SendToClient(const int64_t pid, const FPackageHandle &pkg) c
 }
 
 void UServiceAgent::PostToPlayer(const int64_t pid, const AActorTask &task) const {
-    if (task == nullptr)
-        return;
-
-    if (pid <= 0)
+    if (task == nullptr || pid <= 0)
         return;
 
     const auto *router = GetServer()->GetModule<URouteModule>();
@@ -298,7 +300,6 @@ IActorBase *UServiceAgent::GetActor() const {
     return mService;
 }
 
-
 void UServiceAgent::CleanUp() {
     if (!mLibrary.IsValid())
         return;
@@ -307,14 +308,19 @@ void UServiceAgent::CleanUp() {
         return;
 
     mService->Stop();
+    SPDLOG_INFO("{} - Agent[{} - {:p}], Service Stopped",
+        __FUNCTION__, mServiceID, static_cast<const void *>(this));
+
     auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
     if (destroyer != nullptr) {
         std::invoke(destroyer, mService);
     }
+    SPDLOG_INFO("{} - Agent[{} - {:p}], Service Deleted",
+        __FUNCTION__, mServiceID, static_cast<const void *>(this));
 
-    mService = nullptr;
+    // Reset The Pointer
     mLibrary.Reset();
-
+    mService = nullptr;
     mServiceID = INVALID_SERVICE_ID;
 }
 

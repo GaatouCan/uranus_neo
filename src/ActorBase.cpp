@@ -3,6 +3,7 @@
 
 #include <spdlog/fmt/fmt.h>
 
+
 IActorBase::IActorBase()
     : mAgent(nullptr) {
 }
@@ -36,7 +37,9 @@ UServer *IActorBase::GetServer() const {
 }
 
 void IActorBase::OnPackage(IPackage_Interface *pkg) {
+    // Implement In SubClass
 }
 
 void IActorBase::OnEvent(IEventParam_Interface *event) {
+    // Implement In SubClass
 }

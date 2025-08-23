@@ -23,6 +23,7 @@ void UServer::Initial() {
     if (mState != EServerState::CREATED)
         throw std::logic_error(std::format("{} - Server Not In CREATED State", __FUNCTION__));
 
+    // Initial All Moduel
     for (const auto &pModule: mModuleOrder) {
         SPDLOG_INFO("Initial Server Module[{}]", pModule->GetModuleName());
         pModule->Initial();
@@ -37,6 +38,7 @@ void UServer::Start() {
 
     const auto &cfg = GetServerConfig();
 
+    // Start All Modules
     for (const auto &pModule: mModuleOrder) {
         SPDLOG_INFO("Start Server Module[{}]", pModule->GetModuleName());
         pModule->Start();
@@ -50,6 +52,8 @@ void UServer::Start() {
     });
 
     SPDLOG_INFO("Server Is Running");
+
+    // Run The Main IOContext
     mIOContext.run();
 }
 
@@ -60,9 +64,12 @@ void UServer::Shutdown() {
     mState = EServerState::TERMINATED;
     SPDLOG_INFO("Server Is Shutting Down");
 
+    // Stop The Main IOContext
     if (mIOContext.stopped()) {
         mIOContext.stop();
     }
+
+    // Stop All Modules In Reverse Order
     for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
         SPDLOG_INFO("Stop Module[{}]", (*iter)->GetModuleName());
         (*iter)->Stop();

@@ -12,7 +12,9 @@ class UServer;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 using ATimerTask = std::function<void(ASteadyTimePoint, ASteadyDuration)>;
 
-
+/**
+ * The Basic Class Of Player And Service
+ */
 class BASE_API IActorBase {
 
 public:
@@ -22,7 +24,10 @@ public:
     void SetUpAgent(IAgentBase *agent);
     [[nodiscard]] IAgentBase *GetAgent() const;
 
+    /// Implement This To Handle The Package Data
     virtual void OnPackage(IPackage_Interface *pkg);
+
+    /// Implement This To Handle The Event Param
     virtual void OnEvent(IEventParam_Interface *event);
 
     [[nodiscard]] asio::io_context &GetIOContext() const;
@@ -40,5 +45,6 @@ protected:
     }
 
 protected:
+    /** The Pointer To The Agent **/
     IAgentBase *mAgent;
 };
