@@ -5,20 +5,7 @@
 #include "base/SharedLibrary.h"
 
 
-class UServer;
 class IServiceBase;
-class IPlayerBase;
-class IModuleBase;
-class IRecyclerBase;
-class IPackage_Interface;
-class IEventParam_Interface;
-class IDataAsset_Interface;
-
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
-using APlayerTask = std::function<void(IPlayerBase *)>;
-using AServiceTask = std::function<void(IServiceBase *)>;
-using std::unique_ptr;
-
 
 class BASE_API UTickerNode final : public IChannelNode_Interface {
 
@@ -60,18 +47,18 @@ public:
 
     void PushTicker(ASteadyTimePoint timepoint, ASteadyDuration delta);
 
-// #pragma region Post
-//     void PostPackage(const FPackageHandle &pkg) const;
-//     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
-//
-//     void PostTask(int64_t target, const AServiceTask &task) const;
-//     void PostTask(const std::string &name, const AServiceTask &task) const;
-//
-//     void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-//     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
-//
-//     void PostToPlayer(int64_t pid, const APlayerTask &task) const;
-// #pragma endregion
+#pragma region Post
+     void PostPackage(const FPackageHandle &pkg) const;
+     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+
+     void PostTask(int64_t target, const AActorTask &task) const;
+     void PostTask(const std::string &name, const AActorTask &task) const;
+
+     void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
+     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+
+     void PostToPlayer(int64_t pid, const AActorTask &task) const;
+#pragma endregion
 
 #pragma region Event
     void ListenEvent(int event);

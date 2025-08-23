@@ -6,23 +6,7 @@
 
 class IAgentHandler;
 class IPlayerBase;
-class IServiceBase;
 class IPackageCodec_Interface;
-
-using std::unique_ptr;
-using std::shared_ptr;
-using std::weak_ptr;
-
-
-enum class EAgentState {
-    CREATED,
-    INITIALIZED,
-    CONNECTED,
-    IDLE,
-    RUNNING,
-    WAITING,
-    TERMINATED,
-};
 
 
 class BASE_API UPlayerAgent final : public IAgentBase {
@@ -51,12 +35,14 @@ public:
     [[nodiscard]] FPlayerHandle ExtractPlayer();
 
 #pragma region Post
-    // void PostPackage(const FPackageHandle &pkg) const;
-    // void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+    /// Send To Service, With Set Target In Package
+    void PostPackage(const FPackageHandle &pkg) const;
 
-    // TODO
-    // void PostTask(int64_t target, const AServiceTask &task) const;
-    // void PostTask(const std::string &name, const AServiceTask &task) const;
+    /// Send To Service By Service Name
+    void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
+
+    void PostTask(int64_t target, const AActorTask &task) const;
+    void PostTask(const std::string &name, const AActorTask &task) const;
 #pragma endregion
 
 #pragma region Event

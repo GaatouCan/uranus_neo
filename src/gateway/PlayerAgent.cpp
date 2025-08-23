@@ -1,18 +1,18 @@
 #include "PlayerAgent.h"
-#include "Server.h"
-#include "../service/ServiceAgent.h"
 #include "PlayerBase.h"
+#include "Gateway.h"
+#include "Server.h"
 #include "Utils.h"
 #include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
 #include "event/EventModule.h"
+#include "service/ServiceAgent.h"
+#include "route/RouteModule.h"
 
 #include <asio/experimental/awaitable_operators.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
-
-#include "Gateway.h"
 
 
 using namespace asio::experimental::awaitable_operators;
@@ -146,74 +146,51 @@ FPlayerHandle UPlayerAgent::ExtractPlayer() {
     return std::move(mPlayer);
 }
 
-// void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
-//     if (pkg == nullptr)
-//         return;
-//
-//     const auto target = pkg->GetTarget();
-//     if (target <= 0)
-//         return;
-//
-//     if (const auto context = GetServer()->FindService(target)) {
-//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(), target, context->GetServiceName());
-//
-//         pkg->SetSource(PLAYER_TARGET_ID);
-//         context->PushPackage(pkg);
-//     }
-// }
-//
-// void UPlayerAgent::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
-//     if (pkg == nullptr)
-//         return;
-//
-//     if (const auto context = GetServer()->FindService(name)) {
-//         const auto target = context->GetServiceID();
-//
-//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
-//             static_cast<int>(target), context->GetServiceName());
-//
-//         pkg->SetSource(PLAYER_TARGET_ID);
-//         pkg->SetTarget(target);
-//
-//         context->PushPackage(pkg);
-//     }
-// }
+void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
+    if (pkg == nullptr)
+        return;
 
-// void UPlayerAgent::PostTask(const int64_t target, const AServiceTask &task) const {
-//     if (task == nullptr)
-//         return;
-//
-//     if (target <= 0)
-//         return;
-//
-//     if (const auto context = GetServer()->FindService(target)) {
-//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
-//             target, context->GetServiceName());
-//
-//         context->PushTask(task);
-//     }
-// }
-//
-// void UPlayerAgent::PostTask(const std::string &name, const AServiceTask &task) const {
-//     if (task == nullptr)
-//         return;
-//
-//     if (name.empty())
-//         return;
-//
-//     if (const auto context = GetServer()->FindService(name)) {
-//         const auto target = context->GetServiceID();
-//
-//         SPDLOG_TRACE("{:<20} - From Player[ID: {}, Addr: {}] To Service[ID: {}, Name: {}]",
-//             __FUNCTION__, mPlayer->GetPlayerID(), RemoteAddress().to_string(),
-//             static_cast<int>(target), context->GetServiceName());
-//
-//         context->PushTask(task);
-//     }
-// }
+    const auto *router = GetServer()->GetModule<URouteModule>();
+    if (!router)
+        return;
+
+    pkg->SetSource(PLAYER_TARGET_ID);
+    router->PostPackage(pkg);
+}
+
+void UPlayerAgent::PostPackage(const std::string &name, const FPackageHandle &pkg) const {
+    if (pkg == nullptr)
+        return;
+
+    const auto *router = GetServer()->GetModule<URouteModule>();
+    if (!router)
+        return;
+
+    pkg->SetSource(PLAYER_TARGET_ID);
+    router->PostPackage(name, pkg);
+}
+
+void UPlayerAgent::PostTask(const int64_t target, const AActorTask &task) const {
+    if (target < 0 || task == nullptr)
+        return;
+
+    const auto *router = GetServer()->GetModule<URouteModule>();
+    if (!router)
+        return;
+
+    router->PostTask(true, target, task);
+}
+
+void UPlayerAgent::PostTask(const std::string &name, const AActorTask &task) const {
+    if (name.empty() || task == nullptr)
+        return;
+
+    const auto *router = GetServer()->GetModule<URouteModule>();
+    if (!router)
+        return;
+
+    router->PostTask(name, task);
+}
 
 void UPlayerAgent::ListenEvent(const int event) {
     if (mPlayer == nullptr || mHandler == nullptr || !mChannel->is_open())
@@ -316,7 +293,7 @@ awaitable<void> UPlayerAgent::WritePackage() {
                 break;
             }
 
-            if (pkg == nullptr)
+            if (pkg == nullptr || pkg->GetTarget() != CLIENT_TARGET_ID)
                 continue;
 
             if (const auto ret = co_await mCodec->Encode(pkg.Get()); !ret) {
@@ -378,7 +355,7 @@ awaitable<void> UPlayerAgent::ReadPackage() {
                         mPlayer->OnPackage(pkg.Get());
                     } else if (target > 0) {
                         // Post Package To Service
-                        // PostPackage(pkg);
+                        PostPackage(pkg);
                     }
                 }
             }

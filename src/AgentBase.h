@@ -19,6 +19,7 @@ class IEventParam_Interface;
 class IDataAsset_Interface;
 
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
+using AActorTask = std::function<void(IActorBase *)>;
 
 
 class BASE_API IChannelNode_Interface {
