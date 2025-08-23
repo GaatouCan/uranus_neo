@@ -120,7 +120,7 @@ public:
     void CancelAllTimers() const;
 
     void TryCreateLogger(const std::string &name) const;
-    
+
     /// Implement By Derived Class
     virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
 };
@@ -163,7 +163,7 @@ inline void IServiceBase::PostToPlayerT(const int64_t pid, Callback &&func, Args
 
 template<class Target, class Functor, class ... Args>
 requires std::derived_from<Target, IServiceBase>
-FTimerHandle IServiceBase::CreateTimer(int delay, int rate, Functor &&func, Target *obj, Args &&...args) {
+inline FTimerHandle IServiceBase::CreateTimer(int delay, int rate, Functor &&func, Target *obj, Args &&...args) {
     if (obj == nullptr)
         return {};
 

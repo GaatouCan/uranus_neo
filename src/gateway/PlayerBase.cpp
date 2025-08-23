@@ -43,6 +43,7 @@ void IPlayerBase::SendPackage(const FPackageHandle &pkg) const {
 void IPlayerBase::PostPackage(const FPackageHandle &pkg) const {
     if (pkg == nullptr || pkg->GetTarget() < 0)
         return;
+
     GetAgentT<UPlayerAgent>()->PostPackage(pkg);
 }
 
