@@ -6,7 +6,7 @@
 #include <string>
 
 class UServer;
-class UServiceAgent;
+class IActorBase;
 class IPlayerBase;
 class IPackage_Interface;
 class IDataAsset_Interface;
@@ -16,6 +16,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 using std::make_shared;
 using std::make_unique;
+using AActorTask = std::function<void(IActorBase *)>;
 
 
 enum class EServiceState {
@@ -29,10 +30,6 @@ class BASE_API IServiceBase : public IActorBase {
 
     friend class UServiceAgent;
 
-protected:
-    void SetUpContext(UServiceAgent *pContext);
-    [[nodiscard]] UServiceAgent *GetContext() const;
-
 public:
     IServiceBase();
     ~IServiceBase() override;
@@ -44,115 +41,92 @@ public:
 
     [[nodiscard]] EServiceState GetState() const;
 
-    // [[nodiscard]] asio::io_context &GetIOContext() const;
-    [[nodiscard]] UServer *GetServer() const;
-
     [[nodiscard]] FPackageHandle BuildPackage() const;
 
-#pragma region Control By Context
     virtual bool Initial(const IDataAsset_Interface *pData);
     virtual awaitable<bool> AsyncInitial(const IDataAsset_Interface *pData);
 
     virtual bool Start();
     virtual void Stop();
-#pragma endregion
 
-#pragma region Package
     /// Send To Other Service Use Target In Package
     void PostPackage(const FPackageHandle &pkg) const;
 
     /// Send To Other Service Use Service Name
     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
-#pragma endregion
 
-// #pragma region Task
-//     void PostTask(int64_t target, const std::function<void(IServiceBase *)> &task) const;
-//     void PostTask(const std::string &name, const std::function<void(IServiceBase *)> &task) const;
-//
-//     template<class Type, class Callback, class... Args>
-//     requires std::derived_from<Type, IServiceBase>
-//     void PostTaskT(int64_t target, Callback &&func, Args &&... args);
-//
-//     template<class Type, class Callback, class... Args>
-//     requires std::derived_from<Type, IServiceBase>
-//     void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
-// #pragma endregion
+    void PostTask(int64_t target, const AActorTask &task) const;
+    void PostTask(const std::string &name, const AActorTask &task) const;
 
-#pragma region To Player
-    // void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    // void PostToPlayer(int64_t pid, const APlayerTask &task) const;
-    //
-    // template<class Type, class Callback, class... Args>
-    // requires std::derived_from<Type, IPlayerBase>
-    // void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
-#pragma endregion
+    template<class Type, class Callback, class... Args>
+    requires std::derived_from<Type, IServiceBase>
+    void PostTaskT(int64_t target, Callback &&func, Args &&... args);
+
+    template<class Type, class Callback, class... Args>
+    requires std::derived_from<Type, IServiceBase>
+    void PostTaskT(const std::string &name, Callback &&func, Args &&... args);
+
+    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
+    void PostToPlayer(int64_t pid, const AActorTask &task) const;
+
+    template<class Type, class Callback, class... Args>
+    requires std::derived_from<Type, IPlayerBase>
+    void PostToPlayerT(int64_t pid, Callback &&func, Args &&... args);
 
     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
 
-#pragma region Event
     virtual void ListenEvent(int event) const;
     virtual void RemoveListener(int event) const;
 
     void DispatchEvent(const shared_ptr<IEventParam_Interface> &event) const;
-#pragma endregion
 
-#pragma region Timer
     [[nodiscard]] FTimerHandle CreateTimer(const ATimerTask &task, int delay, int rate = -1) const;
     void CancelTimer(int64_t tid) const;
     void CancelAllTimers() const;
-#pragma endregion
 
     void TryCreateLogger(const std::string &name) const;
 
-#pragma region Implenment In Derived Class
     void OnPackage(IPackage_Interface *pkg) override;
     void OnEvent(IEventParam_Interface *event) override;
     virtual void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta);
-#pragma endregion
 
 protected:
-    UServiceAgent *mContext;
     std::atomic<EServiceState> mState;
-
     bool bUpdatePerTick;
 };
 
 
-// template<class Type, class Callback, class ... Args>
-// requires std::derived_from<Type, IServiceBase>
-// inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
-//     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-//         auto *ptr = dynamic_cast<Type *>(ser);
-//         if (ptr == nullptr)
-//             return;
-//
-//         std::invoke(func, ptr, args...);
-//     };
-//     this->PostTask(target, task);
-// }
-//
-// template<class Type, class Callback, class ... Args>
-// requires std::derived_from<Type, IServiceBase>
-// inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
-//     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IServiceBase *ser) {
-//         auto *pService = dynamic_cast<Type *>(ser);
-//         if (pService == nullptr)
-//             return;
-//
-//         std::invoke(func, pService, args...);
-//     };
-//     this->PostTask(name, task);
-// }
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IServiceBase>
+inline void IServiceBase::PostTaskT(const int64_t target, Callback &&func, Args &&...args) {
+    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IActorBase *pActor) {
+        if (auto *pService = dynamic_cast<Type *>(pActor)) {
+            std::invoke(func, pService, std::forward<Args>(args)...);
+        }
+    };
 
-// template<class Type, class Callback, class ... Args>
-// requires std::derived_from<Type, IPlayerBase>
-// void IServiceBase::PostToPlayerT(int64_t pid, Callback &&func, Args &&...args) {
-//     auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IPlayerBase *plr) {
-//         auto *pPlayer = dynamic_cast<Type *>(plr);
-//         if (pPlayer == nullptr)
-//             return;
-//
-//         std::invoke(func, pPlayer, args...);
-//     };
-//     this->PostToPlayer(pid, task);
-// }
+    this->PostTask(target, task);
+}
+
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IServiceBase>
+inline void IServiceBase::PostTaskT(const std::string &name, Callback &&func, Args &&...args) {
+    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IActorBase *pActor) {
+        if (auto *pService = dynamic_cast<Type *>(pActor)) {
+            std::invoke(func, pService, std::forward<Args>(args)...);
+        }
+    };
+
+    this->PostTask(name, task);
+}
+
+template<class Type, class Callback, class ... Args>
+requires std::derived_from<Type, IPlayerBase>
+inline void IServiceBase::PostToPlayerT(const int64_t pid, Callback &&func, Args &&...args) {
+    auto task = [func = std::forward<Callback>(func), ...args = std::forward<Args>(args)](IActorBase *pAcotr) {
+        if (auto *pPlayer = dynamic_cast<Type *>(pAcotr)) {
+            std::invoke(func, pPlayer, std::forward<Args>(args)...);
+        }
+    };
+    this->PostToPlayer(pid, task);
+}

@@ -86,7 +86,7 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     mPackagePool->Initial();
 
     // Initial Service
-    mService->SetUpContext(this);
+    mService->SetUpAgent(this);
     const auto ret = mService->Initial(pData);
 
     // Context And Service Initialized

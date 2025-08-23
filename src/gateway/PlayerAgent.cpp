@@ -126,6 +126,8 @@ void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
         throw std::runtime_error(std::format("{} - Other Player Already Exists", __FUNCTION__));
 
     mPlayer = std::move(plr);
+    mPlayer->SetUpAgent(this);
+
     mReceiveTime = std::chrono::steady_clock::now();
 
     co_spawn(mContext, [self = SharedFromThis()]() -> awaitable<void> {
@@ -143,11 +145,12 @@ void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
 }
 
 FPlayerHandle UPlayerAgent::ExtractPlayer() {
+    mPlayer->CleanAgent();
     return std::move(mPlayer);
 }
 
 void UPlayerAgent::PostPackage(const FPackageHandle &pkg) const {
-    if (pkg == nullptr)
+    if (pkg == nullptr || pkg->GetTarget() < 0)
         return;
 
     const auto *router = GetServer()->GetModule<URouteModule>();
@@ -223,7 +226,7 @@ void UPlayerAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param)
 }
 
 void UPlayerAgent::SendPackage(const FPackageHandle &pkg) {
-    if (pkg == nullptr)
+    if (pkg == nullptr || pkg->GetTarget() != CLIENT_TARGET_ID)
         return;
 
     if (const bool ret = mOutput.try_send_via_dispatch(std::error_code{}, pkg); !ret && mOutput.is_open()) {
@@ -403,6 +406,7 @@ void UPlayerAgent::CleanUp() {
         mPlayer->Save();
 
         if (bCachable) {
+            mPlayer->CleanAgent();
             gateway->RecyclePlayer(std::move(mPlayer));
         } else {
             gateway->RemovePlayer(mPlayer->GetPlayerID());

@@ -146,6 +146,11 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
         player = mPlayerFactory->CreatePlayer();
     }
 
+    // Set The Player ID Whether Is New Or Cached
+    player->SetPlayerID(pid);
+
+    // Move The Player To The Agent
+    // The Lifetime Of The Player Is Managed By The Agent From Now On
     agent->SetUpPlayer(std::move(player));
 }
 
