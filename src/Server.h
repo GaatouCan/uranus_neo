@@ -2,7 +2,6 @@
 
 #include "Module.h"
 #include "gateway/PlayerBase.h"
-#include "base/MultiIOContextPool.h"
 #include "base/SingleIOContextPool.h"
 #include "base/IdentAllocator.h"
 #include "factory/CodecFactory.h"
@@ -49,7 +48,6 @@ public:
     void Shutdown();
 
     [[nodiscard]] asio::io_context& GetIOContext();
-    [[nodiscard]] asio::io_context& GetWorkerContext();
 
     template<class T>
     requires std::derived_from<T, IModuleBase>
@@ -85,15 +83,6 @@ public:
     }
 
     template<class T, class... Args>
-    requires std::derived_from<T, IPlayerFactory_Interface>
-    void SetPlayerFactory(Args && ... args) {
-        if (mState != EServerState::CREATED)
-            throw std::logic_error("Only can set PlayerFactory in CREATED state");
-
-        mPlayerFactory = make_unique<T>(std::forward<Args>(args)...);
-    }
-
-    template<class T, class... Args>
     requires std::derived_from<T, IServiceFactory_Interface>
     void SetServiceFactory(Args && ... args) {
         if (mState != EServerState::CREATED)
@@ -107,56 +96,19 @@ public:
     unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
     unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
 
-    FPlayerHandle CreatePlayer() const;
-    unique_ptr<IAgentHandler> CreateAgentHandler() const;
-
     [[nodiscard]] ICodecFactory_Interface *GetCodecFactory() const;
-    [[nodiscard]] IPlayerFactory_Interface *GetPlayerFactory() const;
     [[nodiscard]] IServiceFactory_Interface *GetServiceFactory() const;
 
-    // [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
-    // [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
+    // [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
+    // [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
     //
-    // [[nodiscard]] std::vector<shared_ptr<UPlayerAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
+    // void BootService(const std::string &path, const IDataAsset_Interface *pData);
     //
-    // void RemovePlayer(int64_t pid);
-    // void RecyclePlayer(FPlayerHandle &&player);
-    //
-    // void RemoveAgent(const std::string &key);
-    //
-    // void OnPlayerLogin(const std::string &key, int64_t pid);
-
-    [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
-    [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
-
-    void BootService(const std::string &path, const IDataAsset_Interface *pData);
-
-    void ShutdownService(int64_t sid);
-    void ShutdownService(const std::string &name);
+    // void ShutdownService(int64_t sid);
+    // void ShutdownService(const std::string &name);
 
 private:
-    awaitable<void> WaitForClient(uint16_t port);
-    awaitable<void> CollectCachedPlayer();
-
-private:
-#pragma region IO Management
     asio::io_context        mIOContext;
-    ATcpAcceptor            mAcceptor;
-    UMultiIOContextPool     mIOContextPool;
-#pragma endregion IO Manage
-
-#pragma region Agent Management
-    absl::flat_hash_map<std::string, shared_ptr<UPlayerAgent>> mAgentMap;
-    mutable std::shared_mutex mAgentMutex;
-
-    absl::flat_hash_map<int64_t, shared_ptr<UPlayerAgent>> mPlayerMap;
-    mutable std::shared_mutex mPlayerMutex;
-
-    absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
-    mutable std::shared_mutex mCacheMutex;
-
-    ASteadyTimer mCacheTimer;
-#pragma endregion
 
 #pragma region Service Management
     USingleIOContextPool mWorkerPool;
@@ -175,9 +127,8 @@ private:
 #pragma endregion
 
     unique_ptr<ICodecFactory_Interface> mCodecFactory;
-    unique_ptr<IPlayerFactory_Interface> mPlayerFactory;
     unique_ptr<IServiceFactory_Interface> mServiceFactory;
 
-    EModuleState mState;
+    EServerState mState;
 };
 

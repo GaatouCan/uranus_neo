@@ -1,6 +1,6 @@
 #include "PlayerAgent.h"
 #include "Server.h"
-#include "ServiceAgent.h"
+#include "../service/ServiceAgent.h"
 #include "PlayerBase.h"
 #include "Utils.h"
 #include "base/AgentHandler.h"
@@ -69,16 +69,20 @@ void UPlayerAgent::SetExpireSecond(const int sec) {
 
 
 bool UPlayerAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
-    mModule = pModule;
+    auto *gateway = dynamic_cast<UGateway *>(pModule);
+    if (gateway == nullptr)
+        throw std::bad_cast();
+
+    mModule = gateway;
 
     // Create The Channel
     mChannel = make_unique<AChannel>(mContext, 1024);
 
     // Create The Package Pool
-    mPackagePool = mModule->GetServer()->CreateUniquePackagePool(mContext);
+    mPackagePool = gateway->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
 
-    mHandler = mModule->GetServer()->CreateAgentHandler();
+    mHandler = gateway->CreateAgentHandler();
     mHandler->SetUpAgent(this);
 
     return true;

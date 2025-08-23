@@ -36,6 +36,8 @@ public:
         mPlayerFactory = std::make_unique<T>(std::forward<Args>(args)...);
     }
 
+    unique_ptr<IAgentHandler> CreateAgentHandler() const;
+
     [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
     [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
 

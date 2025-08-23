@@ -1,6 +1,7 @@
 #include "ServiceAgent.h"
 #include "ServiceBase.h"
 #include "Server.h"
+#include "ServiceModule.h"
 #include "gateway/PlayerAgent.h"
 #include "base/Package.h"
 #include "base/DataAsset.h"
@@ -54,11 +55,15 @@ void UServiceAgent::SetUpLibrary(const FSharedLibrary &library) {
     mLibrary = library;
 }
 
-bool UServiceAgent::Initial(UServer *pServer, IDataAsset_Interface *pData) {
-    if (!mLibrary.IsValid())
-        throw std::logic_error(std::format("{} - Server Is Null", __FUNCTION__));
+bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
+    auto *module = dynamic_cast<UServiceModule *>(pModule);
+    if (module == nullptr)
+        throw std::bad_cast();
 
-    mServer = pServer;
+    if (!mLibrary.IsValid())
+        throw std::logic_error(std::format("{} - Shared Library Is Null", __FUNCTION__));
+
+    mModule = module;
 
     // Start To Create Service
 
@@ -78,7 +83,7 @@ bool UServiceAgent::Initial(UServer *pServer, IDataAsset_Interface *pData) {
     mChannel = make_unique<AChannel>(mContext, 1024);
 
     // Create Package Pool For Data Exchange
-    mPackagePool = mServer->CreateUniquePackagePool(mContext);
+    mPackagePool = module->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
 
     // Initial Service
@@ -102,7 +107,7 @@ void UServiceAgent::Stop() {
 }
 
 bool UServiceAgent::BootService() {
-    if (mServer == nullptr || mChannel == nullptr || mPackagePool == nullptr || !mLibrary.IsValid() || mService == nullptr)
+    if (mModule == nullptr || mChannel == nullptr || mPackagePool == nullptr || !mLibrary.IsValid() || mService == nullptr)
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
     if (const auto res = mService->Start(); !res) {

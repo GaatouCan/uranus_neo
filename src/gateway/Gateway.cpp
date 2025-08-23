@@ -1,6 +1,7 @@
 #include "Gateway.h"
 #include "Server.h"
 #include "PlayerAgent.h"
+#include "base/AgentHandler.h"
 #include "base/PackageCodec.h"
 #include "login/LoginAuth.h"
 
@@ -14,6 +15,12 @@ UGateway::~UGateway() {
     Stop();
 }
 
+unique_ptr<IAgentHandler> UGateway::CreateAgentHandler() const {
+    if (mPlayerFactory == nullptr)
+        throw std::runtime_error(fmt::format("{} - PlayerFactory Is Null", __FUNCTION__));
+
+    return mPlayerFactory->CreateAgentHandler();
+}
 
 shared_ptr<UPlayerAgent> UGateway::FindPlayer(const int64_t pid) const {
     if (mState != EModuleState::RUNNING)

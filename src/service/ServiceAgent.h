@@ -54,7 +54,7 @@ public:
     [[nodiscard]] int64_t GetServiceID() const;
     [[nodiscard]] std::string GetServiceName() const;
 
-    bool Initial(UServer *pServer, IDataAsset_Interface *pData) override;
+    bool Initial(IModuleBase *pModule, IDataAsset_Interface *pData) override;
     bool BootService();
     void Stop();
 
