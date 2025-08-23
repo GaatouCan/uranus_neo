@@ -25,11 +25,14 @@ UPlayerAgent::UPlayerAgent(unique_ptr<IPackageCodec_Interface> &&codec)
       mOutput(mContext, 1024),
       mWatchdog(mContext),
       mExpiration(std::chrono::seconds(30)),
-      bCachable(true) {
+      bCachable(true),
+      bRepeated(false) {
 
+    // Set The Socket
     GetSocket().set_option(asio::ip::tcp::no_delay(true));
     GetSocket().set_option(asio::ip::tcp::socket::keep_alive(true));
 
+    // Define The Key
     mKey = fmt::format("{}-{}", RemoteAddress().to_string(), utils::UnixTime());
 }
 
@@ -82,6 +85,7 @@ bool UPlayerAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     mPackagePool = gateway->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
 
+    // Create The Handler
     mHandler = gateway->CreateAgentHandler();
     mHandler->SetUpAgent(this);
 
@@ -91,6 +95,7 @@ bool UPlayerAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
 void UPlayerAgent::ConnectToClient() {
     mReceiveTime = std::chrono::steady_clock::now();
 
+    // Start The Coroutine
     co_spawn(mContext, [self = SharedFromThis()]() -> awaitable<void> {
         if (const auto ret = co_await self->mCodec->Initial(); !ret) {
             self->Disconnect();
@@ -125,6 +130,7 @@ void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
     if (!mPlayer)
         throw std::runtime_error(std::format("{} - Other Player Already Exists", __FUNCTION__));
 
+    // Assign The Player
     mPlayer = std::move(plr);
     mPlayer->SetUpAgent(this);
 
@@ -137,9 +143,13 @@ void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
         pkg->SetSource(SERVER_SOURCE_ID);
         pkg->SetTarget(CLIENT_TARGET_ID);
 
+        // Send The Login Response
         self->SendPackage(pkg);
 
+        // Initial The Player Instance
         self->mPlayer->Initial();
+
+        // Start The Process Looping
         co_await self->ProcessChannel();
     }, detached);
 }
@@ -252,12 +262,16 @@ void UPlayerAgent::OnLoginFailed(const int code, const std::string &desc) {
     pkg->SetSource(SERVER_SOURCE_ID);
     pkg->SetTarget(CLIENT_TARGET_ID);
 
+    // Send The Login Failure Response
     SendPackage(pkg);
 }
 
 void UPlayerAgent::OnRepeated(const std::string &addr) {
     if (mHandler != nullptr)
         throw std::logic_error(std::format("{} - Handler Is Null Pointer", __FUNCTION__));
+
+    // Do Not Recycle This Player Instance
+    bCachable = false;
 
     const auto pkg = mHandler->OnRepeated(addr);
     if (pkg == nullptr) {
@@ -269,6 +283,7 @@ void UPlayerAgent::OnRepeated(const std::string &addr) {
     pkg->SetSource(SERVER_SOURCE_ID);
     pkg->SetTarget(CLIENT_TARGET_ID);
 
+    // Send The Login Repeat Response
     SendPackage(pkg);
 }
 
@@ -305,6 +320,8 @@ awaitable<void> UPlayerAgent::WritePackage() {
             }
 
             // Can Do Something Here
+
+            // If Send The Below Protocol, Disconnect The Socket
             if (pkg->GetPackageID() == LOGIN_FAILED_PACKAGE_ID ||
                 pkg->GetPackageID() == LOGIN_REPEATED_PACKAGE_ID) {
                 Disconnect();
@@ -355,6 +372,7 @@ awaitable<void> UPlayerAgent::ReadPackage() {
                 } break;
                 default: {
                     if (const auto target = pkg->GetTarget(); target == PLAYER_TARGET_ID) {
+                        // Run Directly
                         mPlayer->OnPackage(pkg.Get());
                     } else if (target > 0) {
                         // Post Package To Service
@@ -405,7 +423,7 @@ void UPlayerAgent::CleanUp() {
         mPlayer->OnLogout();
         mPlayer->Save();
 
-        if (bCachable) {
+        if (bCachable && !bRepeated) {
             mPlayer->CleanAgent();
             gateway->RecyclePlayer(std::move(mPlayer));
         } else {

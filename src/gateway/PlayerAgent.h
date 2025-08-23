@@ -44,6 +44,9 @@ class BASE_API UPlayerAgent final : public IAgentBase {
     /** Enable After Socket Closed, Player Instance Can Be Recycled Back To The UGateway **/
     bool bCachable;
 
+    /** If Login Repeated **/
+    bool bRepeated;
+
 public:
     explicit UPlayerAgent(unique_ptr<IPackageCodec_Interface> &&codec);
     ~UPlayerAgent() override;

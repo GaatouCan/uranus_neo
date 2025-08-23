@@ -101,6 +101,7 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
     shared_ptr<UPlayerAgent> agent;
     shared_ptr<UPlayerAgent> existed;
 
+    // Find The Not Login Agent By Key And Check If Login Agent With Same Player ID Existed
     {
         std::scoped_lock lock(mAgentMutex, mPlayerMutex);
         if (const auto iter = mPlayerMap.find(pid); iter != mPlayerMap.end()) {
@@ -119,7 +120,12 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
         }
     }
 
+    // Agent Not Exist
+    if (!agent)
+        return;
+
     // Query The Cached Map
+    // If There Is Player Instance With This Player ID
     {
         std::unique_lock lock(mCacheMutex);
         if (player == nullptr) {
@@ -132,17 +138,17 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
         mCachedMap.erase(pid);
     }
 
-    if (!agent)
-        return;
-
+    // Login Repeated
     if (existed) {
         existed->OnRepeated(agent->RemoteAddress().to_string());
     }
 
+    // Reset The Old Instance
     if (player) {
         player->Save();
         player->OnReset();
     } else {
+        // Create New One
         player = mPlayerFactory->CreatePlayer();
     }
 
@@ -164,6 +170,9 @@ void UGateway::Initial() {
     // Load The Library
     mPlayerFactory->Initial();
 
+    // Run The IO Context Pool
+    mIOContextPool.Start(4);
+
     mState = EModuleState::INITIALIZED;
 }
 
@@ -172,10 +181,12 @@ void UGateway::Start() {
         throw std::logic_error(std::format("{} - Module[{}] Not In INITIALIZED State", __FUNCTION__, GetModuleName()));
 
     const auto &cfg = GetServer()->GetServerConfig();
-
     const auto port = cfg["server"]["port"].as<uint16_t>();
 
+    // Begin To Waiting Client Connect
     co_spawn(GetIOContext(), WaitForClient(port), detached);
+
+    // Start The Cache Collect Coroutine
     co_spawn(GetIOContext(), CollectCachedPlayer(), detached);
 
     mState = EModuleState::RUNNING;
@@ -186,6 +197,9 @@ void UGateway::Stop() {
         return;
 
     mState = EModuleState::STOPPED;
+
+    mCacheTimer->cancel();
+    mIOContextPool.Stop();
 }
 
 awaitable<void> UGateway::WaitForClient(const uint16_t port) {
@@ -205,6 +219,7 @@ awaitable<void> UGateway::WaitForClient(const uint16_t port) {
             }
 
             if (socket.is_open()) {
+                // Check If The IP Address In Blacklist
                 if (auto *login = GetServer()->GetModule<ULoginAuth>(); login != nullptr) {
                     if (!login->VerifyAddress(socket.remote_endpoint())) {
                         SPDLOG_WARN("Reject Client From {}", socket.remote_endpoint().address().to_string());
@@ -213,14 +228,17 @@ awaitable<void> UGateway::WaitForClient(const uint16_t port) {
                     }
                 }
 
+                // Create New Codec
                 auto codec = GetServer()->CreateUniquePackageCodec(std::move(socket));
 
+                // Create New Player Agent
                 const auto agent = make_shared<UPlayerAgent>(std::move(codec));
                 const auto key = agent->GetKey();
 
                 if (key.empty())
                     continue;
 
+                // Check If The Key Repeated
                 {
                     std::unique_lock lock(mAgentMutex);
                     if (mAgentMap.contains(key)) {
@@ -234,6 +252,8 @@ awaitable<void> UGateway::WaitForClient(const uint16_t port) {
                     __FUNCTION__, agent->RemoteAddress().to_string(), agent->GetKey());
 
                 agent->Initial(this, nullptr);
+
+                // Run The Agent And Waiting The Login Request
                 agent->ConnectToClient();
             }
         }
