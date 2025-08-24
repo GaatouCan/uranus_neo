@@ -36,12 +36,12 @@ public:
 protected:
     template<class T>
     T *GetAgentT() const {
-        auto res = dynamic_cast<T *>(GetAgent());
+        auto *pResult = dynamic_cast<T *>(GetAgent());
 
-        if (res == nullptr)
+        if (pResult == nullptr)
             throw std::bad_cast();
 
-        return res;
+        return pResult;
     }
 
 protected:

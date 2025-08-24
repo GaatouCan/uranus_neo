@@ -16,11 +16,11 @@ void UChannelPackageNode::Execute(IActorBase *pActor) const {
     }
 }
 
-void UChannelEventNode::SetEventParam(const std::shared_ptr<IEventParam_Interface> &event) {
+void UChannelEventNode::SetEventParam(const shared_ptr<IEventParam_Interface> &event) {
     mEvent = event;
 }
 
-void UChannelTaskNode::SetTask(const std::function<void(IActorBase *)> &task) {
+void UChannelTaskNode::SetTask(const AActorTask &task) {
     mTask = task;
 }
 
@@ -120,7 +120,7 @@ void IAgentBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     }
 }
 
-void IAgentBase::PushTask(const std::function<void(IActorBase *)> &task) {
+void IAgentBase::PushTask(const AActorTask &task) {
     if (mChannel == nullptr || !mChannel->is_open())
         return;
 
@@ -185,12 +185,10 @@ awaitable<void> IAgentBase::ProcessChannel() {
             if (node == nullptr)
                 continue;
 
-            const auto actor = GetActor();
-            if (actor == nullptr)
-                break;
-
             // Execute The Task
-            node->Execute(actor);
+            if (auto *pActor = GetActor()) {
+                node->Execute(pActor);
+            }
         }
 
         SPDLOG_TRACE("{} - Agent[{:p}] Complete Process Channel, Begin Clean Up",

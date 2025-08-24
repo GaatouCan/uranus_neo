@@ -53,10 +53,10 @@ public:
  */
 class BASE_API UChannelEventNode final : public IChannelNode_Interface {
 
-    std::shared_ptr<IEventParam_Interface> mEvent;
+    shared_ptr<IEventParam_Interface> mEvent;
 
 public:
-    void SetEventParam(const std::shared_ptr<IEventParam_Interface> &event);
+    void SetEventParam(const shared_ptr<IEventParam_Interface> &event);
     void Execute(IActorBase *pActor) const override;
 };
 
@@ -65,10 +65,10 @@ public:
  */
 class BASE_API UChannelTaskNode final : public IChannelNode_Interface {
 
-    std::function<void(IActorBase *)> mTask;
+    AActorTask mTask;
 
 public:
-    void SetTask(const std::function<void(IActorBase *)> &task);
+    void SetTask(const AActorTask &task);
     void Execute(IActorBase *pActor) const override;
 };
 
@@ -124,7 +124,7 @@ public:
     void PushEvent(const shared_ptr<IEventParam_Interface> &event);
 
     /// Push The Function To The Inner Channel
-    void PushTask(const std::function<void(IActorBase *)> &task);
+    void PushTask(const AActorTask &task);
 
     /// Return A Package Handle From The Inner Package Pool
     FPackageHandle BuildPackage() const;
