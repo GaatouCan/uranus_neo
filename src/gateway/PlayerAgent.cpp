@@ -367,7 +367,10 @@ awaitable<void> UPlayerAgent::ReadPackage() {
                     // TODO: Parse Platform Info
                 } break;
                 case LOGOUT_REQUEST_PACKAGE_ID: {
-                    // TODO: Parse Logout Request
+                    const auto request = mHandler->ParseLogoutRequest(pkg);
+                    if (request.player_id == GetPlayerID()) {
+                        // Can Do Something Here
+                    }
                     bCachable = false;
                 } break;
                 default: {

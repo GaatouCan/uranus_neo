@@ -11,4 +11,5 @@ public:
     FPackageHandle OnRepeated(const std::string &addr) override;
 
     FPlatformInfo ParsePlatformInfo(const FPackageHandle &pkg) override;
+    FLogoutRequest ParseLogoutRequest(const FPackageHandle &pkg) override;
 };

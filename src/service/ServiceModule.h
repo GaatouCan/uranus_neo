@@ -33,7 +33,7 @@ class BASE_API UServiceModule final : public IModuleBase {
     absl::flat_hash_map<int64_t, shared_ptr<UServiceAgent>> mServiceMap;
     mutable std::shared_mutex mServiceMutex;
 
-    /** Service Name To Serivce ID Mapping **/
+    /** Service Name To Service ID Mapping **/
     absl::flat_hash_map<std::string, int64_t> mServiceNameMap;
     mutable std::shared_mutex mServiceNameMutex;
 
@@ -90,6 +90,8 @@ public:
 
     /// Unregister Service To Update
     void RemoveTicker(int64_t sid);
+
+    [[nodiscard]] std::map<int64_t, std::string> GetAllServiceMap() const;
 
 protected:
     void Initial() override;

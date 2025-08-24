@@ -21,7 +21,7 @@ message LoginResponse {
   int64 player_id = 1;
 
   message ServiceInfo {
-    int32 sid = 1;
+    int64 sid = 1;
     string name = 2;
   }
 
@@ -51,7 +51,7 @@ message LoginRepeatedResponse {
 
 // 1006
 message PlatformInfo {
-  int32 player_id = 1;
+  int64 player_id = 1;
   string os_name = 2;
   string os_version = 3;
   string client_version = 4;

@@ -371,3 +371,17 @@ void UServiceModule::RemoveTicker(const int64_t sid) {
     std::unique_lock lock(mTickMutex);
     mTickerSet.erase(sid);
 }
+
+std::map<int64_t, std::string> UServiceModule::GetAllServiceMap() const {
+    if (mState != EModuleState::RUNNING)
+        return {};
+
+    std::map<int64_t, std::string> result;
+
+    std::shared_lock lock(mServiceNameMutex);
+    for (const auto &[name, sid] : mServiceNameMap) {
+        result.emplace(sid, name);
+    }
+
+    return result;
+}

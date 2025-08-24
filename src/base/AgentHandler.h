@@ -11,6 +11,10 @@ class UPlayerAgent;
 class UServer;
 using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
+struct FLogoutRequest {
+    int64_t player_id;
+};
+
 
 class BASE_API IAgentHandler {
 
@@ -30,6 +34,7 @@ public:
     virtual FPackageHandle OnRepeated(const std::string &addr) = 0;
 
     virtual FPlatformInfo ParsePlatformInfo(const FPackageHandle &pkg) = 0;
+    virtual FLogoutRequest ParseLogoutRequest(const FPackageHandle &pkg) = 0;
 
 private:
     UPlayerAgent* mAgent;
