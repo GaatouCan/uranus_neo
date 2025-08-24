@@ -87,11 +87,11 @@ protected:
     /** The Pointer To The Directory Owner Module **/
     IModuleBase *mModule;
 
-    /** The Inner Channel To Schedule The Nodes **/
-    unique_ptr<AChannel> mChannel;
-
     /** The Inner Package Pool **/
     unique_ptr<IRecyclerBase> mPackagePool;
+
+    /** The Inner Channel To Schedule The Nodes **/
+    AChannel mChannel;
 
     /** The Inner Timer Manager **/
     UTimerManager mTimerManager;
@@ -99,7 +99,7 @@ protected:
 public:
     IAgentBase() = delete;
 
-    explicit IAgentBase(asio::io_context &ctx);
+    explicit IAgentBase(asio::io_context &context, size_t channelSize = SERVICE_CHANNEL_SIZE);
     virtual ~IAgentBase();
 
     DISABLE_COPY_MOVE(IAgentBase)

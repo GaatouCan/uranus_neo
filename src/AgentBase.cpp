@@ -36,9 +36,10 @@ void UChannelEventNode::Execute(IActorBase *pActor) const {
     }
 }
 
-IAgentBase::IAgentBase(asio::io_context &ctx)
-    : mContext(ctx),
+IAgentBase::IAgentBase(asio::io_context &context, const size_t channelSize)
+    : mContext(context),
       mModule(nullptr),
+      mChannel(mContext, channelSize),
       mTimerManager(mContext) {
 }
 
@@ -58,9 +59,6 @@ UServer *IAgentBase::GetServer() const {
 bool IAgentBase::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     mModule = pModule;
 
-    // Create The Channel
-    mChannel = make_unique<AChannel>(mContext, 1024);
-
     // Create The Package Pool
     mPackagePool = mModule->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
@@ -73,7 +71,7 @@ void IAgentBase::CleanUp() {
 }
 
 void IAgentBase::PushPackage(const FPackageHandle &pkg) {
-    if (mChannel == nullptr || !mChannel->is_open())
+    if (!mChannel.is_open())
         return;
 
     if (pkg == nullptr)
@@ -86,18 +84,18 @@ void IAgentBase::PushPackage(const FPackageHandle &pkg) {
     SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
 
     // Push To The Channel
-    if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UChannelPackageNode>();
         temp->SetPackage(pkg);
 
         co_spawn(mContext, [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
 void IAgentBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
-    if (mChannel == nullptr || !mChannel->is_open())
+    if (!mChannel.is_open())
         return;
 
     if (event == nullptr)
@@ -110,18 +108,18 @@ void IAgentBase::PushEvent(const shared_ptr<IEventParam_Interface> &event) {
     SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
 
     // Push To The Channel
-    if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UChannelEventNode>();
         temp->SetEventParam(event);
 
         co_spawn(mContext, [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
 void IAgentBase::PushTask(const AActorTask &task) {
-    if (mChannel == nullptr || !mChannel->is_open())
+    if (!mChannel.is_open())
         return;
 
     if (task == nullptr)
@@ -134,19 +132,19 @@ void IAgentBase::PushTask(const AActorTask &task) {
     SPDLOG_TRACE("{} - Agent[{:p}]", __FUNCTION__, static_cast<void *>(this));
 
     // Push To The Channel
-    if (const auto ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
+    if (const auto ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret) {
         auto temp = make_unique<UChannelTaskNode>();
         temp->SetTask(task);
 
         co_spawn(mContext, [self = shared_from_this(), node = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mChannel->async_send(std::error_code{}, std::move(node));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(node));
         }, detached);
     }
 }
 
 FPackageHandle IAgentBase::BuildPackage() const {
     // If Something Is Not Assigned, Throw The Exception
-    if (mModule == nullptr || mChannel == nullptr || mPackagePool == nullptr)
+    if (mModule == nullptr || mPackagePool == nullptr)
         throw std::runtime_error(fmt::format("{} - AgentBase[{:p}] Not Initialized",
             __FUNCTION__, static_cast<const void *>(this)));
 
@@ -154,7 +152,7 @@ FPackageHandle IAgentBase::BuildPackage() const {
 }
 
 FTimerHandle IAgentBase::CreateTimer(const ATimerTask &task, const int delay, const int rate) {
-    if (mChannel == nullptr || !mChannel->is_open())
+    if (!mChannel.is_open())
         return {};
 
     return mTimerManager.CreateTimer(task, delay, rate);
@@ -170,16 +168,13 @@ void IAgentBase::CancelAllTimers() {
 
 
 awaitable<void> IAgentBase::ProcessChannel() {
-    if (mChannel == nullptr)
-        co_return;
-
     SPDLOG_TRACE("{} - Agent[{:p}] Begin Process Channel", __FUNCTION__, static_cast<const void *>(this));
 
     try {
         // Looping Condition
-        while (mChannel->is_open()) {
-            auto [ec, node] = co_await mChannel->async_receive();
-            if (ec || !mChannel->is_open())
+        while (mChannel.is_open()) {
+            auto [ec, node] = co_await mChannel.async_receive();
+            if (ec || !mChannel.is_open())
                 break;
 
             if (node == nullptr)

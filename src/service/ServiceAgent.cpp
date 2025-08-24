@@ -38,7 +38,7 @@ void UTickerNode::Execute(IActorBase *pActor) const {
 }
 
 UServiceAgent::UServiceAgent(asio::io_context &ctx)
-    : IAgentBase(ctx),
+    : IAgentBase(ctx, SERVICE_CHANNEL_SIZE),
       mServiceID(INVALID_SERVICE_ID),
       mService(nullptr) {
 }
@@ -82,9 +82,6 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     SPDLOG_INFO("{} - ServiceAgent[{} - {:p}] - Service Created",
         __FUNCTION__, mServiceID, static_cast<void *>(this));
 
-    // Create The Inner Channel
-    mChannel = make_unique<AChannel>(mContext, 1024);
-
     // Create Package Pool For Data Exchange
     mPackagePool = module->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
@@ -104,15 +101,19 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
 }
 
 void UServiceAgent::Stop() {
-    if (mChannel != nullptr || mChannel->is_open()) {
-        mChannel->close();
+    if (mChannel.is_open()) {
+        mChannel.close();
         SPDLOG_INFO("{} - Agent[{} - {:p}] Will Stop",
             __FUNCTION__, mServiceID, static_cast<const void *>(this));
     }
 }
 
 bool UServiceAgent::BootService() {
-    if (mModule == nullptr || mChannel == nullptr || mPackagePool == nullptr || !mLibrary.IsValid() || mService == nullptr)
+    if (mModule == nullptr ||
+        mPackagePool == nullptr ||
+        mService == nullptr ||
+        !mLibrary.IsValid() ||
+        !mChannel.is_open())
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
     // Start The Service
@@ -152,7 +153,7 @@ int64_t UServiceAgent::GetServiceID() const {
 }
 
 void UServiceAgent::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDuration delta) {
-    if (mService == nullptr || mChannel == nullptr || !mChannel->is_open())
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     auto node = make_unique<UTickerNode>();
@@ -160,13 +161,13 @@ void UServiceAgent::PushTicker(const ASteadyTimePoint timepoint, const ASteadyDu
     node->SetDeltaTime(delta);
 
     // Push To The Inner Channel
-    if (const bool ret = mChannel->try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel->is_open()) {
+    if (const bool ret = mChannel.try_send_via_dispatch(std::error_code{}, std::move(node)); !ret && mChannel.is_open()) {
         auto temp = make_unique<UTickerNode>();
         temp->SetCurrentTickTime(timepoint);
         temp->SetDeltaTime(delta);
 
         co_spawn(mContext, [self = SharedFromThis(), temp = std::move(temp)]() mutable -> awaitable<void> {
-            co_await self->mChannel->async_send(std::error_code{}, std::move(temp));
+            co_await self->mChannel.async_send(std::error_code{}, std::move(temp));
         }, detached);
     }
 }
@@ -267,7 +268,7 @@ void UServiceAgent::PostToPlayer(const int64_t pid, const AActorTask &task) cons
 }
 
 void UServiceAgent::ListenEvent(const int event) {
-    if (mService == nullptr || mChannel == nullptr || !mChannel->is_open())
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();
@@ -286,7 +287,7 @@ void UServiceAgent::RemoveListener(const int event) const {
 }
 
 void UServiceAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
-    if (mService == nullptr || mChannel == nullptr || !mChannel->is_open())
+    if (mService == nullptr || !mChannel.is_open())
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();

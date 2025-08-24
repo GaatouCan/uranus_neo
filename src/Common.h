@@ -82,6 +82,9 @@ inline constexpr int CLIENT_TARGET_ID       = -2;
 inline constexpr int SERVER_SOURCE_ID       = -3;
 inline constexpr int INVALID_SERVICE_ID     = -10;
 
+inline constexpr int SERVICE_CHANNEL_SIZE   = 4096;
+inline constexpr int PLAYER_CHANNEL_SIZE    = 512;
+
 inline constexpr auto CORE_SERVICE_DIRECTORY    = "service";
 inline constexpr auto EXTEND_SERVICE_DIRECTORY  = "extend";
 inline constexpr auto PLAYER_AGENT_DIRECTORY    = "agent";

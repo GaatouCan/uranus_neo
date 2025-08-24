@@ -20,7 +20,7 @@ using namespace std::literals::chrono_literals;
 
 
 UPlayerAgent::UPlayerAgent(unique_ptr<IPackageCodec_Interface> &&codec)
-    : IAgentBase(static_cast<asio::io_context &>(codec->GetExecutor().context())),
+    : IAgentBase(static_cast<asio::io_context &>(codec->GetExecutor().context()), PLAYER_CHANNEL_SIZE),
       mCodec(std::move(codec)),
       mOutput(mContext, 1024),
       mWatchdog(mContext),
@@ -78,9 +78,6 @@ bool UPlayerAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
 
     mModule = gateway;
 
-    // Create The Channel
-    mChannel = make_unique<AChannel>(mContext, 1024);
-
     // Create The Package Pool
     mPackagePool = gateway->GetServer()->CreateUniquePackagePool(mContext);
     mPackagePool->Initial();
@@ -115,8 +112,8 @@ void UPlayerAgent::Disconnect() {
         GetSocket().close();
     }
 
-    if (mChannel != nullptr || mChannel->is_open()) {
-        mChannel->close();
+    if (mChannel.is_open()) {
+        mChannel.close();
     }
 
     mWatchdog.cancel();
@@ -124,7 +121,7 @@ void UPlayerAgent::Disconnect() {
 }
 
 void UPlayerAgent::SetUpPlayer(FPlayerHandle &&plr) {
-    if (!IsSocketOpen())
+    if (!IsSocketOpen() || !mChannel.is_open())
         return;
 
     if (!mPlayer)
@@ -206,7 +203,7 @@ void UPlayerAgent::PostTask(const std::string &name, const AActorTask &task) con
 }
 
 void UPlayerAgent::ListenEvent(const int event) {
-    if (mPlayer == nullptr || mHandler == nullptr || !mChannel->is_open())
+    if (mPlayer == nullptr || mHandler == nullptr || !mChannel.is_open())
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();
@@ -225,7 +222,7 @@ void UPlayerAgent::RemoveListener(const int event) const {
 }
 
 void UPlayerAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param) const {
-    if (mPlayer == nullptr || mHandler == nullptr || !mChannel->is_open())
+    if (mPlayer == nullptr || mHandler == nullptr || !mChannel.is_open())
         return;
 
     auto *module = GetServer()->GetModule<UEventModule>();
@@ -367,10 +364,9 @@ awaitable<void> UPlayerAgent::ReadPackage() {
                     // TODO: Parse Platform Info
                 } break;
                 case LOGOUT_REQUEST_PACKAGE_ID: {
-                    const auto request = mHandler->ParseLogoutRequest(pkg);
-                    if (request.player_id == GetPlayerID()) {
-                        // Can Do Something Here
-                    }
+                    // if (const auto request = mHandler->ParseLogoutRequest(pkg); request.player_id == GetPlayerID()) {
+                    //     Can Do Something Here
+                    // }
                     bCachable = false;
                 } break;
                 default: {
