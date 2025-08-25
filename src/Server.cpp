@@ -84,15 +84,15 @@ void UServer::Shutdown() {
     mState = EServerState::TERMINATED;
     SPDLOG_INFO("Server Is Shutting Down");
 
-    // Stop The Main IOContext
-    if (mIOContext.stopped()) {
-        mIOContext.stop();
-    }
-
     // Stop All Modules In Reverse Order
     for (auto iter = mModuleOrder.rbegin(); iter != mModuleOrder.rend(); ++iter) {
         SPDLOG_INFO("Stop Module[{}]", (*iter)->GetModuleName());
         (*iter)->Stop();
+    }
+
+    // Stop The Main IOContext
+    if (!mIOContext.stopped()) {
+        mIOContext.stop();
     }
 
     SPDLOG_INFO("Shutdown The Server Successfully");

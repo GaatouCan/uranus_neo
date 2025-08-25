@@ -109,9 +109,6 @@ void UServiceModule::Stop() {
 
     mState = EModuleState::STOPPED;
 
-    // Stop The Worker Pool
-    mWorkerPool.Stop();
-
     // Stop The Update Timer
     if (mTickTimer != nullptr) {
         mTickTimer->cancel();
@@ -122,6 +119,9 @@ void UServiceModule::Stop() {
         SPDLOG_INFO("Stop Service[{}]", context->GetServiceName());
         context->Stop();
     }
+
+    // Stop The Worker Pool
+    mWorkerPool.Stop();
 
     mServiceMap.clear();
     mServiceNameMap.clear();

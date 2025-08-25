@@ -29,7 +29,7 @@ namespace detail {
 
     void FControlBlock::IncRefCount() {
         mRefCount.fetch_add(1, std::memory_order_relaxed);
-        SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
+        // SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
     }
 
     void FControlBlock::DecRefCount() {
@@ -40,7 +40,7 @@ namespace detail {
             }
         }
 
-        SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
+        // SPDLOG_TRACE("{} - Current Count[{}]", __FUNCTION__, mRefCount.load());
     }
 
     int64_t FControlBlock::GetRefCount() const {
@@ -55,7 +55,7 @@ namespace detail {
             throw std::invalid_argument("Control Block Is Null");
 
         mControl->IncRefCount();
-        SPDLOG_DEBUG("Create Element Node");
+        // SPDLOG_DEBUG("Create Element Node");
     }
 
     IElementNodeBase::~IElementNodeBase() {
@@ -63,7 +63,7 @@ namespace detail {
         assert(mControl != nullptr);
         mControl->DecRefCount();
 
-        SPDLOG_DEBUG("Destroy Element Node");
+        // SPDLOG_DEBUG("Destroy Element Node");
     }
 
     void IElementNodeBase::OnAcquire() {
@@ -125,15 +125,14 @@ IRecyclerBase::IRecyclerBase(asio::io_context &ctx)
 }
 
 IRecyclerBase::~IRecyclerBase() {
-    {
-        std::unique_lock lock(mMutex);
-        while (!mQueue.empty()) {
-            auto *pNode = mQueue.front();
-            mQueue.pop();
+    mShrinkTimer.cancel();
 
-            pNode->DestroyElement();
-            pNode->Destroy();
-        }
+    while (!mQueue.empty()) {
+        auto *pNode = mQueue.front();
+        mQueue.pop();
+
+        pNode->DestroyElement();
+        pNode->Destroy();
     }
 
     assert(mControl != nullptr);
