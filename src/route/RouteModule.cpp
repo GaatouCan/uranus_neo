@@ -126,3 +126,14 @@ void URouteModule::SendToClient(int64_t pid, const FPackageHandle &pkg) const {
         agent->SendPackage(pkg);
     }
 }
+
+std::map<int64_t, std::string> URouteModule::GetRouteMap() const {
+    if (mState != EModuleState::RUNNING)
+        return {};
+
+    if (auto *serviceModule = GetServer()->GetModule<UServiceModule>()) {
+        return serviceModule->GetAllServiceMap();
+    }
+
+    return {};
+}

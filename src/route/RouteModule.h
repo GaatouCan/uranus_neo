@@ -3,6 +3,8 @@
 #include "Module.h"
 #include "base/Recycler.h"
 
+#include <map>
+
 
 class IPackage_Interface;
 class IActorBase;
@@ -29,6 +31,7 @@ public:
     /// Only Post To Service
     void PostPackage(const std::string &name, const FPackageHandle &pkg) const;
 
+    /// If ToService Is True, Target Is Service ID, Else Target Is Player ID
     void PostTask(bool bToService, int64_t target, const AActorTask &task) const;
 
     /// Only Post To Service
@@ -36,4 +39,6 @@ public:
 
     /// Send Package To Client
     void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+
+    [[nodiscard]] std::map<int64_t, std::string> GetRouteMap() const;
 };
