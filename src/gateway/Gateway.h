@@ -83,6 +83,8 @@ public:
     /// Handle On Player Login
     void OnPlayerLogin(const std::string &key, int64_t pid);
 
+    void ForeachPlayer(const std::function<bool(const shared_ptr<UPlayerAgent> &)> &func) const;
+
 protected:
     void Initial() override;
     void Start() override;

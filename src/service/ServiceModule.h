@@ -93,6 +93,8 @@ public:
 
     [[nodiscard]] std::map<int64_t, std::string> GetAllServiceMap() const;
 
+    void ForeachService(const std::function<bool(const shared_ptr<UServiceAgent> &)> &func) const;
+
 protected:
     void Initial() override;
     void Start() override;

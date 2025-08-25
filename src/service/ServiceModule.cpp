@@ -385,3 +385,22 @@ std::map<int64_t, std::string> UServiceModule::GetAllServiceMap() const {
 
     return result;
 }
+
+void UServiceModule::ForeachService(const std::function<bool(const shared_ptr<UServiceAgent> &)> &func) const {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    std::set<shared_ptr<UServiceAgent>> services;
+
+    {
+        std::shared_lock lock(mServiceMutex);
+        for (const auto &agent : mServiceMap | std::views::values) {
+            services.insert(agent);
+        }
+    }
+
+    for (const auto &ser : services) {
+        if (std::invoke(func, ser))
+            return;
+    }
+}

@@ -160,6 +160,25 @@ void UGateway::OnPlayerLogin(const std::string &key, const int64_t pid) {
     agent->SetUpPlayer(std::move(player));
 }
 
+void UGateway::ForeachPlayer(const std::function<bool(const shared_ptr<UPlayerAgent> &)> &func) const {
+    if (mState != EModuleState::RUNNING)
+        return;
+
+    std::set<shared_ptr<UPlayerAgent>> players;
+
+    {
+        std::shared_lock lock(mPlayerMutex);
+        for (const auto &player : mPlayerMap | std::views::values) {
+            players.insert(player);
+        }
+    }
+
+    for (const auto &plr : players) {
+        if (std::invoke(func, plr))
+            return;
+    }
+}
+
 void UGateway::Initial() {
     if (mState != EModuleState::CREATED)
         throw std::logic_error(std::format("{} - Module[{}] Not In CREATED State", __FUNCTION__, GetModuleName()));
