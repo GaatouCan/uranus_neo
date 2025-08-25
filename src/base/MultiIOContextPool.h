@@ -12,8 +12,8 @@ class BASE_API UMultiIOContextPool final {
 
     struct FPoolNode {
         std::thread thread;
-        asio::executor_work_guard<asio::io_context::executor_type> guard;
         asio::io_context context;
+        asio::executor_work_guard<asio::io_context::executor_type> guard;
 
         FPoolNode();
     };

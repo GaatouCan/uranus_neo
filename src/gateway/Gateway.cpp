@@ -16,6 +16,10 @@ UGateway::~UGateway() {
     Stop();
 }
 
+IPlayerFactory_Interface *UGateway::GetPlayerFactory() const {
+    return mPlayerFactory.get();
+}
+
 unique_ptr<IAgentHandler> UGateway::CreateAgentHandler() const {
     if (mPlayerFactory == nullptr)
         throw std::runtime_error(fmt::format("{} - PlayerFactory Is Null", __FUNCTION__));

@@ -18,8 +18,8 @@ awaitable<bool> UGameWorld::AsyncInitial(const IDataAsset_Interface *data) {
     co_return true;
 }
 
-void UGameWorld::OnEvent(const std::shared_ptr<IEventParam_Interface> &event) {
-    IServiceBase::OnEvent(event);
+void UGameWorld::OnEvent(IEventParam_Interface *event) {
+
 }
 
 void UGameWorld::OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) {
@@ -35,7 +35,7 @@ void UGameWorld::Stop() {
     IServiceBase::Stop();
 }
 
-void UGameWorld::OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) {
+void UGameWorld::OnPackage(IPackage_Interface *pkg) {
 
 }
 

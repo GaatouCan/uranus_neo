@@ -3,7 +3,6 @@
 #include <../../src/service/ServiceBase.h>
 
 #include <entt/entt.hpp>
-#include <memory>
 #include <absl/container/flat_hash_map.h>
 
 
@@ -22,8 +21,8 @@ public:
     bool Start() override;
     void Stop() override;
 
-    void OnPackage(const std::shared_ptr<IPackage_Interface> &pkg) override;
-    void OnEvent(const std::shared_ptr<IEventParam_Interface> &event) override;
+    void OnPackage(IPackage_Interface *pkg) override;
+    void OnEvent(IEventParam_Interface *event) override;
     void OnUpdate(ASteadyTimePoint now, ASteadyDuration delta) override;
 
 private:

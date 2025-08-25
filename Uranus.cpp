@@ -11,8 +11,10 @@
 #include <internal/PlayerFactory.h>
 #include <internal/ServiceFactory.h>
 #include <LoginHandlerImpl.h>
+#include <AgentHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
+
 
 int main() {
 #ifdef _DEBUG
@@ -47,6 +49,9 @@ int main() {
 
     if (auto *gateway = server->CreateModule<UGateway>(); gateway != nullptr) {
         gateway->SetPlayerFactory<UPlayerFactory>();
+        if (auto *factory = dynamic_cast<UPlayerFactory *>(gateway->GetPlayerFactory())) {
+            factory->SetAgentHandler<UAgentHandlerImpl>();
+        }
     }
 
     server->SetCodecFactory<UCodecFactory>();

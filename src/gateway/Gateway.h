@@ -60,6 +60,8 @@ public:
         mPlayerFactory = std::make_unique<T>(std::forward<Args>(args)...);
     }
 
+    [[nodiscard]] IPlayerFactory_Interface *GetPlayerFactory() const;
+
     /// Create The Agent Handler
     unique_ptr<IAgentHandler> CreateAgentHandler() const;
 

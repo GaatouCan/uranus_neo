@@ -23,6 +23,26 @@ void UServer::Initial() {
     if (mState != EServerState::CREATED)
         throw std::logic_error(std::format("{} - Server Not In CREATED State", __FUNCTION__));
 
+    if (const auto coreDir = std::filesystem::path(CORE_SERVICE_DIRECTORY); !std::filesystem::exists(coreDir)) {
+        try {
+            std::filesystem::create_directory(coreDir);
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+            Shutdown();
+            exit(-1);
+        }
+    }
+
+    if (const auto extendDir = std::filesystem::path(EXTEND_SERVICE_DIRECTORY); !std::filesystem::exists(extendDir)) {
+        try {
+            std::filesystem::create_directory(extendDir);
+        } catch (const std::exception &e) {
+            SPDLOG_ERROR("{} - {}", __FUNCTION__, e.what());
+            Shutdown();
+            exit(-2);
+        }
+    }
+
     // Initial All Moduel
     for (const auto &pModule: mModuleOrder) {
         SPDLOG_INFO("Initial Server Module[{}]", pModule->GetModuleName());

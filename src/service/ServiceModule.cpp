@@ -26,7 +26,7 @@ void UServiceModule::Initial() {
     mServiceFactory->LoadService();
 
     // Create All The Core Services Defined In Configuration
-    for (const auto &val : cfg["services"]["core"]) {
+    for (const auto &val : cfg["service"]["core"]) {
         const auto name = val["name"].as<std::string>();
 
         // Combine The Full Path
@@ -78,7 +78,7 @@ void UServiceModule::Initial() {
         mServiceNameMap.insert_or_assign(serviceName, sid);
     }
 
-    const auto updateMs = cfg["services"]["update"].as<int>();
+    const auto updateMs = cfg["service"]["update"].as<int>();
 
     // Start The Update Loop
     mTickTimer = make_unique<ASteadyTimer>(mWorkerPool.GetIOContext());

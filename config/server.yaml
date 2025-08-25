@@ -5,11 +5,16 @@ server:
   cross: 0
   logger:
     directory: /log
+  cache:
+    collect_gap: 10
+    keep_alive: 60
+    max_size: 1024
 
 package:
   magic: 23244435
 
 service:
+  update: 1000
   core:
     - name: "gameworld"
 #  extend:
