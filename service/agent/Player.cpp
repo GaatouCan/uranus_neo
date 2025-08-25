@@ -20,11 +20,11 @@ void UPlayer::Initial() {
 }
 
 void UPlayer::OnLogin() {
-
+    mComponentModule.OnLogin();
 }
 
 void UPlayer::OnLogout() {
-
+    mComponentModule.OnLogout();
 }
 
 void UPlayer::Save() {
