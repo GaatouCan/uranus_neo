@@ -1,60 +1,96 @@
 #pragma once
 
 #include "Module.h"
-#include "base/SharedLibrary.h"
-#include "base/PlatformInfo.h"
-#include "base/Package.h"
-#include "base/RecycleHandle.h"
+#include "base/MultiIOContextPool.h"
+#include "factory/PlayerFactory.h"
+#include "base/Types.h"
 
-#include <functional>
+#include <absl/container/flat_hash_map.h>
 #include <shared_mutex>
-#include <unordered_map>
 
 
-class IServiceBase;
-class IPlayerAgent;
-class UAgentContext;
-
-using std::unordered_map;
-using FPackageHandle = FRecycleHandle<IPackage_Interface>;
 
 class BASE_API UGateway final : public IModuleBase {
 
     DECLARE_MODULE(UGateway)
 
-protected:
-    UGateway();
+    struct BASE_API FCachedNode {
+        FPlayerHandle player;
+        ASteadyTimePoint timepoint;
+    };
 
-    void Initial() override;
-    void Stop() override;
+    /** The IOContext For Sockets **/
+    UMultiIOContextPool mIOContextPool;
+
+    /** The Acceptor Use The Main IOContext Is UServer **/
+    unique_ptr<ATcpAcceptor> mAcceptor;
+
+    /** The Timer To Collect The Cached Player **/
+    unique_ptr<ASteadyTimer> mCacheTimer;
+
+    /** Create The Player Instance And Agent Handler **/
+    unique_ptr<IPlayerFactory_Interface> mPlayerFactory;
+
+    /** The All Agent That Without Player Instance(Not Login) **/
+    absl::flat_hash_map<std::string, shared_ptr<UPlayerAgent>> mAgentMap;
+    mutable std::shared_mutex mAgentMutex;
+
+    /** The All Agent That With Player Instance(Has Login) **/
+    absl::flat_hash_map<int64_t, shared_ptr<UPlayerAgent>> mPlayerMap;
+    mutable std::shared_mutex mPlayerMutex;
+
+    /** The Cached Player Instance **/
+    absl::flat_hash_map<int64_t, FCachedNode> mCachedMap;
+    mutable std::shared_mutex mCacheMutex;
 
 public:
+    UGateway();
     ~UGateway() override;
 
-    constexpr const char *GetModuleName() const override {
-        return "Gateway Module";
+    [[nodiscard]] constexpr const char *GetModuleName() const override {
+        return "Gateway";
     }
 
-    void OnPlayerLogin(int64_t pid, const std::string &key);
-    void OnPlayerLogout(int64_t pid);
+    template<class T, class... Args>
+    requires std::derived_from<T, IPlayerFactory_Interface>
+    void SetPlayerFactory(Args && ... args) {
+        if (mState != EModuleState::CREATED)
+            throw std::logic_error("Only can set PlayerFactory in CREATED state");
 
-    std::string GetConnectionKey(int64_t pid) const;
-    std::shared_ptr<UAgentContext> FindPlayerAgent(int64_t pid) const;
+        mPlayerFactory = std::make_unique<T>(std::forward<Args>(args)...);
+    }
 
-    void SendToPlayer(int64_t pid, const FPackageHandle &pkg) const;
-    void PostToPlayer(int64_t pid, const std::function<void(IServiceBase *)> &task) const;
+    /// Create The Agent Handler
+    unique_ptr<IAgentHandler> CreateAgentHandler() const;
 
-    void OnClientPackage(int64_t pid, const FPackageHandle &pkg) const;
-    void SendToClient(int64_t pid, const FPackageHandle &pkg) const;
+    /// Find The Login Player Agent By Player ID
+    [[nodiscard]] shared_ptr<UPlayerAgent> FindPlayer(int64_t pid) const;
 
-    void OnHeartBeat(int64_t pid, const FPackageHandle &pkg) const;
-    void OnPlatformInfo(const FPlatformInfo &info) const;
+    /// Find The Not Login Agent By Key
+    [[nodiscard]] shared_ptr<UPlayerAgent> FindAgent(const std::string &key) const;
+
+    [[nodiscard]] std::vector<shared_ptr<UPlayerAgent>> GetPlayerList(const std::vector<int64_t> &list) const;
+
+    /// Remove The Login Player Agent
+    void RemovePlayer(int64_t pid);
+
+    /// Recycle The Player Instance
+    void RecyclePlayer(FPlayerHandle &&player);
+
+    /// Remove The Not Login Player Agent
+    void RemoveAgent(const std::string &key);
+
+    /// Handle On Player Login
+    void OnPlayerLogin(const std::string &key, int64_t pid);
+
+    void ForeachPlayer(const std::function<bool(const shared_ptr<UPlayerAgent> &)> &func) const;
+
+protected:
+    void Initial() override;
+    void Start() override;
+    void Stop() override;
 
 private:
-    FSharedLibrary mLibrary;
-
-    unordered_map<std::string, int64_t> mConnToPlayer;
-    unordered_map<int64_t, std::shared_ptr<UAgentContext>> mPlayerMap;
-
-    mutable std::shared_mutex mMutex;
+    awaitable<void> WaitForClient(uint16_t port);
+    awaitable<void> CollectCachedPlayer();
 };

@@ -1,31 +1,35 @@
 #pragma once
 
 #include "Module.h"
+#include "factory/CodecFactory.h"
 
 #include <typeindex>
-#include <memory>
-#include <atomic>
-#include <unordered_map>
-#include <asio.hpp>
+#include <yaml-cpp/yaml.h>
+#include <absl/container/flat_hash_map.h>
 
+
+enum class EServerState {
+    CREATED,
+    INITIALIZED,
+    RUNNING,
+    TERMINATED,
+};
 
 class BASE_API UServer final {
-
-#pragma region Module Define
-    std::unordered_map<std::type_index, std::unique_ptr<IModuleBase>> mModuleMap;
-    std::unordered_map<std::string, std::type_index> mNameToModule;
-    std::vector<std::type_index> mModuleOrder;
-#pragma endregion
-
-#pragma region Worker
+    /** The Basic IOContext Of The Whole Server **/
     asio::io_context mIOContext;
-    asio::executor_work_guard<asio::io_context::executor_type> mWorkGuard;
-    std::vector<std::thread> mWorkerList;
-#pragma endregion
 
-    std::atomic_bool bInitialized;
-    std::atomic_bool bRunning;
-    std::atomic_bool bShutdown;
+    /** The Module Map With The Key Of typeinfo **/
+    absl::flat_hash_map<std::type_index, std::unique_ptr<IModuleBase> > mModuleMap;
+
+    /** Record The Order Of Declare The Modules **/
+    std::vector<IModuleBase *> mModuleOrder;
+
+    /** The Factory To Create The Package Code And Package Pool **/
+    unique_ptr<ICodecFactory_Interface> mCodecFactory;
+
+    /** Current Server State **/
+    EServerState mState;
 
 public:
     UServer();
@@ -33,50 +37,63 @@ public:
 
     DISABLE_COPY_MOVE(UServer)
 
-    [[nodiscard]] asio::io_context &GetIOContext();
+    /// Return The Current Server State
+    [[nodiscard]] EServerState GetState() const;
 
-    template<CModuleType ModuleType, typename... Args>
-    ModuleType *CreateModule(Args &&... args);
-
-    template<CModuleType ModuleType>
-    ModuleType *GetModule() const;
-
-    IModuleBase *GetModule(const std::string &name) const;
-
+    /// Initial All The Modules
     void Initial();
-    void Run();
+
+    /// Start All The Modules And Run The Main IOContext
+    void Start();
+
+    /// Stop All The Modules And The Main IOContext
     void Shutdown();
 
-    [[nodiscard]] bool IsInitialized() const;
-    [[nodiscard]] bool IsRunning() const;
-    [[nodiscard]] bool IsShutdown() const;
+    /// Get The Reference Of The Main IOContext
+    [[nodiscard]] asio::io_context &GetIOContext();
+
+    template<class T>
+    requires std::derived_from<T, IModuleBase>
+    T *CreateModule() {
+        if (mModuleMap.contains(typeid(T)))
+            throw std::logic_error("Module Already Exists");
+
+        auto module = std::make_unique<T>();
+        auto *pModule = module.get();
+
+        module->SetUpModule(this);
+
+        mModuleMap.emplace(typeid(T), std::move(module));
+        mModuleOrder.emplace_back(pModule);
+
+        return pModule;
+    }
+
+    template<class T>
+    requires std::derived_from<T, IModuleBase>
+    T *GetModule() const {
+        const auto it = mModuleMap.find(typeid(T));
+        return it == mModuleMap.end() ? nullptr : dynamic_cast<T *>(it->second.get());
+    }
+
+    template<class T, class... Args>
+    requires std::derived_from<T, ICodecFactory_Interface>
+    void SetCodecFactory(Args &&... args) {
+        if (mState != EServerState::CREATED)
+            throw std::logic_error("Only can set CodecFactory in CREATED state");
+
+        mCodecFactory = make_unique<T>(std::forward<Args>(args)...);
+    }
+
+    /// Return The Server Configuration
+    [[nodiscard]] const YAML::Node &GetServerConfig() const;
+
+    /// Create A New PackageCodec With A Tcp Socket Use Inner Factory
+    unique_ptr<IPackageCodec_Interface> CreateUniquePackageCodec(ATcpSocket &&socket) const;
+
+    /// Create A New PackagePool And Bind To The Specified IOContext, Use Inner Factory
+    unique_ptr<IRecyclerBase> CreateUniquePackagePool(asio::io_context &ctx) const;
+
+    /// Get The Raw Pointer Of Inner Codec Factory
+    [[nodiscard]] ICodecFactory_Interface *GetCodecFactory() const;
 };
-
-template<CModuleType ModuleType, typename ... Args>
-inline ModuleType *UServer::CreateModule(Args &&...args) {
-    if (bInitialized || bRunning || bShutdown) {
-        return nullptr;
-    }
-
-    if (mModuleMap.contains(typeid(ModuleType))) {
-        return dynamic_cast<ModuleType *>(mModuleMap[typeid(ModuleType)].get());
-    }
-
-    auto *pModule = new ModuleType(std::forward<Args>(args)...);
-    auto ptr = std::unique_ptr<IModuleBase>(pModule);
-
-    ptr->SetUpModule(this);
-
-    mNameToModule.emplace(ptr->GetModuleName(), typeid(ModuleType));
-    mModuleOrder.emplace_back(typeid(ModuleType));
-
-    mModuleMap.emplace(typeid(ModuleType), std::move(ptr));
-
-    return pModule;
-}
-
-template<CModuleType ModuleType>
-inline ModuleType *UServer::GetModule() const {
-    const auto iter = mModuleMap.find(typeid(ModuleType));
-    return iter != mModuleMap.end() ? dynamic_cast<ModuleType *>(iter->second.get()) : nullptr;
-}

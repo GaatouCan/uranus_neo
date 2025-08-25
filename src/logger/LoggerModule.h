@@ -11,12 +11,12 @@ class BASE_API ULoggerModule final : public IModuleBase {
     DECLARE_MODULE(ULoggerModule)
 
 protected:
-    ULoggerModule();
-    ~ULoggerModule() override;
-
     void Stop() override;
 
 public:
+    ULoggerModule();
+    ~ULoggerModule() override;
+
     [[nodiscard]] constexpr const char * GetModuleName() const override {
         return "Logger Module";
     }

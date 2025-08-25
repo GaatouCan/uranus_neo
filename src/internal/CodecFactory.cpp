@@ -14,13 +14,18 @@ UCodecFactory::UCodecFactory()
     );
 }
 
-UCodecFactory::~UCodecFactory() {
-}
-
 unique_ptr<IPackageCodec_Interface> UCodecFactory::CreateUniquePackageCodec(ATcpSocket socket) {
     return make_unique<UPacketCodec>(ASslStream(std::move(socket), mSSLContext));
 }
 
-unique_ptr<IRecyclerBase> UCodecFactory::CreateUniquePackagePool() {
-    return IRecyclerBase::CreateUnique<FPacket>();
+unique_ptr<IRecyclerBase> UCodecFactory::CreateUniquePackagePool(asio::io_context &ctx) {
+    return IRecyclerBase::CreateUnique<FPacket>(ctx);
+}
+
+IPackageCodec_Interface *UCodecFactory::CreatePackageCodec(ATcpSocket socket) {
+    return new UPacketCodec(ASslStream(std::move(socket), mSSLContext));
+}
+
+IRecyclerBase *UCodecFactory::CreatePackagePool(asio::io_context &ctx) {
+    return IRecyclerBase::Create<FPacket>(ctx);
 }

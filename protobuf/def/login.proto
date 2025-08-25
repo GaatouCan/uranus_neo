@@ -21,7 +21,7 @@ message LoginResponse {
   int64 player_id = 1;
 
   message ServiceInfo {
-    int32 sid = 1;
+    int64 sid = 1;
     string name = 2;
   }
 
@@ -34,19 +34,30 @@ message LoginFailedResponse {
   string address = 2;
 
   enum Reason {
-    REPEATED = 0;
-    BANNED = 1;
-    AGENT_ERROR = 2;
+    FAILED_TO_PARSE = 0;
+    VERIFY_TOKEN_FAIL = 1;
   }
 
   Reason reason = 3;
-  string extend = 4;
+  string description = 4;
 }
 
 // 1005
+message LoginRepeatedResponse {
+  int64 player_id = 1;
+  string other_address = 2;
+  uint64 timepoint = 3;
+}
+
+// 1006
 message PlatformInfo {
-  int32 player_id = 1;
+  int64 player_id = 1;
   string os_name = 2;
   string os_version = 3;
   string client_version = 4;
+}
+
+// 1007
+message LogoutRequest {
+  int64 player_id = 1;
 }

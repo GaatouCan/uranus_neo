@@ -31,8 +31,8 @@ UMonitor::~UMonitor() {
     Stop();
 }
 
-void UMonitor::OnAcceptClient(const std::shared_ptr<UConnection> &conn) {
-    for (const auto &val : mPluginMap | std::views::values) {
-        val->OnAcceptClient(conn);
-    }
-}
+// void UMonitor::OnAcceptClient(const std::shared_ptr<UConnection> &conn) {
+//     for (const auto &val : mPluginMap | std::views::values) {
+//         val->OnAcceptClient(conn);
+//     }
+// }

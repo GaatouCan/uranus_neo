@@ -7,7 +7,7 @@
 #include <string>
 
 
-class UConnection;
+class UPlayerAgent;
 class IPluginBase;
 
 
@@ -16,20 +16,19 @@ class BASE_API UMonitor final : public IModuleBase {
     DECLARE_MODULE(UMonitor)
 
 protected:
-    UMonitor();
-
     void Initial() override;
     void Start() override;
     void Stop() override;
 
 public:
+    UMonitor();
     ~UMonitor() override;
 
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "UMonitor";
     }
 
-    void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
+    // void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
 
 private:
     std::unordered_map<std::string, std::unique_ptr<IPluginBase>> mPluginMap;

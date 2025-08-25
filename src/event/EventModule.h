@@ -1,27 +1,33 @@
 #pragma once
 
 #include "Module.h"
+#include "base/Types.h"
 #include "base/EventParam.h"
-#include "base/ContextHandle.h"
 
-#include <unordered_map>
-#include <unordered_set>
+#include <absl/container/flat_hash_map.h>
+#include <memory>
 #include <shared_mutex>
+
+
+class IAgentBase;
+using std::weak_ptr;
 
 
 class BASE_API UEventModule final : public IModuleBase {
 
     DECLARE_MODULE(UEventModule)
 
-    using AListenerMap = std::unordered_map<int, std::unordered_set<FContextHandle, FContextHandle::FHash, FContextHandle::FEqual>>;
+    using AListenerMap = absl::flat_hash_map<int, absl::flat_hash_map<int64_t, weak_ptr<IAgentBase>>>;
 
 protected:
-    UEventModule();
+    void Initial() override;
+    void Stop() override;
 
 public:
+    UEventModule();
     ~UEventModule() override = default;
 
-    constexpr const char *GetModuleName() const override {
+    [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Event Module";
     }
 
@@ -33,14 +39,33 @@ public:
     template<CEventType Type, class... Args>
     void DispatchT(Args && ... args);
 
-    void ListenEvent(const FContextHandle &handle, int event);
+    void ServiceListenEvent(int64_t sid, const weak_ptr<IAgentBase> &weakPtr, int event);
 
-    void RemoveListenEvent(const FContextHandle &handle, int event);
-    void RemoveListener(const FContextHandle &handle);
+    void RemoveServiceListenerByEvent(int64_t sid, int event);
+    void RemoveServiceListener(int64_t sid);
+
+    void PlayerListenEvent(int64_t pid, const weak_ptr<IAgentBase> &weakPtr, int event);
+
+    void RemovePlayerListenerByEvent(int64_t pid, int event);
+    void RemovePlayerListener(int64_t pid);
 
 private:
-    AListenerMap mListenerMap;
-    mutable std::shared_mutex mListenerMutex;
+    void RemoveExpiredServices();
+    void RemoveExpiredPlayers();
+
+private:
+    AListenerMap mServiceListenerMap;
+    mutable std::shared_mutex mServiceListenerMutex;
+
+    std::unique_ptr<ASteadyTimer> mServiceTimer;
+
+    AListenerMap mPlayerListenerMap;
+    mutable std::shared_mutex mPlayerListenerMutex;
+
+    std::unique_ptr<ASteadyTimer> mPlayerTimer;
+
+    std::atomic_bool bServiceWaiting;
+    std::atomic_bool bPlayerWaiting;
 };
 
 template<CEventType Type>

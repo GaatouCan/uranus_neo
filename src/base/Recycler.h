@@ -1,12 +1,11 @@
 #pragma once
 
+#include "base/Types.h"
 #include "Recycle.h"
-#include "RecycleHandle.h"
 
 #include <queue>
 #include <atomic>
 #include <memory>
-#include <cassert>
 #include <shared_mutex>
 
 
@@ -14,9 +13,8 @@ namespace detail {
 #pragma region Recycler Control Block
 
     class BASE_API FControlBlock {
-
-        std::atomic_int64_t             mRefCount;
-        std::atomic<IRecyclerBase *>    mRecycler;
+        std::atomic_int64_t mRefCount;
+        std::atomic<IRecyclerBase *> mRecycler;
 
     public:
         FControlBlock() = delete;
@@ -28,9 +26,11 @@ namespace detail {
 
         void Release();
 
-        [[nodiscard]] int64_t           GetRefCount()   const;
-        [[nodiscard]] bool              IsValid()       const;
-        [[nodiscard]] IRecyclerBase *   Get()           const;
+        [[nodiscard]] int64_t GetRefCount() const;
+
+        [[nodiscard]] bool IsValid() const;
+
+        [[nodiscard]] IRecyclerBase *Get() const;
 
         void IncRefCount();
         void DecRefCount();
@@ -56,221 +56,277 @@ namespace detail {
         void IncRefCount();
         bool DecRefCount();
 
-        virtual void DestroyElement()   noexcept = 0;
-        virtual void Destroy()          noexcept = 0;
+        virtual void DestroyElement() noexcept = 0;
+        virtual void Destroy() noexcept = 0;
 
-        [[nodiscard]] virtual       IRecycle_Interface *Get()       noexcept = 0;
+        [[nodiscard]] virtual IRecycle_Interface *Get() noexcept = 0;
         [[nodiscard]] virtual const IRecycle_Interface *Get() const noexcept = 0;
 
-        template<CRecycleType Type>
+        template<class Type>
         Type *GetT() noexcept {
-            return static_cast<Type *>(Get());
+            return dynamic_cast<Type *>(Get());
         }
 
-        template<CRecycleType Type>
+        template<class Type>
         const Type *GetT() const noexcept {
-            return static_cast<const Type *>(Get());
+            return dynamic_cast<const Type *>(Get());
         }
 
         [[nodiscard]] IRecyclerBase *GetRecycler() const noexcept;
 
     private:
-        std::atomic_int64_t     mRefCount;
-        FControlBlock *const    mControl;
+        std::atomic_int64_t mRefCount;
+        FControlBlock *const mControl;
     };
 }
 #pragma endregion
 
-class BASE_API IRecyclerBase {
+#pragma region Recycle Handle Define
+template<class Type>
+class FRecycleHandle final {
 
-    template<CRecycleType Type>
+    friend class IRecyclerBase;
+
+    template<class T>
     friend class FRecycleHandle;
 
-    static constexpr float  RECYCLER_EXPAND_THRESHOLD   = 0.75f;
-    static constexpr float  RECYCLER_EXPAND_RATE        = 1.f;
+    using ElementType = std::remove_extent_t<Type>;
 
-    static constexpr int    RECYCLER_SHRINK_DELAY       = 1;
-    static constexpr float  RECYCLER_SHRINK_THRESHOLD   = 0.3f;
-    static constexpr float  RECYCLER_SHRINK_RATE        = 0.5f;
-    static constexpr int    RECYCLER_MINIMUM_CAPACITY   = 64;
+    explicit FRecycleHandle(detail::IElementNodeBase *pNode)
+        : mNode(pNode) {
+        mElement = mNode->GetT<Type>();
+        if (!mElement)
+            throw std::bad_cast();
+    }
+
+public:
+    FRecycleHandle()
+        : mNode(nullptr),
+          mElement(nullptr) {
+    }
+
+    // NOLINT(google-explicit-constructor)
+    FRecycleHandle(nullptr_t)
+        : FRecycleHandle() {
+    }
+
+    ~FRecycleHandle() {
+        Release();
+    }
+
+    FRecycleHandle(const FRecycleHandle &rhs) {
+        if (rhs.mNode) {
+            rhs.mNode->IncRefCount();
+        }
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+    }
+
+    FRecycleHandle &operator=(const FRecycleHandle &rhs) {
+        if (this != &rhs) {
+            FRecycleHandle(rhs).Swap(*this);
+        }
+        return *this;
+    }
+
+    FRecycleHandle(FRecycleHandle &&rhs) noexcept {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        rhs.mNode = nullptr;
+        rhs.mElement = nullptr;
+    }
+
+    FRecycleHandle &operator=(FRecycleHandle &&rhs) noexcept {
+        if (this != &rhs) {
+            FRecycleHandle(std::move(rhs)).Swap(*this);
+        }
+        return *this;
+    }
+
+    template<class T>
+    FRecycleHandle(const FRecycleHandle<T> &rhs) {
+        if (rhs.mNode) {
+            rhs.mNode->IncRefCount();
+        }
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+    }
+
+    template<class T>
+    FRecycleHandle &operator=(const FRecycleHandle<T> &rhs) {
+        if (this != &rhs) {
+            FRecycleHandle(rhs).Swap(*this);
+        }
+        return *this;
+    }
+
+    template<class T>
+    FRecycleHandle(FRecycleHandle<T> &&rhs) noexcept {
+        mNode = rhs.mNode;
+        mElement = rhs.mElement;
+        rhs.mNode = nullptr;
+        rhs.mElement = nullptr;
+    }
+
+    template<class T>
+    FRecycleHandle &operator=(FRecycleHandle<T> &&rhs) noexcept {
+        if (this != &rhs) {
+            FRecycleHandle(std::move(rhs)).Swap(*this);
+        }
+        return *this;
+    }
+
+    ElementType *operator->() const noexcept {
+        return mElement;
+    }
+
+    ElementType &operator*() const noexcept {
+        return *mElement;
+    }
+
+    [[nodiscard]] ElementType *Get() const noexcept {
+        return mElement;
+    }
+
+    template<class T>
+    [[nodiscard]] Type *GetT() const noexcept {
+        if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
+            return mElement;
+        }
+        return dynamic_cast<T *>(Get());
+    }
+
+    [[nodiscard]] bool IsValid() const noexcept {
+        return mNode != nullptr && mElement != nullptr;
+    }
+
+    void Swap(FRecycleHandle &rhs) {
+        std::swap(mNode, rhs.mNode);
+        std::swap(mElement, rhs.mElement);
+    }
+
+    void Reset() noexcept {
+        FRecycleHandle().Swap(*this);
+    }
+
+    template<class T>
+    FRecycleHandle<T> CastTo() const noexcept {
+        if (auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
+            return FRecycleHandle<T>{ *this, pElement };
+        }
+        return {};
+    }
+
+    bool operator==(const FRecycleHandle &rhs) const noexcept {
+        return mElement == rhs.mElement;
+    }
+
+    bool operator==(nullptr_t) const noexcept {
+        return mElement == nullptr;
+    }
+
+    explicit operator bool() const noexcept {
+        return IsValid();
+    }
+
+private:
+    template<class T>
+    FRecycleHandle(const FRecycleHandle<T> &rhs, ElementType *pCast) {
+        if (rhs.mNode)
+            rhs.mNode->IncRefCount();
+
+        mNode = rhs.mNode;
+        mElement = pCast;
+    }
+
+    void Release() noexcept;
+
+private:
+    detail::IElementNodeBase *mNode;
+    ElementType *mElement;
+};
+#pragma endregion
+
+class BASE_API IRecyclerBase {
+
+    template<class Type>
+    friend class FRecycleHandle;
+
+    static constexpr float RECYCLER_EXPAND_THRESHOLD = 0.75f;
+    static constexpr float RECYCLER_EXPAND_RATE = 1.f;
+
+    static constexpr int RECYCLER_SHRINK_DELAY = 1;
+    static constexpr int RECYCLER_SHRINK_COUNT = 512;
+    static constexpr float RECYCLER_SHRINK_THRESHOLD = 0.3f;
+    static constexpr float RECYCLER_SHRINK_RATE = 0.5f;
+    static constexpr int RECYCLER_MINIMUM_CAPACITY = 64;
 
 protected:
-    IRecyclerBase();
+    explicit IRecyclerBase(asio::io_context &ctx);
 
     virtual detail::IElementNodeBase *CreateNode() const = 0;
 
 public:
+    IRecyclerBase() = delete;
     virtual ~IRecyclerBase();
 
     DISABLE_COPY_MOVE(IRecyclerBase)
 
-    void Initial(size_t capacity = 64);
+    void Initial(size_t capacity = RECYCLER_MINIMUM_CAPACITY);
 
-    template<CRecycleType Type = IRecycle_Interface>
+    template<class Type = IRecycle_Interface>
     FRecycleHandle<Type> Acquire() {
-        return FRecycleHandle<Type>{this->AcquireNode()};
+        return FRecycleHandle<Type>{ AcquireNode() };
     }
+
+    void SetShrinkCount(int count);
+    void SetShrinkDelay(int sec);
+    void SetShrinkThreshold(float threshold);
+    void SetShrinkRate(float rate);
 
     void Shrink();
 
-    [[nodiscard]] size_t GetUsage()     const;
-    [[nodiscard]] size_t GetIdle()      const;
-    [[nodiscard]] size_t GetCapacity()  const;
+    [[nodiscard]] size_t GetUsage() const;
+    [[nodiscard]] size_t GetIdle() const;
+    [[nodiscard]] size_t GetCapacity() const;
 
     template<
         CRecycleType Type,
         class Allocator = std::allocator<Type>,
-        class Deleter   = std::default_delete<Type>>
-    static IRecyclerBase *Create(Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
+        class Deleter = std::default_delete<Type> >
+    static IRecyclerBase *Create(asio::io_context &ctx, Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
 
     template<
         CRecycleType Type,
         class Allocator = std::allocator<Type>,
-        class Deleter   = std::default_delete<Type>>
-    static std::unique_ptr<IRecyclerBase> CreateUnique(Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
+        class Deleter = std::default_delete<Type> >
+    static std::unique_ptr<IRecyclerBase> CreateUnique(asio::io_context &ctx, Allocator &&allocator = Allocator{}, Deleter &&deleter = Deleter{});
 
 private:
     detail::IElementNodeBase *AcquireNode();
-
     void Recycle(detail::IElementNodeBase *pNode);
 
 private:
+    asio::io_context &mCtx;
+
     std::queue<detail::IElementNodeBase *> mQueue;
     mutable std::shared_mutex mMutex;
     std::atomic_int64_t mUsage;
+
+    int mShrinkCount;
+    int mShrinkDelay;
+    float mShrinkThreshold;
+    float mShrinkRate;
+
+    ASteadyTimer mShrinkTimer;
+    std::atomic_bool bShrinking;
 
 protected:
     detail::FControlBlock *mControl;
 };
 
-#pragma region RecycleHandle Define
 
-template<CRecycleType Type>
-FRecycleHandle<Type>::FRecycleHandle(detail::IElementNodeBase *pNode)
-    : mNode(pNode) {
-    mElement = mNode->GetT<Type>();
-    assert(mElement);
-}
-
-template<CRecycleType Type>
-FRecycleHandle<Type>::FRecycleHandle()
-    : mNode(nullptr),
-      mElement(nullptr) {
-}
-
-template<CRecycleType Type>
-FRecycleHandle<Type>::FRecycleHandle(nullptr_t)
-    : FRecycleHandle() {
-}
-
-template<CRecycleType Type>
-FRecycleHandle<Type>::~FRecycleHandle() {
-    this->Release();
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle &rhs) {
-    if (rhs.mNode) {
-        rhs.mNode->IncRefCount();
-    }
-    mNode       = rhs.mNode;
-    mElement    = rhs.mElement;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type> &FRecycleHandle<Type>::operator=(const FRecycleHandle &rhs) {
-    if (this != &rhs) {
-        FRecycleHandle(rhs).Swap(*this);
-    }
-    return *this;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type>::FRecycleHandle(FRecycleHandle &&rhs) noexcept {
-    mNode           = rhs.mNode;
-    mElement        = rhs.mElement;
-    rhs.mNode       = nullptr;
-    rhs.mElement    = nullptr;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type> &FRecycleHandle<Type>::operator=(FRecycleHandle &&rhs) noexcept {
-    if (this != &rhs) {
-        FRecycleHandle(std::move(rhs)).Swap(*this);
-    }
-    return *this;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type>::ElementType *FRecycleHandle<Type>::operator->() const noexcept {
-    return mElement;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type>::ElementType &FRecycleHandle<Type>::operator*() const noexcept {
-    return *mElement;
-}
-
-template<CRecycleType Type>
-inline FRecycleHandle<Type>::ElementType *FRecycleHandle<Type>::Get() const noexcept {
-    return mElement;
-}
-
-template<CRecycleType Type>
-template<CRecycleType T>
-inline Type *FRecycleHandle<Type>::GetT() const noexcept {
-    if constexpr (std::is_same_v<std::remove_extent_t<T>, ElementType>) {
-        return mElement;
-    }
-    return static_cast<T *>(Get());
-}
-
-template<CRecycleType Type>
-inline bool FRecycleHandle<Type>::IsValid() const noexcept {
-    return mNode != nullptr && mElement != nullptr;
-}
-
-template<CRecycleType Type>
-inline void FRecycleHandle<Type>::Swap(FRecycleHandle &rhs) {
-    std::swap(mNode,    rhs.mNode);
-    std::swap(mElement, rhs.mElement);
-}
-
-template<CRecycleType Type>
-inline void FRecycleHandle<Type>::Reset() noexcept {
-    FRecycleHandle().Swap(*this);
-}
-
-template<CRecycleType Type>
-template<CRecycleType T>
-inline FRecycleHandle<T> FRecycleHandle<Type>::CastTo() const noexcept {
-    if (auto *pElement = dynamic_cast<FRecycleHandle<T>::ElementType *>(mElement)) {
-        return FRecycleHandle<T>{*this, pElement};
-    }
-    return {};
-}
-
-template<CRecycleType Type>
-inline bool FRecycleHandle<Type>::operator==(const FRecycleHandle &rhs) const noexcept {
-    return this->mElement == rhs.mElement;
-}
-
-template<CRecycleType Type>
-inline bool FRecycleHandle<Type>::operator==(nullptr_t) const noexcept {
-    return this->mElement == nullptr;
-}
-
-template<CRecycleType Type>
-template<CRecycleType T>
-inline FRecycleHandle<Type>::FRecycleHandle(const FRecycleHandle<T> &rhs, ElementType *pCast) {
-    if (rhs.mNode)
-        rhs.mNode->IncRefCount();
-
-    mNode       = rhs.mNode;
-    mElement    = pCast;
-}
-
-template<CRecycleType Type>
+template<class Type>
 inline void FRecycleHandle<Type>::Release() noexcept {
     if (mNode && mNode->DecRefCount()) {
         if (auto *recycler = mNode->GetRecycler()) {
@@ -287,7 +343,7 @@ inline void FRecycleHandle<Type>::Release() noexcept {
 
     mNode = nullptr;
 }
-#pragma endregion
+
 
 namespace detail {
     template<class Alloc, class Other>
@@ -303,9 +359,9 @@ namespace detail {
 
     template<CRecycleType Type, typename Allocator>
     class FElementNodeInplace final : public IElementNodeBase {
-        using ElementType   = std::remove_extent_t<Type>;
-        using Traits        = std::allocator_traits<Allocator>;
-        using AllocNode     = RebindAlloc<Allocator, FElementNodeInplace>;
+        using ElementType = std::remove_extent_t<Type>;
+        using Traits = std::allocator_traits<Allocator>;
+        using AllocNode = RebindAlloc<Allocator, FElementNodeInplace>;
 
     public:
         explicit FElementNodeInplace(FControlBlock *pControl, const AllocNode &alloc)
@@ -349,10 +405,10 @@ namespace detail {
 
     template<CRecycleType Type, typename Allocator, typename Deleter>
     class FElementNodeSeparate final : public IElementNodeBase {
-        using ElementType   = std::remove_extent_t<Type>;
-        using Traits        = std::allocator_traits<Allocator>;
-        using AllocType     = RebindAlloc<Allocator, Type>;
-        using AllocNode     = RebindAlloc<Allocator, FElementNodeSeparate>;
+        using ElementType = std::remove_extent_t<Type>;
+        using Traits = std::allocator_traits<Allocator>;
+        using AllocType = RebindAlloc<Allocator, Type>;
+        using AllocNode = RebindAlloc<Allocator, FElementNodeSeparate>;
 
     public:
         FElementNodeSeparate(FControlBlock *pControl, const AllocNode &alloc, const Deleter &deleter)
@@ -423,7 +479,7 @@ namespace detail {
     template<CRecycleType Type, class Allocator, class Deleter>
     IElementNodeBase *CreateElementNode(FControlBlock *pCtrl, const Allocator &alloc, const Deleter &deleter) {
         if constexpr (CheckStandardAllocator<Type, Allocator> && CheckDefaultDeleter<Type, Deleter>) {
-            using Node      = FElementNodeInplace<Type, Allocator>;
+            using Node = FElementNodeInplace<Type, Allocator>;
             using AllocNode = RebindAlloc<Allocator, Node>;
             AllocNode allocNode(alloc);
             Node *res = std::allocator_traits<AllocNode>::allocate(allocNode, 1);
@@ -435,7 +491,7 @@ namespace detail {
             }
             return res;
         } else {
-            using Node      = FElementNodeSeparate<Type, Allocator, Deleter>;
+            using Node = FElementNodeSeparate<Type, Allocator, Deleter>;
             using AllocNode = RebindAlloc<Allocator, Node>;
 
             AllocNode allocNode(alloc);
@@ -454,15 +510,14 @@ namespace detail {
 template<
     CRecycleType Type,
     class Allocator = std::allocator<Type>,
-    class Deleter   = std::default_delete<Type>>
+    class Deleter = std::default_delete<Type> >
 class TRecycler final : public IRecyclerBase {
-
 public:
     template<typename A = Allocator, typename D = Deleter>
-    explicit TRecycler(A &&alloc = Allocator{}, D && deleter = Deleter{})
-        : mAllocator(std::forward<A>(alloc)),
+    explicit TRecycler(asio::io_context &ctx, A &&alloc = Allocator{}, D &&deleter = Deleter{})
+        : IRecyclerBase(ctx),
+          mAllocator(std::forward<A>(alloc)),
           mDeleter(std::forward<D>(deleter)) {
-
     }
 
     DISABLE_COPY_MOVE(TRecycler)
@@ -481,19 +536,19 @@ template<
     CRecycleType Type,
     class Allocator,
     class Deleter>
-inline IRecyclerBase *IRecyclerBase::Create(Allocator &&allocator, Deleter &&deleter) {
-    return IRecyclerBase::CreateUnique<Type, Allocator, Deleter>(
-        std::forward<Allocator>(allocator),
-        std::forward<Deleter>(deleter))
-    .release();
+inline IRecyclerBase *IRecyclerBase::Create(asio::io_context &ctx, Allocator &&allocator, Deleter &&deleter) {
+    return IRecyclerBase::CreateUnique<Type, Allocator, Deleter>(ctx,
+                std::forward<Allocator>(allocator),
+                std::forward<Deleter>(deleter))
+            .release();
 }
 
 template<
     CRecycleType Type,
     class Allocator,
     class Deleter>
-std::unique_ptr<IRecyclerBase> IRecyclerBase::CreateUnique(Allocator &&allocator, Deleter &&deleter) {
-    return std::make_unique<TRecycler<Type, Allocator, Deleter>>(
+std::unique_ptr<IRecyclerBase> IRecyclerBase::CreateUnique(asio::io_context &ctx, Allocator &&allocator, Deleter &&deleter) {
+    return std::make_unique<TRecycler<Type, Allocator, Deleter> >(ctx,
         std::forward<Allocator>(allocator),
         std::forward<Deleter>(deleter));
 }

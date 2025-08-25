@@ -1,16 +1,15 @@
 #pragma once
 
 #include "ComponentModule.h"
+#include "gateway/PlayerBase.h"
 
-#include <gateway/PlayerAgent.h>
 #include <base/ProtocolRoute.h>
 #include <config/ConfigManager.h>
 #include <internal/Packet.h>
 
 #include <functional>
 
-
-class UPlayer final : public IPlayerAgent {
+class UPlayer final : public IPlayerBase {
 
     using AProtocolFunctor = std::function<void(uint32_t, FPacket *, UPlayer *)>;
 
@@ -18,12 +17,19 @@ public:
     UPlayer();
     ~UPlayer() override;
 
-    bool Start() override;
-    void Stop() override;
+    void Initial() override;
 
-    void RegisterProtocol(uint32_t id, const AProtocolFunctor &func);
+    void OnLogin() override;
+    void OnLogout() override;
+
+    void Save() override;
+
+    void OnReset() override;
 
     void OnPackage(IPackage_Interface *pkg) override;
+    void OnEvent(IEventParam_Interface *event) override;
+
+    void RegisterProtocol(uint32_t id, const AProtocolFunctor &func);
 
     UComponentModule &GetComponentModule();
 

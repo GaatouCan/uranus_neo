@@ -3,7 +3,6 @@
 #include "Common.h"
 
 #include <concepts>
-
 #ifdef __linux__
 #include <cstdint>
 #endif

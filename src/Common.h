@@ -77,10 +77,13 @@ RegisterMethod(new TClazzMethod(#method, &##clazz##::##method));
 
 inline constexpr auto EmptyCallback = [](auto && ...){};
 
-inline constexpr int PLAYER_AGENT_ID        = -1;
+inline constexpr int PLAYER_TARGET_ID       = -1;
 inline constexpr int CLIENT_TARGET_ID       = -2;
 inline constexpr int SERVER_SOURCE_ID       = -3;
 inline constexpr int INVALID_SERVICE_ID     = -10;
+
+inline constexpr int SERVICE_CHANNEL_SIZE   = 4096;
+inline constexpr int PLAYER_CHANNEL_SIZE    = 512;
 
 inline constexpr auto CORE_SERVICE_DIRECTORY    = "service";
 inline constexpr auto EXTEND_SERVICE_DIRECTORY  = "extend";
@@ -90,4 +93,6 @@ inline constexpr int HEARTBEAT_PACKAGE_ID       = 1001;
 inline constexpr int LOGIN_REQUEST_PACKAGE_ID   = 1002;
 inline constexpr int LOGIN_RESPONSE_PACKAGE_ID  = 1003;
 inline constexpr int LOGIN_FAILED_PACKAGE_ID    = 1004;
-inline constexpr int PLATFORM_PACKAGE_ID        = 1005;
+inline constexpr int LOGIN_REPEATED_PACKAGE_ID  = 1005;
+inline constexpr int PLATFORM_PACKAGE_ID        = 1006;
+inline constexpr int LOGOUT_REQUEST_PACKAGE_ID  = 1007;

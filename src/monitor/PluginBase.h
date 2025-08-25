@@ -6,7 +6,7 @@
 
 class UMonitor;
 class UServer;
-class UConnection;
+class UPlayerAgent;
 
 class BASE_API IPluginBase {
 
@@ -23,7 +23,7 @@ public:
     [[nodiscard]] UMonitor *GetMonitor() const;
     [[nodiscard]] UServer *GetServer() const;
 
-    virtual void OnAcceptClient(const std::shared_ptr<UConnection> &conn);
+    // virtual void OnAcceptClient(const std::shared_ptr<UAgent> &conn);
 
 private:
     void SetUpModule(UMonitor *owner);

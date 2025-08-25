@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/Recycle.h"
 #include "base/Package.h"
 #include "base/ByteArray.h"
 
@@ -17,7 +18,7 @@ inline constexpr uint32_t MAXIMUM_PACKAGE_ID = 999999;
  * Use The Structure Of Header Plus Data Part;
  * The Header Occupies 24 Bytes And Uses Big-Endian Transmission In Network
  */
-class BASE_API FPacket final : public IPackage_Interface {
+class BASE_API FPacket final : public IRecycle_Interface, public IPackage_Interface {
 
     friend class UPacketCodec;
 

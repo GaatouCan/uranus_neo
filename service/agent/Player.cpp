@@ -1,29 +1,42 @@
 #include "Player.h"
+#include "Server.h"
 
 #include <config/Config.h>
 
+
 UPlayer::UPlayer() {
-    bUpdatePerTick = false;
 
     mComponentModule.SetUpPlayer(this);
-    mConfig.LoadConfig(GetModule<UConfig>());
+    mConfig.LoadConfig(GetServer()->GetModule<UConfig>());
     LoadProtocol();
 }
 
 UPlayer::~UPlayer() {
+
 }
 
-bool UPlayer::Start() {
-    if (!IPlayerAgent::Start())
-        return false;
+void UPlayer::Initial() {
 
-    mComponentModule.OnLogin();
-    return true;
 }
 
-void UPlayer::Stop() {
-    IPlayerAgent::Stop();
-    mComponentModule.OnLogout();
+void UPlayer::OnLogin() {
+
+}
+
+void UPlayer::OnLogout() {
+
+}
+
+void UPlayer::Save() {
+
+}
+
+void UPlayer::OnReset() {
+
+}
+
+void UPlayer::OnEvent(IEventParam_Interface *event) {
+
 }
 
 void UPlayer::RegisterProtocol(const uint32_t id, const AProtocolFunctor &func) {
@@ -46,11 +59,11 @@ UComponentModule &UPlayer::GetComponentModule() {
 }
 
 extern "C" {
-    SERVICE_API IServiceBase *CreateInstance() {
+    SERVICE_API IPlayerBase *CreatePlayer() {
         return new UPlayer();
     }
 
-    SERVICE_API void DestroyInstance(IServiceBase *inst) {
+    SERVICE_API void DestroyPlayer(IPlayerBase *inst) {
         delete dynamic_cast<UPlayer *>(inst);
     }
 }

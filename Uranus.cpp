@@ -2,14 +2,14 @@
 #include <config/Config.h>
 #include <login/LoginAuth.h>
 #include <event/EventModule.h>
-#include <timer/TimerModule.h>
 #include <logger/LoggerModule.h>
 #include <monitor/Monitor.h>
-#include <database/DataAccess.h>
-#include <service/ServiceModule.h>
 #include <gateway/Gateway.h>
-#include <network/Network.h>
+#include <service/ServiceModule.h>
+#include <route/RouteModule.h>
 #include <internal/CodecFactory.h>
+#include <internal/PlayerFactory.h>
+#include <internal/ServiceFactory.h>
 #include <LoginHandlerImpl.h>
 
 #include <spdlog/spdlog.h>
@@ -33,7 +33,7 @@ int main() {
     }
 
     server->CreateModule<UEventModule>();
-    server->CreateModule<UTimerModule>();
+    server->CreateModule<URouteModule>();
     server->CreateModule<ULoggerModule>();
     server->CreateModule<UMonitor>();
 
@@ -41,15 +41,18 @@ int main() {
     //     dataAccess->SetDatabaseAdapter<UMongoAdapter>();
     // }
 
-    server->CreateModule<UServiceModule>();
-    server->CreateModule<UGateway>();
-
-    if (auto *network = server->CreateModule<UNetwork>(); network != nullptr) {
-        network->SetCodecFactory<UCodecFactory>();
+    if (auto *module = server->CreateModule<UServiceModule>(); module != nullptr) {
+        module->SetServiceFactory<UServiceFactory>();
     }
 
+    if (auto *gateway = server->CreateModule<UGateway>(); gateway != nullptr) {
+        gateway->SetPlayerFactory<UPlayerFactory>();
+    }
+
+    server->SetCodecFactory<UCodecFactory>();
+
     server->Initial();
-    server->Run();
+    server->Start();
     server->Shutdown();
 
     delete server;

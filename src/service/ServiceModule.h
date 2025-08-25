@@ -1,79 +1,105 @@
 #pragma once
 
 #include "Module.h"
-#include "ServiceType.h"
-#include "base/SharedLibrary.h"
+#include "base/Types.h"
+#include "base/SingleIOContextPool.h"
 #include "base/IdentAllocator.h"
-#include "base/ContextHandle.h"
+#include "factory/ServiceFactory.h"
 
-#include <unordered_map>
-#include <map>
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <shared_mutex>
 
 
-using std::unordered_map;
-using std::unordered_set;
+using std::unique_ptr;
+using std::shared_ptr;
+using std::make_unique;
+using std::make_shared;
 
+class UServiceAgent;
 class IDataAsset_Interface;
-class UServiceContext;
 
-
+/**
+ * Manager All The Services
+ */
 class BASE_API UServiceModule final : public IModuleBase {
 
     DECLARE_MODULE(UServiceModule)
 
-protected:
-    UServiceModule();
+    /** The Worker Pool For All The Service **/
+    USingleIOContextPool mWorkerPool;
 
-    void Initial() override;
-    void Start() override;
-    void Stop() override;
+    /** All The Service Map **/
+    absl::flat_hash_map<int64_t, shared_ptr<UServiceAgent>> mServiceMap;
+    mutable std::shared_mutex mServiceMutex;
+
+    /** Service Name To Service ID Mapping **/
+    absl::flat_hash_map<std::string, int64_t> mServiceNameMap;
+    mutable std::shared_mutex mServiceNameMutex;
+
+    /** The Service Factory Use To Load Service Shared Libraries **/
+    unique_ptr<IServiceFactory_Interface> mServiceFactory;
+
+    /** Allocate Service ID **/
+    TIdentAllocator<int64_t, true> mAllocator;
+
+    /** For Update Per Tick **/
+    std::unique_ptr<ASteadyTimer> mTickTimer;
+
+    /** All The Service ID Which Need To Update **/
+    absl::flat_hash_set<int64_t> mTickerSet;
+    mutable std::shared_mutex mTickMutex;
 
 public:
+    UServiceModule();
     ~UServiceModule() override;
 
     [[nodiscard]] constexpr const char *GetModuleName() const override {
         return "Service Module";
     }
 
-    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(FServiceHandle sid) const;
-    [[nodiscard]] std::shared_ptr<UServiceContext> FindService(const std::string &name) const;
+    template<class T, class... Args>
+    requires std::derived_from<T, IServiceFactory_Interface>
+    void SetServiceFactory(Args && ... args) {
+        if (mState != EModuleState::CREATED)
+            throw std::logic_error("Only can set ServiceFactory in CREATED state");
 
-    [[nodiscard]] std::map<std::string, FServiceHandle> GetServiceList() const;
-    [[nodiscard]] FServiceHandle GetServiceID(const std::string &name) const;
+        mServiceFactory = make_unique<T>(std::forward<Args>(args)...);
+    }
 
-    [[nodiscard]] FSharedLibrary FindServiceLibrary(const std::string &filename, EServiceType type = EServiceType::EXTEND) const;
+    /// Get Reference Of IOContext In Worker Pool
+    [[nodiscard]] asio::io_context &GetWorkerIOContext();
 
-    void BootExtendService(const std::string &filename, const IDataAsset_Interface *data = nullptr);
-    void ShutdownService(FServiceHandle sid);
+    /// Find Service By Service ID
+    [[nodiscard]] shared_ptr<UServiceAgent> FindService(int64_t sid) const;
 
-    [[nodiscard]] FServiceHandle AcquireServiceID();
-    void RecycleServiceID(FServiceHandle id);
+    /// Find Service By Service Name
+    [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
+
+    /// Boot Extend Service
+    void BootService(const std::string &name, IDataAsset_Interface *pData);
+
+    /// Shutdown Extend Service By Service ID
+    void ShutdownService(int64_t sid);
+
+    /// Shutdown Extend Service By Service Name
+    void ShutdownService(const std::string &name);
+
+    /// Register Service To Update
+    void InsertTicker(int64_t sid);
+
+    /// Unregister Service To Update
+    void RemoveTicker(int64_t sid);
+
+    [[nodiscard]] std::map<int64_t, std::string> GetAllServiceMap() const;
+
+    void ForeachService(const std::function<bool(const shared_ptr<UServiceAgent> &)> &func) const;
+
+protected:
+    void Initial() override;
+    void Start() override;
+    void Stop() override;
 
 private:
-    void OnServiceShutdown(const std::string &filename, FServiceHandle sid, EServiceType type);
-
-private:
-    /** Dynamic Library Handles That For Service **/
-#pragma region Dyncmic Library Manage
-    unordered_map<std::string, FSharedLibrary> mCoreLibraryMap;
-    unordered_map<std::string, FSharedLibrary> mExtendLibraryMap;
-    mutable std::shared_mutex mLibraryMutex;
-#pragma endregion
-
-    /** Running Service Map **/
-    unordered_map<int64_t, std::shared_ptr<UServiceContext>> mServiceMap;
-    mutable std::shared_mutex mServiceMutex;
-
-    /** Service Name To Service ID Mapping **/
-    unordered_map<std::string, int64_t> mNameToServiceID;
-    mutable std::shared_mutex mNameMutex;
-
-    /** Service ID Set With Same Library Filename **/
-    unordered_map<std::string, unordered_set<int64_t>> mFilenameMapping;
-    mutable std::shared_mutex mFileNameMutex;
-
-    /** Service ID Management **/
-    TIdentAllocator<int64_t, true> mAllocator;
+    awaitable<void> UpdateLoop(int ms);
 };
-
