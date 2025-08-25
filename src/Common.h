@@ -43,7 +43,7 @@ clazz &operator=(clazz &&) noexcept = delete;
 DISABLE_COPY(clazz) \
 DISABLE_MOVE(clazz)
 
-// #define SPDLOG_NO_SOURCE_LOC
+#define SPDLOG_NO_SOURCE_LOC
 
 #define ARGS_WRAPPER(...) __VA_ARGS__
 

@@ -36,7 +36,6 @@ namespace detail {
         if (mRefCount.fetch_sub(1, std::memory_order_relaxed) == 1) {
             if (mRecycler.load(std::memory_order_acquire) == nullptr) {
                 delete this;
-                return;
             }
         }
 
