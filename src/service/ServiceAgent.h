@@ -90,7 +90,7 @@ public:
     /// Register Self To Event Module With Specific Event Type
     void ListenEvent(int event);
 
-    /// Will Not Listen Specific Event Type Any More
+    /// Will Not Listen Specific Event Type AnyMore
     void RemoveListener(int event) const;
 
     /// Dispatch Event
