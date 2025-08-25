@@ -14,15 +14,7 @@ FPlayerHandle::FPlayerHandle(IPlayerBase *pPlayer, IPlayerFactory_Interface *pFa
 }
 
 FPlayerHandle::~FPlayerHandle() {
-    if (mPlayer == nullptr)
-        return;
-
-    if (mFactory == nullptr) {
-        delete mPlayer;
-        return;
-    }
-
-    mFactory->DestroyPlayer(mPlayer);
+    Release();
 }
 
 FPlayerHandle::FPlayerHandle(FPlayerHandle &&rhs) noexcept {
@@ -68,4 +60,19 @@ bool FPlayerHandle::operator==(nullptr_t) const noexcept {
 
 FPlayerHandle::operator bool() const noexcept {
     return IsValid();
+}
+
+void FPlayerHandle::Release() noexcept {
+    if (mPlayer == nullptr)
+        return;
+
+    if (mFactory == nullptr) {
+        delete mPlayer;
+        return;
+    }
+
+    mFactory->DestroyPlayer(mPlayer);
+
+    mPlayer = nullptr;
+    mFactory = nullptr;
 }

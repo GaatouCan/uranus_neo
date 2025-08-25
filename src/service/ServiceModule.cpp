@@ -25,12 +25,19 @@ void UServiceModule::Initial() {
     // Load The Service Shared Libraries
     mServiceFactory->LoadService();
 
-    // Create All The Core Services Defined In Configureation
+    // Create All The Core Services Defined In Configuration
     for (const auto &val : cfg["services"]["core"]) {
-        const auto path = val["path"].as<std::string>();
-        const auto library = mServiceFactory->FindService("core." + path);
-        if (!library.IsValid()) {
-            SPDLOG_CRITICAL("Failed To Find Service[{}]", path);
+        const auto name = val["name"].as<std::string>();
+
+        // Combine The Full Path
+        std::string path;
+        path.reserve(5 + name.size());
+        path += "core.";
+        path += name;
+
+        auto handle = mServiceFactory->CreateInstance(path);
+        if (handle == nullptr) {
+            SPDLOG_CRITICAL("Failed To Create Service[{}]", name);
             continue;
         }
 
@@ -46,29 +53,29 @@ void UServiceModule::Initial() {
 
         // Set Up The Agent
         agent->SetUpServiceID(sid);
-        agent->SetUpLibrary(library);
+        agent->SetUpService(std::move(handle));
 
         // Initial The Agent
         if (!agent->Initial(this, nullptr)) {
-            SPDLOG_CRITICAL("Failed To Initial Service: {}", path);
+            SPDLOG_CRITICAL("Failed To Initial Service: {}", name);
             mAllocator.Recycle(sid);
             agent->Stop();
             continue;
         }
 
         // Check If The Service Name Repeated
-        const std::string name = agent->GetServiceName();
-        if (mServiceNameMap.contains(name)) {
-            SPDLOG_CRITICAL("Service[{}] Already Exists", name);
+        const std::string serviceName = agent->GetServiceName();
+        if (mServiceNameMap.contains(serviceName)) {
+            SPDLOG_CRITICAL("Service[{}] Already Exists", serviceName);
             agent->Stop();
             continue;
         }
 
-        SPDLOG_INFO("Service[{}] Initialized", name);
+        SPDLOG_INFO("Service[{}] Initialized", serviceName);
 
         // Insert The Service And Its Name To The Maps
         mServiceMap.insert_or_assign(sid, agent);
-        mServiceNameMap.insert_or_assign(name, sid);
+        mServiceNameMap.insert_or_assign(serviceName, sid);
     }
 
     const auto updateMs = cfg["services"]["update"].as<int>();
@@ -185,13 +192,19 @@ shared_ptr<UServiceAgent> UServiceModule::FindService(const std::string &name) c
     return FindService(sid);
 }
 
-void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *pData) {
+void UServiceModule::BootService(const std::string &name, IDataAsset_Interface *pData) {
     if (mState != EModuleState::RUNNING || mServiceFactory == nullptr)
         return;
 
-    const auto library = mServiceFactory->FindService("extend." + path);
-    if (!library.IsValid()) {
-        SPDLOG_ERROR("{} - Fail To Find Service Library[{}]", __FUNCTION__, path);
+    // Combine The Full Path
+    std::string path;
+    path.reserve(7 + name.size());
+    path += "extend.";
+    path += name;
+
+    auto handle = mServiceFactory->CreateInstance(path);
+    if (handle == nullptr) {
+        SPDLOG_ERROR("{} - Fail To Create Service[{}]", __FUNCTION__, name);
         return;
     }
 
@@ -211,7 +224,7 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
 
     // Set Up The Agent
     agent->SetUpServiceID(sid);
-    agent->SetUpLibrary(library);
+    agent->SetUpService(std::move(handle));
 
     // Initial The Service
     if (!agent->Initial(this, pData)) {
@@ -222,8 +235,8 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
     }
 
     // Check If The Service Name Is Defined
-    const std::string name = agent->GetServiceName();
-    if (name.empty() || name == "UNKNOWN") {
+    const std::string serviceName = agent->GetServiceName();
+    if (serviceName.empty() || serviceName == "UNKNOWN") {
         SPDLOG_ERROR("{} - Service[{}] Name Undefined", __FUNCTION__, sid);
         agent->Stop();
         mAllocator.RecycleTS(sid);
@@ -234,25 +247,25 @@ void UServiceModule::BootService(const std::string &path, IDataAsset_Interface *
     bool bRepeat = false;
     {
         std::shared_lock lock(mServiceNameMutex);
-        if (mServiceNameMap.contains(name)) {
+        if (mServiceNameMap.contains(serviceName)) {
             bRepeat = true;
         }
     }
 
     // Try To Boot The Service
     if (bRepeat || !agent->BootService()) {
-        SPDLOG_ERROR("{} - Service[{}] Name Repeated Or Fail To Boot", __FUNCTION__, name);
+        SPDLOG_ERROR("{} - Service[{}] Name Repeated Or Fail To Boot", __FUNCTION__, serviceName);
         agent->Stop();
         mAllocator.RecycleTS(sid);
         return;
     }
 
-    SPDLOG_INFO("{} - Boot Service[{}] Successfully", __FUNCTION__, name);
+    SPDLOG_INFO("{} - Boot Service[{}] Successfully", __FUNCTION__, serviceName);
 
     // Insert The Service And The Name To The Maps
     std::scoped_lock lock(mServiceMutex, mServiceNameMutex);
     mServiceMap.insert_or_assign(sid, agent);
-    mServiceNameMap.insert_or_assign(name, sid);
+    mServiceNameMap.insert_or_assign(serviceName, sid);
 }
 
 void UServiceModule::ShutdownService(const int64_t sid) {

@@ -37,21 +37,32 @@ void UServiceFactory::LoadService() {
     }
 }
 
-FSharedLibrary UServiceFactory::FindService(const std::string &name) const {
+FServiceHandle UServiceFactory::CreateInstance(const std::string &name) const {
     const std::vector<std::string> res = utils::SplitString(name, '.');
 
     if (res.size() != 2)
         return {};
 
+    FSharedLibrary library;
+
     if (res[0] == "core") {
         const auto iter = mCoreMap.find(res[1]);
-        return iter == mCoreMap.end() ? FSharedLibrary{} : iter->second;
+        if (iter == mCoreMap.end())
+            return {};
+
+        library = iter->second;
     }
 
     if (res[0] == "extend") {
         const auto iter = mExtendMap.find(res[1]);
-        return iter == mExtendMap.end() ? FSharedLibrary{} : iter->second;
+        if (iter == mExtendMap.end())
+            return {};
+
+        library = iter->second;
     }
 
-    return {};
+    if (!library.IsValid())
+        return {};
+
+    return FServiceHandle{ library };
 }

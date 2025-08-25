@@ -427,6 +427,7 @@ void UPlayerAgent::CleanUp() {
             gateway->RecyclePlayer(std::move(mPlayer));
         } else {
             gateway->RemovePlayer(mPlayer->GetPlayerID());
+            mPlayer.Release();
         }
     }
 

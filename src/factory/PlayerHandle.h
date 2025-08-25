@@ -37,4 +37,5 @@ public:
 
     explicit operator bool() const noexcept;
 
+    void Release() noexcept;
 };

@@ -11,10 +11,6 @@
 #include <spdlog/spdlog.h>
 
 
-using AServiceCreator = IServiceBase *(*)();
-using AServiceDestroyer = void (*)(IServiceBase *);
-
-
 UTickerNode::UTickerNode()
     : mDeltaTime(0) {
 }
@@ -39,8 +35,7 @@ void UTickerNode::Execute(IActorBase *pActor) const {
 
 UServiceAgent::UServiceAgent(asio::io_context &ctx)
     : IAgentBase(ctx, SERVICE_CHANNEL_SIZE),
-      mServiceID(INVALID_SERVICE_ID),
-      mService(nullptr) {
+      mServiceID(INVALID_SERVICE_ID) {
 }
 
 UServiceAgent::~UServiceAgent() {
@@ -51,13 +46,14 @@ void UServiceAgent::SetUpServiceID(const int64_t sid) {
     mServiceID = sid;
 }
 
-void UServiceAgent::SetUpLibrary(const FSharedLibrary &library) {
-    mLibrary = library;
+void UServiceAgent::SetUpService(FServiceHandle &&service) {
+    mService = std::move(service);
 }
+
 
 bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
     // Check If The Shared Library Assigned
-    if (!mLibrary.IsValid())
+    if (!mService)
         throw std::logic_error(std::format("{} - Shared Library Is Null", __FUNCTION__));
 
     // Assign The mModule
@@ -66,21 +62,6 @@ bool UServiceAgent::Initial(IModuleBase *pModule, IDataAsset_Interface *pData) {
         throw std::bad_cast();
 
     mModule = module;
-
-    // Load The Constructor From Shared Library
-    auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
-    if (creator == nullptr) {
-        SPDLOG_ERROR("{} - Can't Load Creator", __FUNCTION__);
-        return false;
-    }
-
-    mService = std::invoke(creator);
-    if (mService == nullptr) {
-        SPDLOG_ERROR("{} - Can't Create Service", __FUNCTION__);
-        return false;
-    }
-    SPDLOG_INFO("{} - ServiceAgent[{} - {:p}] - Service Created",
-        __FUNCTION__, mServiceID, static_cast<void *>(this));
 
     // Create Package Pool For Data Exchange
     mPackagePool = module->GetServer()->CreateUniquePackagePool(mContext);
@@ -112,7 +93,6 @@ bool UServiceAgent::BootService() {
     if (mModule == nullptr ||
         mPackagePool == nullptr ||
         mService == nullptr ||
-        !mLibrary.IsValid() ||
         !mChannel.is_open())
         throw std::logic_error(std::format("{:<20} - Not Initialized", __FUNCTION__));
 
@@ -298,13 +278,10 @@ void UServiceAgent::DispatchEvent(const shared_ptr<IEventParam_Interface> &param
 }
 
 IActorBase *UServiceAgent::GetActor() const {
-    return mService;
+    return mService.Get();
 }
 
 void UServiceAgent::CleanUp() {
-    if (!mLibrary.IsValid())
-        return;
-
     if (mService == nullptr)
         return;
 
@@ -312,16 +289,7 @@ void UServiceAgent::CleanUp() {
     SPDLOG_INFO("{} - Agent[{} - {:p}], Service Stopped",
         __FUNCTION__, mServiceID, static_cast<const void *>(this));
 
-    auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
-    if (destroyer != nullptr) {
-        std::invoke(destroyer, mService);
-    }
-    SPDLOG_INFO("{} - Agent[{} - {:p}], Service Deleted",
-        __FUNCTION__, mServiceID, static_cast<const void *>(this));
-
-    // Reset The Pointer
-    mLibrary.Reset();
-    mService = nullptr;
+    mService.Release();
     mServiceID = INVALID_SERVICE_ID;
 }
 

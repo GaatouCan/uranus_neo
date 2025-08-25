@@ -2,10 +2,9 @@
 
 #include "AgentBase.h"
 #include "base/DataAsset.h"
-#include "base/SharedLibrary.h"
+#include "factory/ServiceHandle.h"
 
 
-class IServiceBase;
 
 /**
  * Wrapper Of Update Data
@@ -36,10 +35,7 @@ class BASE_API UServiceAgent final : public IAgentBase {
     int64_t mServiceID;
 
     /** The Inner Service Instance **/
-    IServiceBase *mService;
-
-    /** The Shared Library Of Creator And Destroyer **/
-    FSharedLibrary mLibrary;
+    FServiceHandle mService;
 
 public:
     explicit UServiceAgent(asio::io_context &ctx);
@@ -50,8 +46,7 @@ public:
     /// Set Up The Service ID
     void SetUpServiceID(int64_t sid);
 
-    /// Set Up The Shared Library To Create And Destroy The Inner Service
-    void SetUpLibrary(const FSharedLibrary &library);
+    void SetUpService(FServiceHandle &&service);
 
     /// Return The Service ID
     [[nodiscard]] int64_t GetServiceID() const;

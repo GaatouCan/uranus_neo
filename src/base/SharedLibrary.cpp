@@ -84,6 +84,10 @@ void FSharedLibrary::Reset() {
     FSharedLibrary().Swap(*this);
 }
 
+bool FSharedLibrary::operator==(const FSharedLibrary &rhs) const {
+    return mControl == rhs.mControl;
+}
+
 
 void FSharedLibrary::Release() {
     if (mControl && --mControl->refCount == 0) {

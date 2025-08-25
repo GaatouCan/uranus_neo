@@ -77,7 +77,7 @@ public:
     [[nodiscard]] shared_ptr<UServiceAgent> FindService(const std::string &name) const;
 
     /// Boot Extend Service
-    void BootService(const std::string &path, IDataAsset_Interface *pData);
+    void BootService(const std::string &name, IDataAsset_Interface *pData);
 
     /// Shutdown Extend Service By Service ID
     void ShutdownService(int64_t sid);

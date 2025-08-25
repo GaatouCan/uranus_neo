@@ -48,6 +48,8 @@ public:
     void Swap(FSharedLibrary &rhs);
     void Reset();
 
+    bool operator==(const FSharedLibrary &rhs) const;
+
 private:
     void Release();
 };
