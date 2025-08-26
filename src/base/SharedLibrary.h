@@ -23,6 +23,7 @@ class BASE_API FSharedLibrary final {
     };
 
     FControlBlock *mControl;
+    AModuleHandle mHandle;
 
 public:
     FSharedLibrary();
@@ -57,12 +58,12 @@ private:
 
 template<typename Type>
 inline Type FSharedLibrary::GetSymbol(const std::string &name) const {
-    if (mControl->handle == nullptr)
+    if (!IsValid())
         return nullptr;
 
 #if defined(_WIN32) || defined(_WIN64)
-    return reinterpret_cast<Type>(GetProcAddress(mControl->handle, name.c_str()));
+    return reinterpret_cast<Type>(GetProcAddress(mHandle, name.c_str()));
 #else
-    return reinterpret_cast<Type>(dyslm(mControl->handle, name.c_str()));
+    return reinterpret_cast<Type>(dyslm(mControl->mHandle, name.c_str()));
 #endif
 }

@@ -128,6 +128,12 @@ std::string UServiceAgent::GetServiceName() const {
     return "UNKNOWN";
 }
 
+std::string UServiceAgent::GetServicePath() const {
+    if (!mService)
+        return {};
+    return mService.GetPath();
+}
+
 int64_t UServiceAgent::GetServiceID() const {
     return mServiceID;
 }

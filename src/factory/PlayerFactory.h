@@ -27,5 +27,5 @@ public:
     [[nodiscard]] virtual FPlayerHandle CreatePlayer() = 0;
     [[nodiscard]] virtual unique_ptr<IAgentHandler> CreateAgentHandler() const = 0;
 
-    virtual void DestroyPlayer(IPlayerBase *) const = 0;
+    virtual void DestroyPlayer(IPlayerBase *) = 0;
 };

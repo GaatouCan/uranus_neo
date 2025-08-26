@@ -33,7 +33,7 @@ public:
     [[nodiscard]] FPlayerHandle CreatePlayer() override;
     [[nodiscard]] unique_ptr<IAgentHandler> CreateAgentHandler() const override;
 
-    void DestroyPlayer(IPlayerBase *pPlayer) const override;
+    void DestroyPlayer(IPlayerBase *pPlayer) override;
 
 private:
     FSharedLibrary mLibrary;

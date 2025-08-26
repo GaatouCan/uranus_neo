@@ -4,7 +4,8 @@
 #include <format>
 
 FSharedLibrary::FSharedLibrary()
-    : mControl(nullptr) {
+    : mControl(nullptr),
+      mHandle(nullptr){
 }
 
 FSharedLibrary::~FSharedLibrary() {
@@ -26,6 +27,8 @@ FSharedLibrary::FSharedLibrary(const std::string &path) {
         throw std::runtime_error(std::format("{} - Fail To Load Dynamic Library[{}]", __FUNCTION__, path));
     }
 #endif
+
+    mHandle = mControl->handle;
 }
 
 FSharedLibrary::FSharedLibrary(const std::filesystem::path &path)
@@ -34,6 +37,7 @@ FSharedLibrary::FSharedLibrary(const std::filesystem::path &path)
 
 FSharedLibrary::FSharedLibrary(const FSharedLibrary &rhs) {
     mControl = rhs.mControl;
+    mHandle = rhs.mHandle;
     if (mControl) {
         ++mControl->refCount;
     }
@@ -43,6 +47,8 @@ FSharedLibrary &FSharedLibrary::operator=(const FSharedLibrary &rhs) {
     if (this != &rhs) {
         Release();
         mControl = rhs.mControl;
+        mHandle = rhs.mHandle;
+
         if (mControl) {
             ++mControl->refCount;
         }
@@ -52,14 +58,18 @@ FSharedLibrary &FSharedLibrary::operator=(const FSharedLibrary &rhs) {
 
 FSharedLibrary::FSharedLibrary(FSharedLibrary &&rhs) noexcept {
     mControl = rhs.mControl;
+    mHandle = rhs.mHandle;
     rhs.mControl = nullptr;
+    rhs.mHandle = nullptr;
 }
 
 FSharedLibrary &FSharedLibrary::operator=(FSharedLibrary &&rhs) noexcept {
     if (this != &rhs) {
         Release();
         mControl = rhs.mControl;
+        mHandle = rhs.mHandle;
         rhs.mControl = nullptr;
+        rhs.mHandle = nullptr;
     }
     return *this;
 }
@@ -69,7 +79,7 @@ size_t FSharedLibrary::GetUseCount() const noexcept {
 }
 
 bool FSharedLibrary::IsValid() const noexcept {
-    return mControl != nullptr;
+    return mControl != nullptr && mHandle != nullptr;
 }
 
 FSharedLibrary::operator bool() const noexcept {
@@ -78,6 +88,7 @@ FSharedLibrary::operator bool() const noexcept {
 
 void FSharedLibrary::Swap(FSharedLibrary &rhs) {
     std::swap(mControl, rhs.mControl);
+    std::swap(mHandle, rhs.mHandle);
 }
 
 void FSharedLibrary::Reset() {
@@ -100,4 +111,5 @@ void FSharedLibrary::Release() {
         delete mControl;
     }
     mControl = nullptr;
+    mHandle = nullptr;
 }

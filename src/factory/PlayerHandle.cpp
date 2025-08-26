@@ -1,5 +1,5 @@
 #include "PlayerHandle.h"
-#include "../gateway/PlayerBase.h"
+#include "gateway/PlayerBase.h"
 #include "PlayerFactory.h"
 
 
@@ -26,6 +26,8 @@ FPlayerHandle::FPlayerHandle(FPlayerHandle &&rhs) noexcept {
 
 FPlayerHandle &FPlayerHandle::operator=(FPlayerHandle &&rhs) noexcept {
     if (this != &rhs) {
+        Release();
+
         mPlayer = rhs.mPlayer;
         mFactory = rhs.mFactory;
         rhs.mPlayer = nullptr;
@@ -66,12 +68,11 @@ void FPlayerHandle::Release() noexcept {
     if (mPlayer == nullptr)
         return;
 
-    if (mFactory == nullptr) {
+    if (mFactory != nullptr) {
+        mFactory->DestroyPlayer(mPlayer);
+    } else {
         delete mPlayer;
-        return;
     }
-
-    mFactory->DestroyPlayer(mPlayer);
 
     mPlayer = nullptr;
     mFactory = nullptr;

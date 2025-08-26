@@ -1,6 +1,8 @@
 #pragma once
 
-#include "base/SharedLibrary.h"
+#include "Common.h"
+
+#include <string>
 
 
 class IServiceBase;
@@ -10,18 +12,22 @@ class IServiceFactory_Interface;
 class BASE_API FServiceHandle final {
 
     IServiceBase *mService;
-    FSharedLibrary mLibrary;
+    IServiceFactory_Interface *mFactory;
+
+    std::string mPath;
 
 public:
     FServiceHandle();
 
-    explicit FServiceHandle(const FSharedLibrary &library);
+    FServiceHandle(IServiceBase *pService, IServiceFactory_Interface *pFactory, const std::string &path);
     ~FServiceHandle();
 
     DISABLE_COPY(FServiceHandle)
 
     FServiceHandle(FServiceHandle &&rhs) noexcept;
     FServiceHandle &operator=(FServiceHandle &&rhs) noexcept;
+
+    const std::string &GetPath() const;
 
     [[nodiscard]] bool IsValid() const;
 

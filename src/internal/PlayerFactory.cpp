@@ -56,6 +56,6 @@ unique_ptr<IAgentHandler> UPlayerFactory::CreateAgentHandler() const {
     return std::invoke(mCreateAgentHandler);
 }
 
-void UPlayerFactory::DestroyPlayer(IPlayerBase *pPlayer) const {
+void UPlayerFactory::DestroyPlayer(IPlayerBase *pPlayer) {
     std::invoke(mDestroyer, pPlayer);
 }

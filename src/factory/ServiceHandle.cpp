@@ -3,25 +3,15 @@
 #include "service/ServiceBase.h"
 
 
-using AServiceCreator   = IServiceBase *(*)();
-using AServiceDestroyer = void (*)(IServiceBase *);
-
-
 FServiceHandle::FServiceHandle()
-    : mService(nullptr) {
+    : mService(nullptr),
+      mFactory(nullptr) {
 }
 
-FServiceHandle::FServiceHandle(const FSharedLibrary &library)
-    : mService(nullptr),
-      mLibrary(library) {
-
-    auto creator = mLibrary.GetSymbol<AServiceCreator>("CreateInstance");
-    auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
-
-    if (creator == nullptr || destroyer == nullptr)
-        return;
-
-    mService = std::invoke(creator);
+FServiceHandle::FServiceHandle(IServiceBase *pService, IServiceFactory_Interface *pFactory, const std::string &path)
+    : mService(pService),
+      mFactory(pFactory),
+      mPath(path) {
 }
 
 
@@ -31,23 +21,35 @@ FServiceHandle::~FServiceHandle() {
 
 FServiceHandle::FServiceHandle(FServiceHandle &&rhs) noexcept {
     mService = rhs.mService;
-    rhs.mService = nullptr;
+    mFactory = rhs.mFactory;
 
-    mLibrary = std::move(rhs.mLibrary);
+    rhs.mService = nullptr;
+    rhs.mFactory = nullptr;
+
+    mPath = std::move(rhs.mPath);
 }
 
 FServiceHandle &FServiceHandle::operator=(FServiceHandle &&rhs) noexcept {
     if (this != &rhs) {
-        mService = rhs.mService;
-        rhs.mService = nullptr;
+        Release();
 
-        mLibrary = std::move(rhs.mLibrary);
+        mService = rhs.mService;
+        mFactory = rhs.mFactory;
+
+        rhs.mService = nullptr;
+        rhs.mFactory = nullptr;
+
+        mPath = std::move(rhs.mPath);
     }
     return *this;
 }
 
+const std::string &FServiceHandle::GetPath() const {
+    return mPath;
+}
+
 bool FServiceHandle::IsValid() const {
-    return mService != nullptr;
+    return mService != nullptr && mFactory != nullptr && !mPath.empty();
 }
 
 IServiceBase *FServiceHandle::operator->() const noexcept {
@@ -63,7 +65,8 @@ IServiceBase *FServiceHandle::Get() const noexcept {
 }
 
 bool FServiceHandle::operator==(const FServiceHandle &rhs) const noexcept {
-    return mService == rhs.mService && mLibrary == rhs.mLibrary;
+    return mService == rhs.mService && mFactory == rhs.mFactory &&
+            mPath == rhs.mPath;
 }
 
 bool FServiceHandle::operator==(nullptr_t) const noexcept {
@@ -78,18 +81,13 @@ void FServiceHandle::Release() {
     if (!mService)
         return;
 
-    if (mLibrary.IsValid()) {
-        delete mService;
-        return;
-    }
-
-    auto destroyer = mLibrary.GetSymbol<AServiceDestroyer>("DestroyInstance");
-    if (destroyer != nullptr) {
-        std::invoke(destroyer, mService);
+    if (mFactory != nullptr && !mPath.empty()) {
+        mFactory->DestroyInstance(mService, mPath);
     } else {
         delete mService;
     }
 
     mService = nullptr;
-    mLibrary.Reset();
+    mFactory = nullptr;
+    mPath.clear();
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base/SharedLibrary.h"
 #include "ServiceHandle.h"
 
 class BASE_API IServiceFactory_Interface {
@@ -13,5 +12,6 @@ public:
 
     virtual void LoadService() = 0;
 
-    [[nodiscard]] virtual FServiceHandle CreateInstance(const std::string &path) const = 0;
+    [[nodiscard]] virtual FServiceHandle CreateInstance(const std::string &path) = 0;
+    virtual void DestroyInstance(IServiceBase *pService, const std::string &path) = 0;
 };

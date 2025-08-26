@@ -54,6 +54,8 @@ public:
     /// Return The Service Name After Service Initial
     [[nodiscard]] std::string GetServiceName() const;
 
+    [[nodiscard]] std::string GetServicePath() const;
+
     /// Initial The Service With DataAsset
     bool Initial(IModuleBase *pModule, IDataAsset_Interface *pData) override;
 
